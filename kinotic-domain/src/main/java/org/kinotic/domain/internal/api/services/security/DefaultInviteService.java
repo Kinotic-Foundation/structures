@@ -7,8 +7,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -221,20 +221,20 @@ public class DefaultInviteService implements InviteService {
      * sign-in method are applied by the identity service. A concurrent double-accept is safe — the unique-email
      * check fails the second attempt.
      */
-    private static OrganizationUserParticipantIdentity newOrganizationUser(PendingInvite invite, String displayNameOverride) {
-        OrganizationUserParticipantIdentity user = new OrganizationUserParticipantIdentity();
+    private static OrganizationParticipantIdentity newOrganizationUser(PendingInvite invite, String displayNameOverride) {
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
         user.setEmail(invite.getEmail())
             .setDisplayName(displayName(invite, displayNameOverride));
         return user;
     }
 
     /** The unsaved user of the invitation's application that an invitation into an application creates. */
-    private static ApplicationUserParticipantIdentity newApplicationUser(PendingInvite invite, String displayNameOverride) {
-        ApplicationUserParticipantIdentity user = new ApplicationUserParticipantIdentity();
-        user.setEmail(invite.getEmail())
-            .setDisplayName(displayName(invite, displayNameOverride))
-            .setOrganizationId(invite.getOrganizationId())
-            .setApplicationId(invite.getApplicationId());
+    private static ApplicationParticipantIdentity newApplicationUser(PendingInvite invite, String displayNameOverride) {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
+        user.setOrganizationId(invite.getOrganizationId())
+            .setApplicationId(invite.getApplicationId())
+            .setEmail(invite.getEmail())
+            .setDisplayName(displayName(invite, displayNameOverride));
         return user;
     }
 
@@ -245,28 +245,28 @@ public class DefaultInviteService implements InviteService {
     // the organization user becomes a member of the invitation's organization and signs in there; a disabled user
     // joins nothing, and a membership that already exists is reused, so one disabled before the acceptance
     // refuses the sign-in as a login would
-    private Future<Participant> join(OrganizationUserParticipantIdentity user, PendingInvite invite) {
+    private Future<Participant> join(OrganizationParticipantIdentity user, PendingInvite invite) {
         return requireEnabled(user)
                 .compose(v -> membershipService.addMembership(user.getId(), invite.getOrganizationId()))
                 .compose(membership -> membershipService.resolveParticipant(user, invite.getOrganizationId()));
     }
 
     // the invited address makes the organization user its own: the name it gives and the password it sets
-    private Future<Void> claim(OrganizationUserParticipantIdentity user, String displayName, String password) {
+    private Future<Void> claim(OrganizationParticipantIdentity user, String displayName, String password) {
         Future<?> named = StringUtils.isNotBlank(displayName)
                 ? identityService.save(user.setDisplayName(displayName))
                 : Future.succeededFuture();
         return named.compose(v -> identityService.setPassword(user.getId(), password));
     }
 
-    private static Future<Void> requireEnabled(OrganizationUserParticipantIdentity user) {
+    private static Future<Void> requireEnabled(OrganizationParticipantIdentity user) {
         return user.isEnabled()
                 ? Future.succeededFuture()
                 : Future.failedFuture(new UserDisabledException("This user cannot sign in to the organization."));
     }
 
     // an existing organization user is joined only by someone who knows its password
-    private Future<Void> requireOrganizationUserPassword(OrganizationUserParticipantIdentity user, String password) {
+    private Future<Void> requireOrganizationUserPassword(OrganizationParticipantIdentity user, String password) {
         return localAuthenticationService.verifyPassword(user, password)
                                          .compose(verified -> !verified
                                                  ? Future.failedFuture(new ExistingUserException(

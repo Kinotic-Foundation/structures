@@ -4,11 +4,11 @@ import lombok.NoArgsConstructor;
 
 /**
  * A Kinotic OS user who signs in to the system console with a password and acts as a
- * {@link org.kinotic.domain.api.model.security.participant.SystemParticipant}. Carries no
- * {@code organizationId} or {@code applicationId}, and is unique by email among system users.
+ * {@link org.kinotic.domain.api.model.security.participant.SystemParticipant}; unique by email among system
+ * users.
  */
 @NoArgsConstructor
-public final class SystemUserParticipantIdentity extends UserParticipantIdentity {
+public final class SystemParticipantIdentity extends UserParticipantIdentity {
 
     @Override
     public ParticipantIdentityType getType() {

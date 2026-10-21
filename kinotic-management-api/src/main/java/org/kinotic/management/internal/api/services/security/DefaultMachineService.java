@@ -42,9 +42,9 @@ public class DefaultMachineService implements MachineService {
                 .compose(app -> {
                     MachineParticipantIdentity machine = new MachineParticipantIdentity();
                     machine.setMachineType(MachineType.CLIENT)
-                           .setDisplayName(displayName)
                            .setOrganizationId(participant.getOrganizationId())
-                           .setApplicationId(applicationId);
+                           .setApplicationId(applicationId)
+                           .setDisplayName(displayName);
                     return identityService.createMachine(machine);
                 });
     }

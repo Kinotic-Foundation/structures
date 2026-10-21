@@ -9,9 +9,9 @@ import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdent
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
@@ -27,23 +27,23 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
     }
 
     /** The system user with the email, or {@code null}. */
-    public Future<SystemUserParticipantIdentity> findSystemUserByEmail(String email) {
+    public Future<SystemParticipantIdentity> findSystemUserByEmail(String email) {
         return findUserByEmail(ParticipantIdentityType.SYSTEM_USER, email, null)
-                .map(SystemUserParticipantIdentity.class::cast);
+                .map(SystemParticipantIdentity.class::cast);
     }
 
     /** The organization user with the email, or {@code null}. */
-    public Future<OrganizationUserParticipantIdentity> findOrganizationUserByEmail(String email) {
+    public Future<OrganizationParticipantIdentity> findOrganizationUserByEmail(String email) {
         return findUserByEmail(ParticipantIdentityType.ORGANIZATION_USER, email, null)
-                .map(OrganizationUserParticipantIdentity.class::cast);
+                .map(OrganizationParticipantIdentity.class::cast);
     }
 
     /** The user of application {@code applicationId} of organization {@code organizationId} with the email, or {@code null}. */
-    public Future<ApplicationUserParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId) {
+    public Future<ApplicationParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         Validate.notBlank(applicationId, "applicationId cannot be blank");
         return findUserByEmail(ParticipantIdentityType.APPLICATION_USER, email, applicationFilter(organizationId, applicationId))
-                .map(ApplicationUserParticipantIdentity.class::cast);
+                .map(ApplicationParticipantIdentity.class::cast);
     }
 
     private Future<ParticipantIdentity> findUserByEmail(ParticipantIdentityType type, String email, Query scope) {
@@ -54,37 +54,37 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
     }
 
     /** The system users. */
-    public Future<Page<SystemUserParticipantIdentity>> findSystemUsers(Pageable pageable) {
+    public Future<Page<SystemParticipantIdentity>> findSystemUsers(Pageable pageable) {
         return findUsers(ParticipantIdentityType.SYSTEM_USER, null, pageable)
-                .map(page -> page.map(SystemUserParticipantIdentity.class::cast));
+                .map(page -> page.map(SystemParticipantIdentity.class::cast));
     }
 
     /** The system users whose email or display name matches {@code searchText}; blank text lists them all. */
-    public Future<Page<SystemUserParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable) {
+    public Future<Page<SystemParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable) {
         return searchUsers(searchText, ParticipantIdentityType.SYSTEM_USER, null, pageable)
-                .map(page -> page.map(SystemUserParticipantIdentity.class::cast));
+                .map(page -> page.map(SystemParticipantIdentity.class::cast));
     }
 
     /** The users of application {@code applicationId} of organization {@code organizationId}. */
-    public Future<Page<ApplicationUserParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable) {
+    public Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable) {
         return findUsers(ParticipantIdentityType.APPLICATION_USER, applicationFilter(organizationId, applicationId), pageable)
-                .map(page -> page.map(ApplicationUserParticipantIdentity.class::cast));
+                .map(page -> page.map(ApplicationParticipantIdentity.class::cast));
     }
 
     /** The users of the application whose email or display name matches {@code searchText}; blank text lists them all. */
-    public Future<Page<ApplicationUserParticipantIdentity>> searchApplicationUsers(String searchText,
+    public Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
                                                                                   String organizationId,
                                                                                   String applicationId,
                                                                                   Pageable pageable) {
         return searchUsers(searchText, ParticipantIdentityType.APPLICATION_USER, applicationFilter(organizationId, applicationId), pageable)
-                .map(page -> page.map(ApplicationUserParticipantIdentity.class::cast));
+                .map(page -> page.map(ApplicationParticipantIdentity.class::cast));
     }
 
     /** The organization users among {@code ids} whose email or display name matches {@code searchText}. */
-    public Future<Page<OrganizationUserParticipantIdentity>> searchOrganizationUsersById(String searchText, Collection<String> ids, Pageable pageable) {
+    public Future<Page<OrganizationParticipantIdentity>> searchOrganizationUsersById(String searchText, Collection<String> ids, Pageable pageable) {
         Validate.notBlank(searchText, "searchText cannot be blank");
         return searchUsers(searchText, ParticipantIdentityType.ORGANIZATION_USER, Query.of(f -> f.ids(i -> i.values(List.copyOf(ids)))), pageable)
-                .map(page -> page.map(OrganizationUserParticipantIdentity.class::cast));
+                .map(page -> page.map(OrganizationParticipantIdentity.class::cast));
     }
 
     private Future<Page<ParticipantIdentity>> findUsers(ParticipantIdentityType type, Query scope, Pageable pageable) {

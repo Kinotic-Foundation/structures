@@ -10,8 +10,8 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
@@ -76,7 +76,7 @@ public class DefaultMemberService implements MemberService {
     private Future<Member> provision(OrganizationParticipant participant, String address, String displayName, boolean sendInvitation) {
         String organizationId = participant.getOrganizationId();
         Future<Void> admissible = sendInvitation ? Future.succeededFuture() : requireOwnProvider(organizationId);
-        OrganizationUserParticipantIdentity user = new OrganizationUserParticipantIdentity();
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
         user.setEmail(address)
             .setDisplayName(StringUtils.trimToNull(displayName));
         return admissible.compose(v -> identityService.createUser(user, null))
@@ -120,7 +120,7 @@ public class DefaultMemberService implements MemberService {
     }
 
     // the organization user of the organization's member at the address that no sign-in method signs in yet
-    private Future<OrganizationUserParticipantIdentity> pendingMember(String address, String organizationId) {
+    private Future<OrganizationParticipantIdentity> pendingMember(String address, String organizationId) {
         return identityService.findOrganizationUserByEmail(address).compose(user -> {
             Validate.isTrue(user != null, "No pending member has this email.");
             return membershipService.findMembership(user.getId(), organizationId).compose(membership -> {
@@ -159,7 +159,7 @@ public class DefaultMemberService implements MemberService {
     public Future<Void> setMemberEnabled(String identityId, boolean enabled) {
         OrganizationParticipant participant = requireOrgParticipant();
         return loadOwnedMember(identityId, participant)
-                .compose(member -> member instanceof OrganizationUserParticipantIdentity
+                .compose(member -> member instanceof OrganizationParticipantIdentity
                         ? membershipService.setMembershipEnabled(member.getId(), participant.getOrganizationId(), enabled)
                         // saveSync so the console's immediate re-query sees the change
                         : identityService.saveSync(member.setEnabled(enabled)).mapEmpty());
@@ -169,7 +169,7 @@ public class DefaultMemberService implements MemberService {
     public Future<Void> removeMember(String identityId) {
         OrganizationParticipant participant = requireOrgParticipant();
         return loadOwnedMember(identityId, participant)
-                .compose(member -> member instanceof OrganizationUserParticipantIdentity user
+                .compose(member -> member instanceof OrganizationParticipantIdentity user
                         ? removeOrganizationMember(user, participant.getOrganizationId())
                         // Cascades the IdentityCredential; sync so the console's immediate re-query
                         // no longer shows the member.
@@ -178,7 +178,7 @@ public class DefaultMemberService implements MemberService {
 
     // the membership goes, with the invitation the member never accepted, and so does an organization user nobody
     // signs in as that holds no other membership, which nothing could reach
-    private Future<Void> removeOrganizationMember(OrganizationUserParticipantIdentity user, String organizationId) {
+    private Future<Void> removeOrganizationMember(OrganizationParticipantIdentity user, String organizationId) {
         return membershipService.removeMembership(user.getId(), organizationId)
                 .compose(v -> inviteService.findPendingInvite(user.getEmail(), organizationId))
                 .compose(invite -> invite == null
@@ -232,12 +232,12 @@ public class DefaultMemberService implements MemberService {
                     // a delegate id gets the same not-found as a foreign one — member management
                     // operates on people; delegates are managed by their owner's revocation flow
                     UserParticipantIdentity user = DomainUtil.requireOwned(identity, UserParticipantIdentity.class,
-                            found -> found instanceof OrganizationUserParticipantIdentity
-                                    || (found instanceof ApplicationUserParticipantIdentity
-                                        && participant.getOrganizationId().equals(found.getOrganizationId())),
+                            found -> found instanceof OrganizationParticipantIdentity
+                                    || (found instanceof ApplicationParticipantIdentity application
+                                        && participant.getOrganizationId().equals(application.getOrganizationId())),
                             "Member not found.");
                     // an organization user is the organization's member only through a membership of it
-                    return user instanceof OrganizationUserParticipantIdentity
+                    return user instanceof OrganizationParticipantIdentity
                             ? membershipService.findMembership(user.getId(), participant.getOrganizationId()).map(membership -> {
                                 Validate.isTrue(membership != null, "Member not found.");
                                 return user;

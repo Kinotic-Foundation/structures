@@ -8,8 +8,8 @@ import lombok.experimental.Accessors;
 /**
  * A person, at any scope: what every kind of user has, an email and sign-in methods of its own, a password and,
  * for an organization's or an application's user, any number of {@link OidcBinding}s. The concrete subtype is the
- * scope the person signs in to — {@link SystemUserParticipantIdentity}, {@link OrganizationUserParticipantIdentity}
- * or {@link ApplicationUserParticipantIdentity} — and one email may be a user of each, each with its own sign-in
+ * scope the person signs in to — {@link SystemParticipantIdentity}, {@link OrganizationParticipantIdentity}
+ * or {@link ApplicationParticipantIdentity} — and one email may be a user of each, each with its own sign-in
  * methods.
  */
 @Getter
@@ -17,7 +17,7 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract sealed class UserParticipantIdentity extends ParticipantIdentity
-        permits SystemUserParticipantIdentity, OrganizationUserParticipantIdentity, ApplicationUserParticipantIdentity {
+        permits SystemParticipantIdentity, OrganizationParticipantIdentity, ApplicationParticipantIdentity {
 
     /** Email address, unique among the users of the same scope. */
     private String email;

@@ -3,8 +3,8 @@ import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentit
 
 /**
  * A person, at any scope: what every kind of user has, an email and sign-in methods of its own. The concrete
- * subtype is the scope the person signs in to — {@link SystemUserParticipantIdentity},
- * {@link OrganizationUserParticipantIdentity} or {@link ApplicationUserParticipantIdentity} — and one email may
+ * subtype is the scope the person signs in to — {@link SystemParticipantIdentity},
+ * {@link OrganizationParticipantIdentity} or {@link ApplicationParticipantIdentity} — and one email may
  * be a user of each, each with its own sign-in methods.
  */
 export abstract class UserParticipantIdentity extends ParticipantIdentity {

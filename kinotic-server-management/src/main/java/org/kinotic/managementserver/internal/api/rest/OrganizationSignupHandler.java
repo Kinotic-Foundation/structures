@@ -10,7 +10,7 @@ import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
@@ -27,7 +27,7 @@ import java.util.Map;
 /**
  * Organization sign-up routes — the sign-up counterpart to {@link OrganizationLoginHandler}.
  * Both email/password and social (OIDC) sign-up create a new {@link Organization}, its founder's organization user
- * ({@link OrganizationUserParticipantIdentity}) and the founder's membership; each handler method documents its own step.
+ * ({@link OrganizationParticipantIdentity}) and the founder's membership; each handler method documents its own step.
  */
 @Slf4j
 @Component
@@ -137,7 +137,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     }
 
     /**
-     * Turns a verified social identity into a pending sign-up: refuses if an {@link OrganizationUserParticipantIdentity}
+     * Turns a verified social identity into a pending sign-up: refuses if an {@link OrganizationParticipantIdentity}
      * already exists for this identity or its verified email (they should log in, not sign up), otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
      * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.

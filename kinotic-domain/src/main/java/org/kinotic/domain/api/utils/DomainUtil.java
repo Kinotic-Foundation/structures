@@ -13,9 +13,10 @@ import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
@@ -363,45 +364,50 @@ public class DomainUtil {
     }
 
     /**
-     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}.
-     * Returns the typed subtype that matches the user's structural scope:
+     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}: a
+     * {@link DefaultSystemParticipant} for a system user, and for a {@link ScopedParticipantIdentity} the participant
+     * of the layer its scope is:
      * <ul>
-     *   <li>{@code organizationId == null} → {@link DefaultSystemParticipant}</li>
-     *   <li>{@code organizationId != null, applicationId == null} → {@link DefaultOrganizationParticipant}</li>
-     *   <li>both set → {@link DefaultApplicationParticipant} (also carrying {@code tenantId})</li>
+     *   <li>SYSTEM → {@link DefaultSystemParticipant}</li>
+     *   <li>ORGANIZATION → {@link DefaultOrganizationParticipant}</li>
+     *   <li>APPLICATION → {@link DefaultApplicationParticipant}, carrying the {@code tenantId} too</li>
      * </ul>
-     * Synchronous: every field needed lives on the user, no lookups required.
+     * An organization user acts through one of its memberships, by
+     * {@link #createParticipant(OrganizationParticipantIdentity, OrganizationMembership)}.
      *
-     * @param user the authenticated user
-     * @return the typed participant for the given user
+     * @param identity the authenticated identity, other than an organization user
+     * @return the typed participant for the given identity
      */
-    public static Participant createParticipant(ParticipantIdentity user) {
-        Validate.isTrue(!(user instanceof OrganizationUserParticipantIdentity),
+    public static Participant createParticipant(ParticipantIdentity identity) {
+        Validate.isTrue(!(identity instanceof OrganizationParticipantIdentity),
                         "An organization user acts through one of its memberships");
-        Map<String, String> metadata = participantMetadata(user);
-        if (user.getOrganizationId() == null) {
-            return DefaultSystemParticipant.builder()
-                                           .id(user.getId())
-                                           .metadata(metadata)
-                                           .roles(List.of())
-                                           .build();
+        ParticipantScope scope = scopeOf(identity);
+        Map<String, String> metadata = participantMetadata(identity);
+        Participant ret;
+        if (scope.organizationId() == null) {
+            ret = DefaultSystemParticipant.builder()
+                                          .id(identity.getId())
+                                          .metadata(metadata)
+                                          .roles(List.of())
+                                          .build();
+        } else if (scope.applicationId() == null) {
+            ret = DefaultOrganizationParticipant.builder()
+                                                .id(identity.getId())
+                                                .organizationId(scope.organizationId())
+                                                .metadata(metadata)
+                                                .roles(List.of())
+                                                .build();
+        } else {
+            ret = DefaultApplicationParticipant.builder()
+                                               .id(identity.getId())
+                                               .organizationId(scope.organizationId())
+                                               .applicationId(scope.applicationId())
+                                               .tenantId(scope.tenantId())
+                                               .metadata(metadata)
+                                               .roles(List.of())
+                                               .build();
         }
-        if (user.getApplicationId() == null) {
-            return DefaultOrganizationParticipant.builder()
-                                                 .id(user.getId())
-                                                 .organizationId(user.getOrganizationId())
-                                                 .metadata(metadata)
-                                                 .roles(List.of())
-                                                 .build();
-        }
-        return DefaultApplicationParticipant.builder()
-                                            .id(user.getId())
-                                            .organizationId(user.getOrganizationId())
-                                            .applicationId(user.getApplicationId())
-                                            .tenantId(user.getTenantId())
-                                            .metadata(metadata)
-                                            .roles(List.of())
-                                            .build();
+        return ret;
     }
 
     /**
@@ -474,7 +480,7 @@ public class DomainUtil {
      * {@link OrganizationParticipant} of the membership's organization. The participant's id is the user's, so what
      * the person creates is attributed to them whichever organization they act in.
      */
-    public static Participant createParticipant(OrganizationUserParticipantIdentity user, OrganizationMembership membership) {
+    public static Participant createParticipant(OrganizationParticipantIdentity user, OrganizationMembership membership) {
         Validate.isTrue(user.getId().equals(membership.getOrganizationUserId()), "The membership is not the user's");
         return DefaultOrganizationParticipant.builder()
                                              .id(user.getId())
@@ -487,6 +493,14 @@ public class DomainUtil {
     /** The scope a participant acts in: its own for a scoped participant, the platform's (all null) otherwise. */
     public static ParticipantScope scopeOf(Participant participant) {
         return participant instanceof ScopedParticipant scoped ? scoped.getScope() : new ParticipantScope(null, null, null);
+    }
+
+    /**
+     * The scope ids an identity carries: a {@link ScopedParticipantIdentity}'s scope, and none (all {@code null}) for
+     * a system user or an organization user.
+     */
+    public static ParticipantScope scopeOf(ParticipantIdentity identity) {
+        return identity instanceof ScopedParticipantIdentity scoped ? scoped.scope() : new ParticipantScope(null, null, null);
     }
 
     private static Map<String, String> participantMetadata(ParticipantIdentity identity) {

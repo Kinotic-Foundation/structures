@@ -13,8 +13,8 @@ import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
@@ -159,7 +159,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aSystemUsersAddressIsAddedAsANewOrganizationUser() throws Exception {
         String email = "system-user-" + suffix() + "@example.test";
-        SystemUserParticipantIdentity systemUser = new SystemUserParticipantIdentity();
+        SystemParticipantIdentity systemUser = new SystemParticipantIdentity();
         systemUser.setEmail(email).setDisplayName("Sam System");
         await(identities.createUser(systemUser, PASSWORD));
         await(identities.syncIndex());
@@ -178,7 +178,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     public void aMemberIsClaimedOnlyWhereTheOrganizationAddedThem() throws Exception {
         // an organization user nobody signs in as that holds no membership of the organization is no one's to claim here
         String email = "elsewhere-" + suffix() + "@example.test";
-        OrganizationUserParticipantIdentity user = await(identities.createUser(organizationUser(email, "Added elsewhere"), null));
+        OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Added elsewhere"), null));
         await(identities.syncIndex());
         assertNull(await(identities.claimProvisionedOrganizationUser(okta.getId(), "sub-" + suffix(), email, organization.getId())));
         assertFalse(await(identities.hasSignInMethod(user.getId())));
@@ -212,7 +212,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void anAddressWithAnOrganizationUserIsInvitedToAcceptInstead() throws Exception {
         String email = "existing-" + suffix() + "@example.test";
-        OrganizationUserParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing person"), PASSWORD));
+        OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing person"), PASSWORD));
         await(identities.syncIndex());
 
         Member invited = await(asAdministrator(() -> members.addMember(email, null, false)));
@@ -255,8 +255,8 @@ public class MemberProvisioningTests extends KinoticTestBase {
         return page.getContent().stream().filter(member -> email.equals(member.email())).findFirst().orElseThrow();
     }
 
-    private static OrganizationUserParticipantIdentity organizationUser(String email, String displayName) {
-        OrganizationUserParticipantIdentity ret = new OrganizationUserParticipantIdentity();
+    private static OrganizationParticipantIdentity organizationUser(String email, String displayName) {
+        OrganizationParticipantIdentity ret = new OrganizationParticipantIdentity();
         ret.setEmail(email).setDisplayName(displayName);
         return ret;
     }

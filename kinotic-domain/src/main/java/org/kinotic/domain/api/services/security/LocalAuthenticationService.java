@@ -1,9 +1,9 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 
 /**
@@ -17,18 +17,18 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 public interface LocalAuthenticationService {
 
     /** Verifies {@code password} against the system user with {@code email}. */
-    Future<SystemUserParticipantIdentity> authenticateSystemUser(String email, String password);
+    Future<SystemParticipantIdentity> authenticateSystemUser(String email, String password);
 
     /**
      * Verifies {@code password} against the organization user with {@code email}, which then signs in to an
      * organization through its membership there, which the caller resolves.
      */
-    Future<OrganizationUserParticipantIdentity> authenticateOrganizationUser(String email, String password);
+    Future<OrganizationParticipantIdentity> authenticateOrganizationUser(String email, String password);
 
     /** Whether {@code password} is the password of {@code user}, an enabled user of any scope. */
     Future<Boolean> verifyPassword(UserParticipantIdentity user, String password);
 
     /** Verifies {@code password} against the user of application {@code applicationId} of organization {@code organizationId} with {@code email}. */
-    Future<ApplicationUserParticipantIdentity> authenticateApplicationUser(String email, String password,
+    Future<ApplicationParticipantIdentity> authenticateApplicationUser(String email, String password,
                                                                          String organizationId, String applicationId);
 }

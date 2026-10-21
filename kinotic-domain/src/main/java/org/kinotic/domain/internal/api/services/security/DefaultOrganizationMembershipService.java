@@ -14,7 +14,7 @@ import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -86,9 +86,9 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
 
     // the page's memberships joined with their organization users, in the page's order; a membership whose user is gone is left out
     private static Page<Member> members(Page<OrganizationMembership> page, List<ParticipantIdentity> identities, Set<String> claimed) {
-        Map<String, OrganizationUserParticipantIdentity> byId = identities.stream()
-                                                                          .filter(OrganizationUserParticipantIdentity.class::isInstance)
-                                                                          .map(OrganizationUserParticipantIdentity.class::cast)
+        Map<String, OrganizationParticipantIdentity> byId = identities.stream()
+                                                                          .filter(OrganizationParticipantIdentity.class::isInstance)
+                                                                          .map(OrganizationParticipantIdentity.class::cast)
                                                                           .collect(Collectors.toMap(ParticipantIdentity::getId, Function.identity()));
         List<Member> members = page.getContent().stream()
                                    .filter(membership -> byId.containsKey(membership.getOrganizationUserId()))
@@ -98,7 +98,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
         return new Page<>(members, page.getTotalElements() - (page.getContent().size() - members.size()));
     }
 
-    private static Member member(OrganizationUserParticipantIdentity user, OrganizationMembership membership, boolean claimed) {
+    private static Member member(OrganizationParticipantIdentity user, OrganizationMembership membership, boolean claimed) {
         return new Member(user.getId(), user.getEmail(), user.getDisplayName(), membership.isEnabled(), membership.getCreated(), !claimed);
     }
 
@@ -134,7 +134,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     }
 
     @Override
-    public Future<Participant> resolveParticipant(OrganizationUserParticipantIdentity user, String organizationId) {
+    public Future<Participant> resolveParticipant(OrganizationParticipantIdentity user, String organizationId) {
         Validate.notNull(user, "user cannot be null");
         return membershipRepository.findById(OrganizationMembership.idOf(user.getId(), organizationId)).map(membership -> {
             Participant participant = null;

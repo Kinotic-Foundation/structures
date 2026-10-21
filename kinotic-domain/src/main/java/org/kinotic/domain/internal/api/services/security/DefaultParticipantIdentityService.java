@@ -12,11 +12,12 @@ import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.domain.api.exceptions.UserDisabledException;
@@ -97,32 +98,28 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     /**
-     * Scope shape is encoded structurally — every save must conform to one of the three
-     * valid combinations:
+     * A {@link ScopedParticipantIdentity}'s scope must be one of the three valid shapes:
      * <ul>
-     *   <li>SYSTEM: {@code organizationId} and {@code applicationId} null, {@code tenantId} null</li>
-     *   <li>ORGANIZATION: {@code organizationId} set, {@code applicationId} null, {@code tenantId} null</li>
-     *   <li>APPLICATION: {@code organizationId} set, {@code applicationId} set; {@code tenantId} optional</li>
+     *   <li>SYSTEM: {@code organizationId}, {@code applicationId} and {@code tenantId} null</li>
+     *   <li>ORGANIZATION: {@code organizationId} set, {@code applicationId} and {@code tenantId} null</li>
+     *   <li>APPLICATION: {@code organizationId} and {@code applicationId} set; {@code tenantId} optional</li>
      * </ul>
-     * and a user's must be the one its kind is named for: none for a system user or an organization user, which
-     * acts in the organizations its memberships name, and APPLICATION for an application's user.
+     * and an application's user's scope must be APPLICATION.
      */
     private void validateScopeFields(ParticipantIdentity entity) {
-        if (entity.getApplicationId() != null) {
-            Validate.notBlank(entity.getOrganizationId(),
-                              "ParticipantIdentity organizationId is required when applicationId is set");
-        } else if (entity.getTenantId() != null) {
-            throw new IllegalArgumentException(
-                    "ParticipantIdentity tenantId must be null when applicationId is null (tenantId is "
-                    + "meaningful only for APPLICATION-scope users)");
+        if (entity instanceof ScopedParticipantIdentity scoped) {
+            ParticipantScope scope = scoped.scope();
+            if (scope.applicationId() != null) {
+                Validate.notBlank(scope.organizationId(),
+                                  "ParticipantIdentity organizationId is required when applicationId is set");
+            } else if (scope.tenantId() != null) {
+                throw new IllegalArgumentException(
+                        "ParticipantIdentity tenantId must be null when applicationId is null (tenantId is "
+                        + "meaningful only for APPLICATION-scope identities)");
+            }
         }
-        if (entity instanceof UserParticipantIdentity user) {
-            boolean scoped = switch (user) {
-                case SystemUserParticipantIdentity system -> system.getOrganizationId() == null && system.getApplicationId() == null;
-                case OrganizationUserParticipantIdentity member -> member.getOrganizationId() == null && member.getApplicationId() == null;
-                case ApplicationUserParticipantIdentity application -> application.getApplicationId() != null;
-            };
-            Validate.isTrue(scoped, "A %s carries no other scope than its own", user.getType());
+        if (entity instanceof ApplicationParticipantIdentity user) {
+            Validate.notBlank(user.getApplicationId(), "An APPLICATION_USER requires its applicationId");
         }
     }
 
@@ -143,26 +140,28 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     // the user of the same kind and scope as user that has its email, which uniqueness is held to
     private Future<UserParticipantIdentity> findSameKindByEmail(UserParticipantIdentity user) {
         return switch (user) {
-            case SystemUserParticipantIdentity system ->
+            case SystemParticipantIdentity system ->
                     identityRepository.findSystemUserByEmail(system.getEmail()).map(UserParticipantIdentity.class::cast);
-            case OrganizationUserParticipantIdentity member ->
+            case OrganizationParticipantIdentity member ->
                     identityRepository.findOrganizationUserByEmail(member.getEmail()).map(UserParticipantIdentity.class::cast);
-            case ApplicationUserParticipantIdentity application ->
+            case ApplicationParticipantIdentity application ->
                     identityRepository.findApplicationUserByEmail(application.getEmail(), application.getOrganizationId(),
                                                                   application.getApplicationId()).map(UserParticipantIdentity.class::cast);
         };
     }
 
     private static ExistingUserException emailTaken(UserParticipantIdentity user) {
+        ParticipantScope scope = DomainUtil.scopeOf(user);
         return new ExistingUserException("A " + user.getType() + " with email " + user.getEmail() + " already exists in scope "
-                                            + DomainUtil.describeScope(user.getOrganizationId(), user.getApplicationId()));
+                                            + DomainUtil.describeScope(scope.organizationId(), scope.applicationId()));
     }
 
     // a name-based UUID of the kind of user, its scope and its email, so the users of one email of one kind in one
     // scope contend for one id
     private static String userId(UserParticipantIdentity user) {
-        String key = user.getType() + "/" + Objects.toString(user.getOrganizationId(), "") + "/"
-                + Objects.toString(user.getApplicationId(), "") + "/" + DomainUtil.normalizeEmail(user.getEmail());
+        ParticipantScope scope = DomainUtil.scopeOf(user);
+        String key = user.getType() + "/" + Objects.toString(scope.organizationId(), "") + "/"
+                + Objects.toString(scope.applicationId(), "") + "/" + DomainUtil.normalizeEmail(user.getEmail());
         return UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
@@ -203,35 +202,35 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     @Override
-    public Future<SystemUserParticipantIdentity> findSystemUserByEmail(String email) {
+    public Future<SystemParticipantIdentity> findSystemUserByEmail(String email) {
         return identityRepository.findSystemUserByEmail(email);
     }
 
     @Override
-    public Future<OrganizationUserParticipantIdentity> findOrganizationUserByEmail(String email) {
+    public Future<OrganizationParticipantIdentity> findOrganizationUserByEmail(String email) {
         return identityRepository.findOrganizationUserByEmail(email);
     }
 
     @Override
-    public Future<ApplicationUserParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId) {
+    public Future<ApplicationParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId) {
         return identityRepository.findApplicationUserByEmail(email, organizationId, applicationId);
     }
 
     @Override
-    public Future<OrganizationUserParticipantIdentity> findOrganizationUserByOidcIdentity(String oidcConfigId, String subject) {
+    public Future<OrganizationParticipantIdentity> findOrganizationUserByOidcIdentity(String oidcConfigId, String subject) {
         return findByOidcIdentity(oidcConfigId, subject, null, null)
-                .map(identity -> identity instanceof OrganizationUserParticipantIdentity user ? user : null);
+                .map(identity -> identity instanceof OrganizationParticipantIdentity user ? user : null);
     }
 
     @Override
-    public Future<ApplicationUserParticipantIdentity> findApplicationUserByOidcIdentity(String oidcConfigId,
+    public Future<ApplicationParticipantIdentity> findApplicationUserByOidcIdentity(String oidcConfigId,
                                                                                         String subject,
                                                                                         String organizationId,
                                                                                         String applicationId) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         Validate.notBlank(applicationId, "applicationId cannot be blank");
         return findByOidcIdentity(oidcConfigId, subject, organizationId, applicationId)
-                .map(identity -> identity instanceof ApplicationUserParticipantIdentity user ? user : null);
+                .map(identity -> identity instanceof ApplicationParticipantIdentity user ? user : null);
     }
 
     // the identity the binding of (oidcConfigId, subject) in the scope signs in, or null
@@ -259,7 +258,8 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     // to one user of each application
     private Future<OidcBinding> bind(UserParticipantIdentity user, String oidcConfigId, String subject) {
         requireBindable(user);
-        String bindingId = OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId());
+        ParticipantScope scope = DomainUtil.scopeOf(user);
+        String bindingId = OidcBinding.idOf(oidcConfigId, subject, scope.organizationId(), scope.applicationId());
         return bindingRepository.findById(bindingId).compose(existing -> {
             Future<OidcBinding> ret;
             if (existing != null) {
@@ -269,8 +269,8 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 // sync so the profile's list of sign-in methods shows the binding at once
                 ret = bindingRepository.saveSync(new OidcBinding().setId(bindingId)
                                                                   .setIdentityId(user.getId())
-                                                                  .setOrganizationId(user.getOrganizationId())
-                                                                  .setApplicationId(user.getApplicationId())
+                                                                  .setOrganizationId(scope.organizationId())
+                                                                  .setApplicationId(scope.applicationId())
                                                                   .setOidcConfigId(oidcConfigId)
                                                                   .setSubject(subject)
                                                                   .setCreated(new Date()));
@@ -281,7 +281,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
 
     // a system user signs in to the system console with a password alone
     private static void requireBindable(UserParticipantIdentity user) {
-        Validate.isTrue(!(user instanceof SystemUserParticipantIdentity), "A system user signs in with a password alone");
+        Validate.isTrue(!(user instanceof SystemParticipantIdentity), "A system user signs in with a password alone");
     }
 
     @Override
@@ -346,24 +346,24 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     @Override
-    public Future<Page<SystemUserParticipantIdentity>> findSystemUsers(Pageable pageable) {
+    public Future<Page<SystemParticipantIdentity>> findSystemUsers(Pageable pageable) {
         return identityRepository.findSystemUsers(pageable);
     }
 
     @Override
-    public Future<Page<SystemUserParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable) {
+    public Future<Page<SystemParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable) {
         return identityRepository.searchSystemUsers(searchText, pageable);
     }
 
     @Override
-    public Future<Page<ApplicationUserParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable) {
+    public Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         Validate.notBlank(applicationId, "applicationId cannot be blank");
         return identityRepository.findApplicationUsers(organizationId, applicationId, pageable);
     }
 
     @Override
-    public Future<Page<ApplicationUserParticipantIdentity>> searchApplicationUsers(String searchText,
+    public Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
                                                                                   String organizationId,
                                                                                   String applicationId,
                                                                                   Pageable pageable) {
@@ -404,8 +404,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
         Validate.notBlank(subject, "subject cannot be blank");
         requireBindable(user);
+        ParticipantScope scope = DomainUtil.scopeOf(user);
         // checked before the user exists, so a bound identity leaves no user behind that no method signs in
-        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId()))
+        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, scope.organizationId(), scope.applicationId()))
                                 .compose(existing -> {
                                     if (existing != null) {
                                         throw new ExistingUserException("This identity already signs in another user");
@@ -427,14 +428,13 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         Future<Participant> ret;
         if (identity == null || !identity.isEnabled()) {
             ret = Future.succeededFuture();
-        } else if (identity instanceof OrganizationUserParticipantIdentity user) {
+        } else if (identity instanceof OrganizationParticipantIdentity user) {
             // a login answers a refused user the way it answers a wrong password, so the reason stays here
             ret = organizationId == null || applicationId != null
                     ? Future.succeededFuture()
                     : membershipService.resolveParticipant(user, organizationId)
                                        .recover(err -> err instanceof UserDisabledException ? Future.succeededFuture() : Future.failedFuture(err));
-        } else if (!Objects.equals(identity.getOrganizationId(), organizationId)
-                || !Objects.equals(identity.getApplicationId(), applicationId)) {
+        } else if (!actsIn(identity, organizationId, applicationId)) {
             ret = Future.succeededFuture();
         } else if (identity instanceof DelegatingParticipantIdentity delegate) {
             // a delegate wields its owner's authority in the delegate's scope, so revoking the owner there
@@ -447,6 +447,12 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         return ret;
     }
 
+    // a system user acts in the SYSTEM scope, and a scoped identity in the scope it carries
+    private static boolean actsIn(ParticipantIdentity identity, String organizationId, String applicationId) {
+        ParticipantScope scope = DomainUtil.scopeOf(identity);
+        return Objects.equals(scope.organizationId(), organizationId) && Objects.equals(scope.applicationId(), applicationId);
+    }
+
     /**
      * Applies the owning application's tenant policy to a new APPLICATION-scope user: when the
      * platform manages the app's tenants and no explicit tenantId was supplied, a fresh UUID
@@ -455,19 +461,19 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
      * createUser accepts caller-supplied ids of any shape; a dedicated UUID keeps tenant
      * identity decoupled from id semantics.
      */
-    private Future<UserParticipantIdentity> applyTenantPolicy(UserParticipantIdentity user) {
-        if (user.getApplicationId() == null || user.getTenantId() != null) {
+    private <T extends UserParticipantIdentity> Future<T> applyTenantPolicy(T user) {
+        if (!(user instanceof ApplicationParticipantIdentity applicationUser) || applicationUser.getTenantId() != null) {
             return Future.succeededFuture(user);
         }
-        return applicationRepository.findById(user.getApplicationId(), user.getOrganizationId())
+        return applicationRepository.findById(applicationUser.getApplicationId(), applicationUser.getOrganizationId())
                 .map(app -> {
                     if (app == null) {
                         throw new IllegalArgumentException(
-                                "Application " + user.getApplicationId() + " not found in organization "
-                                + user.getOrganizationId());
+                                "Application " + applicationUser.getApplicationId() + " not found in organization "
+                                + applicationUser.getOrganizationId());
                     }
                     if (app.getTenantManagement() == TenantManagement.PLATFORM) {
-                        user.setTenantId(UUID.randomUUID().toString());
+                        applicationUser.setTenantId(UUID.randomUUID().toString());
                     }
                     return user;
                 });

@@ -11,8 +11,8 @@ import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.PendingInvite;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.InviteService;
@@ -73,7 +73,7 @@ public class InvitationTests extends KinoticTestBase {
     @Test
     public void anInvitationIsRefusedForAnEmailAlreadyAMemberOfTheOrganization() throws Exception {
         String email = "member-" + suffix() + "@example.test";
-        OrganizationUserParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing member"), PASSWORD));
+        OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing member"), PASSWORD));
         await(memberships.addMembership(user.getId(), organization.getId()));
 
         Throwable refusal = failure(() -> invites.createInvite(invite(email)));
@@ -86,7 +86,7 @@ public class InvitationTests extends KinoticTestBase {
         String email = "disabled-" + suffix() + "@example.test";
         PendingInvite invite = await(invites.createInvite(invite(email)));
         // the organization user joins and is disabled in the organization while the invitation is still out
-        OrganizationUserParticipantIdentity user = await(identities.createUser(organizationUser(email, "Disabled member"), PASSWORD));
+        OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Disabled member"), PASSWORD));
         await(memberships.addMembership(user.getId(), organization.getId()));
         await(memberships.setMembershipEnabled(user.getId(), organization.getId(), false));
 
@@ -100,7 +100,7 @@ public class InvitationTests extends KinoticTestBase {
     @Test
     public void aSystemUsersEmailJoinsAnOrganizationAsAnOrganizationUserWithItsOwnPassword() throws Exception {
         String email = "both-" + suffix() + "@example.test";
-        SystemUserParticipantIdentity systemUser = new SystemUserParticipantIdentity();
+        SystemParticipantIdentity systemUser = new SystemParticipantIdentity();
         systemUser.setEmail(email).setDisplayName("Sam System");
         await(identities.createUser(systemUser, SYSTEM_USER_PASSWORD));
 
@@ -120,7 +120,7 @@ public class InvitationTests extends KinoticTestBase {
     public void memberSearchIsHeldToTheOrganizationsMembers() throws Exception {
         // one token, so the search matches these two organization users and nothing another test created
         String name = "zq" + suffix();
-        OrganizationUserParticipantIdentity member = await(identities.createUser(organizationUser("zq-member-" + suffix() + "@example.test", name), PASSWORD));
+        OrganizationParticipantIdentity member = await(identities.createUser(organizationUser("zq-member-" + suffix() + "@example.test", name), PASSWORD));
         await(identities.createUser(organizationUser("zq-other-" + suffix() + "@example.test", name), PASSWORD));
         await(memberships.addMembership(member.getId(), TEST_ORG_ID));
 
@@ -140,8 +140,8 @@ public class InvitationTests extends KinoticTestBase {
         return invite;
     }
 
-    private static OrganizationUserParticipantIdentity organizationUser(String email, String displayName) {
-        OrganizationUserParticipantIdentity user = new OrganizationUserParticipantIdentity();
+    private static OrganizationParticipantIdentity organizationUser(String email, String displayName) {
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
         user.setEmail(email);
         user.setDisplayName(displayName);
         return user;

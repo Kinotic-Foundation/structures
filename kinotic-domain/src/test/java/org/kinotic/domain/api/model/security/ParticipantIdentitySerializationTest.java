@@ -3,9 +3,9 @@ package org.kinotic.domain.api.model.security;
 import org.junit.jupiter.api.Test;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -24,19 +24,19 @@ class ParticipantIdentitySerializationTest {
 
     @Test
     void eachKindOfUserRoundTripsThroughBaseClassWithItsOwnTypeDiscriminator() {
-        SystemUserParticipantIdentity systemUser = new SystemUserParticipantIdentity();
+        SystemParticipantIdentity systemUser = new SystemParticipantIdentity();
         systemUser.setEmail("jane@example.com").setId("system-user-1");
-        OrganizationUserParticipantIdentity organizationUser = new OrganizationUserParticipantIdentity();
+        OrganizationParticipantIdentity organizationUser = new OrganizationParticipantIdentity();
         organizationUser.setEmail("jane@example.com").setId("organization-user-1");
-        ApplicationUserParticipantIdentity applicationUser = new ApplicationUserParticipantIdentity();
-        applicationUser.setEmail("jane@example.com")
-                       .setOrganizationId("acme")
+        ApplicationParticipantIdentity applicationUser = new ApplicationParticipantIdentity();
+        applicationUser.setOrganizationId("acme")
                        .setApplicationId("orders")
+                       .setEmail("jane@example.com")
                        .setId("application-user-1");
 
-        assertRoundTrips(systemUser, "SYSTEM_USER", SystemUserParticipantIdentity.class);
-        assertRoundTrips(organizationUser, "ORGANIZATION_USER", OrganizationUserParticipantIdentity.class);
-        ApplicationUserParticipantIdentity read = assertRoundTrips(applicationUser, "APPLICATION_USER", ApplicationUserParticipantIdentity.class);
+        assertRoundTrips(systemUser, "SYSTEM_USER", SystemParticipantIdentity.class);
+        assertRoundTrips(organizationUser, "ORGANIZATION_USER", OrganizationParticipantIdentity.class);
+        ApplicationParticipantIdentity read = assertRoundTrips(applicationUser, "APPLICATION_USER", ApplicationParticipantIdentity.class);
         assertEquals("acme", read.getOrganizationId());
         assertEquals("orders", read.getApplicationId());
     }
@@ -57,8 +57,8 @@ class ParticipantIdentitySerializationTest {
         delegate.setOwnerId("user-1")
                 .setClientKey("https://claude.ai/oauth/claude-code-client-metadata")
                 .setDelegateType(DelegateType.MCP_CLIENT)
-                .setDisplayName("Claude Code")
                 .setOrganizationId("acme")
+                .setDisplayName("Claude Code")
                 .setId("delegate-1");
 
         String json = jsonMapper.writeValueAsString(delegate);

@@ -18,8 +18,10 @@ import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
+import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.KinoticAudience;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -272,11 +274,14 @@ public abstract class AuthEndpointSupport {
         if (identity instanceof UserParticipantIdentity user) {
             claims.put("email", user.getEmail());
         }
-        if (identity.getOrganizationId() != null) {
-            claims.put("organizationId", identity.getOrganizationId());
-        }
-        if (identity.getApplicationId() != null) {
-            claims.put("applicationId", identity.getApplicationId());
+        if (identity instanceof ScopedParticipantIdentity scoped) {
+            ParticipantScope scope = scoped.scope();
+            if (scope.organizationId() != null) {
+                claims.put("organizationId", scope.organizationId());
+            }
+            if (scope.applicationId() != null) {
+                claims.put("applicationId", scope.applicationId());
+            }
         }
         return jwtIssuer.sign(claims, new JWTOptions().setExpiresInSeconds(ACCESS_TOKEN_TTL_SECONDS), audience);
     }
@@ -465,12 +470,12 @@ public abstract class AuthEndpointSupport {
      */
     public void completeOidcLogin(RoutingContext ctx,
                                   CallbackResult<? extends OidcConfiguration> result,
-                                  Function<String, Future<ApplicationUserParticipantIdentity>> userLookup,
-                                  Supplier<Future<ApplicationUserParticipantIdentity>> newUser) {
+                                  Function<String, Future<ApplicationParticipantIdentity>> userLookup,
+                                  Supplier<Future<ApplicationParticipantIdentity>> newUser) {
         String sub = verifiedSubject(ctx, result);
         if (sub != null) {
-            Future<ApplicationUserParticipantIdentity> user = userLookup.apply(sub).compose(found -> {
-                Future<ApplicationUserParticipantIdentity> ret;
+            Future<ApplicationParticipantIdentity> user = userLookup.apply(sub).compose(found -> {
+                Future<ApplicationParticipantIdentity> ret;
                 if (found == null && result.config() instanceof OwnedOidcConfiguration owned && owned.isCreateUserOnSignIn()) {
                     ret = newUser.get().compose(template -> template == null
                             ? Future.succeededFuture()
@@ -488,7 +493,7 @@ public abstract class AuthEndpointSupport {
      * The participant an application's user signs in as, itself; a disabled user fails the sign-in with
      * {@link OidcErrorCodes#USER_DISABLED}.
      */
-    public static Participant participantOf(ApplicationUserParticipantIdentity user) {
+    public static Participant participantOf(ApplicationParticipantIdentity user) {
         if (!user.isEnabled()) {
             throw new OidcCallbackException(OidcErrorCodes.USER_DISABLED);
         }
@@ -502,12 +507,12 @@ public abstract class AuthEndpointSupport {
      * {@link OidcErrorCodes#USER_EXISTS}, and an identity whose provider asserts no email with
      * {@link OidcErrorCodes#INVALID_TOKEN}.
      */
-    public Future<ApplicationUserParticipantIdentity> createUserFromClaims(ApplicationUserParticipantIdentity template,
+    public Future<ApplicationParticipantIdentity> createUserFromClaims(ApplicationParticipantIdentity template,
                                                                 String sub,
                                                                 CallbackResult<? extends OidcConfiguration> result) {
         Map<String, Object> claims = result.claims();
         String email = OAuth2Util.stringClaim(claims, "email");
-        Future<ApplicationUserParticipantIdentity> ret;
+        Future<ApplicationParticipantIdentity> ret;
         if (email == null) {
             ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.INVALID_TOKEN));
         } else {

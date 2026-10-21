@@ -11,7 +11,7 @@ import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
 
 /**
- * Login route for system users ({@code SystemUserParticipantIdentity}). Password-only:
+ * Login route for system users ({@code SystemParticipantIdentity}). Password-only:
  * system users are provisioned by Kinotic, so there is no signup, SSO, or social path. On success the browser
  * session is established; the STOMP WebSocket handshake then authenticates from that session cookie.
  */

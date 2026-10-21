@@ -7,7 +7,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
@@ -119,7 +119,7 @@ public class DefaultSignUpService implements SignUpService {
      * user that cannot be.
      */
     private Future<Void> requireNoOrganizationUser(PendingSignUp pending) {
-        Future<OrganizationUserParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
+        Future<OrganizationParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
                 ? identityService.findOrganizationUserByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject())
                 : Future.succeededFuture();
         return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findOrganizationUserByEmail(pending.getEmail()))
@@ -138,12 +138,12 @@ public class DefaultSignUpService implements SignUpService {
      */
     private Future<Participant> createOrgWithFounder(String orgName, String orgDescription, PendingSignUp pending, String password) {
         Organization org = new Organization().setName(orgName).setDescription(orgDescription);
-        OrganizationUserParticipantIdentity user = new OrganizationUserParticipantIdentity();
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
         user.setEmail(pending.getEmail())
             .setDisplayName(pending.getDisplayName());
         return organizationService.create(org)
                 .compose(savedOrg -> {
-                    Future<OrganizationUserParticipantIdentity> created = pending.getAuthType() == AuthType.OIDC
+                    Future<OrganizationParticipantIdentity> created = pending.getAuthType() == AuthType.OIDC
                             ? identityService.createOidcUser(user, pending.getOidcConfigId(), pending.getOidcSubject())
                             : identityService.createUser(user, password);
                     return created

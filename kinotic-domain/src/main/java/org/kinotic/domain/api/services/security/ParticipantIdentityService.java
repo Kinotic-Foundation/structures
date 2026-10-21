@@ -13,9 +13,9 @@ import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 
 import java.util.List;
@@ -23,26 +23,26 @@ import java.util.List;
 public interface ParticipantIdentityService extends IdentifiableCrudService<ParticipantIdentity, String> {
 
     /** The system user with the email, or {@code null}. */
-    Future<SystemUserParticipantIdentity> findSystemUserByEmail(String email);
+    Future<SystemParticipantIdentity> findSystemUserByEmail(String email);
 
     /** The organization user with the email, or {@code null}. */
-    Future<OrganizationUserParticipantIdentity> findOrganizationUserByEmail(String email);
+    Future<OrganizationParticipantIdentity> findOrganizationUserByEmail(String email);
 
     /** The user of application {@code applicationId} of organization {@code organizationId} with the email, or {@code null}. */
-    Future<ApplicationUserParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId);
+    Future<ApplicationParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId);
 
     /**
      * The organization user the OIDC identity {@code (oidcConfigId, subject)} is bound to, or {@code null}. A provider
      * identity binds to one organization user, which signs in to each organization it holds a membership of.
      */
-    Future<OrganizationUserParticipantIdentity> findOrganizationUserByOidcIdentity(String oidcConfigId, String subject);
+    Future<OrganizationParticipantIdentity> findOrganizationUserByOidcIdentity(String oidcConfigId, String subject);
 
     /**
      * The user of application {@code applicationId} of organization {@code organizationId} the OIDC identity
      * {@code (oidcConfigId, subject)} is bound to, or {@code null}. A provider identity binds to one user of each
      * application.
      */
-    Future<ApplicationUserParticipantIdentity> findApplicationUserByOidcIdentity(String oidcConfigId,
+    Future<ApplicationParticipantIdentity> findApplicationUserByOidcIdentity(String oidcConfigId,
                                                                                  String subject,
                                                                                  String organizationId,
                                                                                  String applicationId);
@@ -103,19 +103,19 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
     Future<Void> setPassword(String identityId, String password);
 
     /** The system users. */
-    Future<Page<SystemUserParticipantIdentity>> findSystemUsers(Pageable pageable);
+    Future<Page<SystemParticipantIdentity>> findSystemUsers(Pageable pageable);
 
     /** The system users whose email or display name matches {@code searchText}; blank text lists them all. */
-    Future<Page<SystemUserParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable);
+    Future<Page<SystemParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable);
 
     /** The users of application {@code applicationId} of organization {@code organizationId}. */
-    Future<Page<ApplicationUserParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable);
+    Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable);
 
     /**
      * The users of the application whose email or display name matches {@code searchText}; blank text lists them
      * all, as {@link #findApplicationUsers} does.
      */
-    Future<Page<ApplicationUserParticipantIdentity>> searchApplicationUsers(String searchText,
+    Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
                                                                            String organizationId,
                                                                            String applicationId,
                                                                            Pageable pageable);

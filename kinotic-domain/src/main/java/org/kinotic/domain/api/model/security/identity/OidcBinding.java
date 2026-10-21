@@ -9,7 +9,7 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * A sign-in method of an {@link OrganizationUserParticipantIdentity} or an {@link ApplicationUserParticipantIdentity}:
+ * A sign-in method of an {@link OrganizationParticipantIdentity} or an {@link ApplicationParticipantIdentity}:
  * the identity a provider asserts for the person, the {@code sub} claim under one OIDC configuration, bound to the
  * user it signs in. A user may hold any number of bindings beside its password. A provider identity is bound to at
  * most one organization user, and to at most one user of each application, so a person signs in to several

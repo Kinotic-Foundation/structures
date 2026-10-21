@@ -10,7 +10,7 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * An {@link OrganizationUserParticipantIdentity}'s membership of one organization: an organization the user may
+ * An {@link OrganizationParticipantIdentity}'s membership of one organization: an organization the user may
  * sign in to, and the user's standing there. A person has one organization user and any number of memberships, so
  * one email, one password and one GitHub binding reach every organization the person belongs to. A membership can
  * be disabled or removed by its organization without touching the organization user or its other memberships.

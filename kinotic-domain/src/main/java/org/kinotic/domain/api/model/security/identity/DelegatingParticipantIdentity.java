@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.DelegateType;
 
 /**
@@ -17,11 +18,20 @@ import org.kinotic.domain.api.model.security.DelegateType;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class DelegatingParticipantIdentity extends ParticipantIdentity {
+public final class DelegatingParticipantIdentity extends ParticipantIdentity implements ScopedParticipantIdentity {
+
+    /** The organization of the scope the owner authorized the client in, or {@code null} for SYSTEM. */
+    private String organizationId;
+
+    /** The application of the scope the owner authorized the client in, or {@code null} unless APPLICATION. */
+    private String applicationId;
+
+    /** The owner's tenant when the owner is a user of an application with tenants, else {@code null}. */
+    private String tenantId;
 
     /**
      * Id of the {@link UserParticipantIdentity} this delegate acts on behalf of; for an organization user, the
-     * delegate acts in the one organization its own {@code organizationId} names.
+     * delegate acts in the one organization its own {@link #organizationId} names.
      */
     private String ownerId;
 
@@ -36,6 +46,11 @@ public final class DelegatingParticipantIdentity extends ParticipantIdentity {
      * The type of client this delegate represents.
      */
     private DelegateType delegateType;
+
+    @Override
+    public ParticipantScope scope() {
+        return new ParticipantScope(organizationId, applicationId, tenantId);
+    }
 
     @Override
     public ParticipantIdentityType getType() {

@@ -2,9 +2,8 @@ import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentit
 import { UserParticipantIdentity } from '@/api/model/security/UserParticipantIdentity'
 
 /**
- * A Kinotic OS user who signs in to the system console with a password. Carries no organizationId or
- * applicationId, and is unique by email among system users.
+ * A Kinotic OS user who signs in to the system console with a password; unique by email among system users.
  */
-export class SystemUserParticipantIdentity extends UserParticipantIdentity {
+export class SystemParticipantIdentity extends UserParticipantIdentity {
     public readonly type: ParticipantIdentityType.SYSTEM_USER = ParticipantIdentityType.SYSTEM_USER
 }

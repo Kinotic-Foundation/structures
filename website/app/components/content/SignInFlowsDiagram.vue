@@ -361,7 +361,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
     </svg>
 
     <!-- ═══════════════════════════ IDENTITY: the identity and participant classes ═══════════════════════════ -->
-    <svg v-else-if="figure === 'identity'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 884" role="img" aria-label="UML class diagram. ParticipantIdentity, sealed and abstract, holds id, displayName, organizationId, applicationId, tenantId, enabled and timestamps, and getType returns the ParticipantIdentityType discriminator. Three subclasses: UserParticipantIdentity, sealed and abstract, with email; DelegatingParticipantIdentity with ownerId, clientKey and delegateType; and MachineParticipantIdentity with machineType. A delegate's ownerId points at a user. UserParticipantIdentity has three final subclasses, one per scope: SystemUserParticipantIdentity, OrganizationUserParticipantIdentity and ApplicationUserParticipantIdentity. Every user has zero or one IdentityCredential, organization and application users zero or more OidcBinding rows, and an organization user zero or more OrganizationMembership rows. Below, the sealed ScopedParticipant interface extending the core Participant, with SystemParticipant, OrganizationParticipant and ApplicationParticipant, and the arrow from identity plus scope to participant through resolveParticipant.">
+    <svg v-else-if="figure === 'identity'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 884" role="img" aria-label="UML class diagram. ParticipantIdentity, sealed and abstract, holds id, displayName, enabled and timestamps, and getType returns the ParticipantIdentityType discriminator. ApplicationParticipantIdentity, DelegatingParticipantIdentity and MachineParticipantIdentity implement the sealed ScopedParticipantIdentity interface and carry organizationId and applicationId, and an application user and a delegate a tenantId too. Three subclasses: UserParticipantIdentity, sealed and abstract, with email; DelegatingParticipantIdentity with ownerId, clientKey and delegateType; and MachineParticipantIdentity with machineType. A delegate's ownerId points at a user. UserParticipantIdentity has three final subclasses, one per scope: SystemParticipantIdentity, OrganizationParticipantIdentity and ApplicationParticipantIdentity. Every user has zero or one IdentityCredential, organization and application users zero or more OidcBinding rows, and an organization user zero or more OrganizationMembership rows. Below, the sealed ScopedParticipant interface extending the core Participant, with SystemParticipant, OrganizationParticipant and ApplicationParticipant, and the arrow from identity plus scope to participant through resolveParticipant.">
       <defs>
         <marker id="si5-gen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto"><polygon class="mk-gen" points="1,1 11,6 1,11"></polygon></marker>
         <marker id="si5-mut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon class="mk-mut" points="0,0 10,5 0,10"></polygon></marker>
@@ -374,14 +374,12 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-name" x="590" y="64" text-anchor="middle">ParticipantIdentity</text>
       <line class="sep" x1="440" y1="72" x2="740" y2="72"></line>
       <text class="t-attr" x="452" y="90">id: String · displayName: String</text>
-      <text class="t-attr" x="452" y="106">organizationId: String</text>
-      <text class="t-attr" x="452" y="122">applicationId: String</text>
-      <text class="t-attr" x="452" y="138">tenantId: String</text>
-      <text class="t-attr" x="452" y="154">enabled: boolean · created, updated: Date</text>
-      <line class="sep" x1="440" y1="164" x2="740" y2="164"></line>
-      <text class="t-attr" x="452" y="182">getType(): ParticipantIdentityType</text>
-      <text class="t-attr-mut" x="452" y="198">scope is structural: none → system,</text>
-      <text class="t-attr-mut" x="452" y="214">org → organization, org + app → application</text>
+      <text class="t-attr" x="452" y="106">enabled: boolean · created, updated: Date</text>
+      <line class="sep" x1="440" y1="116" x2="740" y2="116"></line>
+      <text class="t-attr" x="452" y="134">getType(): ParticipantIdentityType</text>
+      <text class="t-attr-mut" x="452" y="166">a «ScopedParticipantIdentity» carries its</text>
+      <text class="t-attr-mut" x="452" y="182">scope: none → system, org → organization,</text>
+      <text class="t-attr-mut" x="452" y="198">org + app → application; scope() returns it</text>
 
       <text class="t-attr-mut" x="760" y="100">the sign-in methods are rows of</text>
       <text class="t-attr-mut" x="760" y="116">their own: a credential, bindings;</text>
@@ -406,7 +404,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-attr" x="432" y="350">ownerId: String · clientKey: String</text>
       <text class="t-attr" x="432" y="366">delegateType: DelegateType</text>
       <text class="t-attr" x="432" y="382">  {CLI, MCP_CLIENT}</text>
-      <text class="t-attr-mut" x="432" y="402">scope = the approving login</text>
+      <text class="t-attr" x="432" y="398">organizationId, applicationId, tenantId</text>
 
       <rect class="cls" x="800" y="290" width="340" height="122" rx="4"></rect>
       <text class="t-ster" x="970" y="308" text-anchor="middle">«final»</text>
@@ -414,6 +412,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="800" y1="332" x2="1140" y2="332"></line>
       <text class="t-attr" x="812" y="350">machineType: MachineType</text>
       <text class="t-attr" x="812" y="366">  {CLIENT, PROJECT_SYNC, APP_RUNTIME}</text>
+      <text class="t-attr" x="812" y="382">organizationId, applicationId</text>
       <text class="t-attr-mut" x="812" y="402">credential: id + provisioned secret</text>
 
       <polyline class="gen" points="210,290 210,258 590,258 590,226" marker-end="url(#si5-gen)"></polyline>
@@ -426,24 +425,25 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <!-- one kind of user per scope -->
       <rect class="cls" x="40" y="460" width="340" height="92" rx="4"></rect>
       <text class="t-ster" x="210" y="478" text-anchor="middle">«final»</text>
-      <text class="t-name" x="210" y="494" text-anchor="middle">SystemUserParticipantIdentity</text>
+      <text class="t-name" x="210" y="494" text-anchor="middle">SystemParticipantIdentity</text>
       <line class="sep" x1="40" y1="502" x2="380" y2="502"></line>
-      <text class="t-attr" x="52" y="520">SYSTEM_USER · no org, no app</text>
+      <text class="t-attr" x="52" y="520">SYSTEM_USER</text>
       <text class="t-attr-mut" x="52" y="538">the system console, password only</text>
 
       <rect class="cls" x="420" y="460" width="340" height="92" rx="4"></rect>
       <text class="t-ster" x="590" y="478" text-anchor="middle">«final»</text>
-      <text class="t-name" x="590" y="494" text-anchor="middle">OrganizationUserParticipantIdentity</text>
+      <text class="t-name" x="590" y="494" text-anchor="middle">OrganizationParticipantIdentity</text>
       <line class="sep" x1="420" y1="502" x2="760" y2="502"></line>
-      <text class="t-attr" x="432" y="520">ORGANIZATION_USER · no org, no app</text>
+      <text class="t-attr" x="432" y="520">ORGANIZATION_USER</text>
       <text class="t-attr-mut" x="432" y="538">acts through its memberships</text>
 
       <rect class="cls" x="800" y="460" width="340" height="92" rx="4"></rect>
       <text class="t-ster" x="970" y="478" text-anchor="middle">«final»</text>
-      <text class="t-name" x="970" y="494" text-anchor="middle">ApplicationUserParticipantIdentity</text>
+      <text class="t-name" x="970" y="494" text-anchor="middle">ApplicationParticipantIdentity</text>
       <line class="sep" x1="800" y1="502" x2="1140" y2="502"></line>
-      <text class="t-attr" x="812" y="520">APPLICATION_USER · org + app (+ tenant)</text>
-      <text class="t-attr-mut" x="812" y="538">acts in its application only</text>
+      <text class="t-attr" x="812" y="520">APPLICATION_USER · organizationId,</text>
+      <text class="t-attr" x="812" y="536">applicationId, tenantId</text>
+      <text class="t-attr-mut" x="812" y="548">acts in its application only</text>
 
       <polyline class="gen" points="210,460 210,436 210,412" marker-end="url(#si5-gen)"></polyline>
       <polyline class="gen" points="590,460 590,436 210,436"></polyline>
@@ -536,7 +536,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <!-- organization user -->
       <rect class="chip-ind" x="420" y="50" width="300" height="172" rx="8"></rect>
       <text class="t-name" x="570" y="76" text-anchor="middle">Jane's organization user</text>
-      <text class="t-sub" x="570" y="94" text-anchor="middle">OrganizationUserParticipantIdentity u-jane</text>
+      <text class="t-sub" x="570" y="94" text-anchor="middle">OrganizationParticipantIdentity u-jane</text>
       <line class="sep" x1="436" y1="106" x2="704" y2="106"></line>
       <text class="t-mono-ink" x="570" y="128" text-anchor="middle">organizationId: null · applicationId: null</text>
       <text class="t-mono-ink" x="570" y="146" text-anchor="middle">email: jane@acme.com</text>
@@ -598,7 +598,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <!-- the other scopes' users -->
       <rect class="chip-vio" x="40" y="432" width="1060" height="54" rx="8"></rect>
-      <text class="t-chip" x="56" y="454">Jane as a system user, or as a user of acme--orders, is another row each: SystemUserParticipantIdentity · ApplicationUserParticipantIdentity acme/orders</text>
+      <text class="t-chip" x="56" y="454">Jane as a system user, or as a user of acme--orders, is another row each: SystemParticipantIdentity · ApplicationParticipantIdentity acme/orders</text>
       <text class="t-tiny" x="56" y="472">each with its own password, no memberships; one signs in at the system console only, the other at acme--orders.apps-api.kinotic.io only, and the organization user grants nothing at either</text>
 
       <!-- the rule -->

@@ -4,9 +4,9 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
@@ -23,19 +23,19 @@ public class DefaultLocalAuthenticationService implements LocalAuthenticationSer
     private final ParticipantIdentityRepository identityRepository;
 
     @Override
-    public Future<SystemUserParticipantIdentity> authenticateSystemUser(String email, String password) {
+    public Future<SystemParticipantIdentity> authenticateSystemUser(String email, String password) {
         requireCredentials(email, password);
         return identityRepository.findSystemUserByEmail(email).compose(user -> verify(user, password));
     }
 
     @Override
-    public Future<OrganizationUserParticipantIdentity> authenticateOrganizationUser(String email, String password) {
+    public Future<OrganizationParticipantIdentity> authenticateOrganizationUser(String email, String password) {
         requireCredentials(email, password);
         return identityRepository.findOrganizationUserByEmail(email).compose(user -> verify(user, password));
     }
 
     @Override
-    public Future<ApplicationUserParticipantIdentity> authenticateApplicationUser(String email, String password,
+    public Future<ApplicationParticipantIdentity> authenticateApplicationUser(String email, String password,
                                                                                 String organizationId, String applicationId) {
         requireCredentials(email, password);
         return identityRepository.findApplicationUserByEmail(email, organizationId, applicationId).compose(user -> verify(user, password));

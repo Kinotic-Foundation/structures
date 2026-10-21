@@ -6,7 +6,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 
 import java.util.List;
 
@@ -50,7 +50,7 @@ public interface OrganizationMembershipService {
      * @return fails with {@link org.kinotic.domain.api.exceptions.UserDisabledException} when the user or its
      *         membership is disabled
      */
-    Future<Participant> resolveParticipant(OrganizationUserParticipantIdentity user, String organizationId);
+    Future<Participant> resolveParticipant(OrganizationParticipantIdentity user, String organizationId);
 
     /**
      * Enables or disables organization user {@code organizationUserId}'s membership of the organization. A disabled

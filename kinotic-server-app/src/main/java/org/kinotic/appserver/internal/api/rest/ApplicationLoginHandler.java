@@ -13,7 +13,7 @@ import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
-import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
 /**
  * Login routes for end-users of an application built on Kinotic, served at the application's own API host.
  * Distinct from the org-login handler: the user is logging into an application's own user base (an
- * {@link ApplicationUserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
+ * {@link ApplicationParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
  * not into the platform-managed org admin surface. The application is the one whose API host the request
  * was addressed to, a login is made only from a page that is one of that application's UIs, and a login
  * from one of a tenant's sites, or one naming a tenant, is to that tenant: it admits the tenant's users and
@@ -176,9 +176,9 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     // the unsaved user an unknown identity becomes, or null when the scope admits no new user: a tenant admits one
     // through its own configuration only, and an application only while the platform assigns the user's tenant
-    private Future<ApplicationUserParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
+    private Future<ApplicationParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
         ApplicationKey applicationKey = scope.application();
-        Future<ApplicationUserParticipantIdentity> ret;
+        Future<ApplicationParticipantIdentity> ret;
         if (scope.tenantId() != null) {
             ret = Future.succeededFuture(config instanceof TenantOidcConfiguration ? newUser(applicationKey, scope.tenantId()) : null);
         } else {
@@ -189,8 +189,8 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         return ret;
     }
 
-    private static ApplicationUserParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
-        ApplicationUserParticipantIdentity ret = new ApplicationUserParticipantIdentity();
+    private static ApplicationParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
+        ApplicationParticipantIdentity ret = new ApplicationParticipantIdentity();
         ret.setOrganizationId(applicationKey.organizationId())
            .setApplicationId(applicationKey.applicationId())
            .setTenantId(tenantId);

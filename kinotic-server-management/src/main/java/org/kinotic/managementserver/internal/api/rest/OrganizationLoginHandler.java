@@ -21,7 +21,7 @@ import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -330,7 +330,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private void completeLandingLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
-            Future<OrganizationUserParticipantIdentity> user = identityService.findOrganizationUserByOidcIdentity(result.config().getId(), sub);
+            Future<OrganizationParticipantIdentity> user = identityService.findOrganizationUserByOidcIdentity(result.config().getId(), sub);
             user.compose(found -> found == null
                         ? Future.succeededFuture(List.<OrganizationMembership>of())
                         : membershipService.findMemberships(found.getId()).map(memberships -> enabledMemberships(found, memberships)))
@@ -341,7 +341,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     // the enabled memberships of organizations the user may sign in to; a user that is disabled, or whose every
     // membership is, has none and is told so, as the organization's own login would tell it
-    private static List<OrganizationMembership> enabledMemberships(OrganizationUserParticipantIdentity user, List<OrganizationMembership> memberships) {
+    private static List<OrganizationMembership> enabledMemberships(OrganizationParticipantIdentity user, List<OrganizationMembership> memberships) {
         List<OrganizationMembership> enabled = user.isEnabled() ? memberships.stream().filter(OrganizationMembership::isEnabled).toList() : List.of();
         if (enabled.isEmpty() && !memberships.isEmpty()) {
             throw new OidcCallbackException(OidcErrorCodes.USER_DISABLED);
@@ -352,7 +352,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     // an organization user that is a member of several organizations has proven who it is, so the landing page may
     // offer those organizations for the person to choose from, where a stranger learns nothing; the page
     // that started the sign-in reads them from handleChoices, so the redirect itself carries no ids
-    private void signInOrOffer(RoutingContext ctx, String origin, OrganizationUserParticipantIdentity user, List<OrganizationMembership> memberships) {
+    private void signInOrOffer(RoutingContext ctx, String origin, OrganizationParticipantIdentity user, List<OrganizationMembership> memberships) {
         if (memberships.size() > 1) {
             // read without being removed, since a concurrent request on the session would make the removal
             // unreliable: the offer expires by its timestamp and ends when the page starts an organization's login
@@ -400,7 +400,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * The participant {@code user} signs in to organization {@code orgId} as, or {@code null} when it is not a
      * member; a disabled user or membership fails the sign-in with {@link OidcErrorCodes#USER_DISABLED}.
      */
-    private Future<Participant> memberOf(OrganizationUserParticipantIdentity user, String orgId) {
+    private Future<Participant> memberOf(OrganizationParticipantIdentity user, String orgId) {
         return user == null ? Future.succeededFuture() : refusingDisabled(membershipService.resolveParticipant(user, orgId));
     }
 

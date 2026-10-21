@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
-import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.exceptions.UserDisabledException;
@@ -90,7 +90,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   // the holder of the invitation owns the invited email, so telling them an organization user exists for
                   // it tells a stranger nothing; the page then asks for that user's password, or, when it has none,
                   // for the provider it is bound to, instead of a new password
-                  Future<OrganizationUserParticipantIdentity> user = invite.getApplicationId() != null
+                  Future<OrganizationParticipantIdentity> user = invite.getApplicationId() != null
                           ? Future.succeededFuture()
                           : identityService.findOrganizationUserByEmail(invite.getEmail());
                   Future<Boolean> userHasPassword = user.compose(found -> found == null
