@@ -102,7 +102,11 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
         ProjectDeployment
       </code>
       
-       before any workload runs, since the microservice workers place their VMs on its node
+       before any workload runs, since the microservice workers place their VMs on its node. <code>
+        Store.state(DEPLOY_TARGET)
+      </code>
+      
+      : later tasks inject it, and a resume replays the node choice
     </td>
   </tr>
   
@@ -120,7 +124,7 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
         kinotic sync --publish
       </code>
       
-       · build UIs · report artifacts and the dependency hash · write the sentinel (still last)
+       · build UIs · report artifacts and the dependency hash · write the sentinel (still last). Shows the sync workload's log from its start
     </td>
   </tr>
   
@@ -139,8 +143,10 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
       </code>
       
        the sync VM reported for the commit into the run; fails when the record names another commit. <code>
-        Store.state(ARTIFACTS).wire()
+        Store.state(ARTIFACTS)
       </code>
+      
+      , injected by every later task; shows the artifacts on completion
     </td>
   </tr>
   
@@ -156,10 +162,6 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
     <td>
       one VM per microservice artifact with one machine identity each; running ones restart on the sentinel, ended ones are replaced, missing ones created, vanished ones marked <code>
         ORPHANED
-      </code>
-      
-      . <code>
-        Store.state(MICROSERVICE_DEPLOYMENTS).wire()
       </code>
     </td>
   </tr>
@@ -178,9 +180,7 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
         ORPHANED
       </code>
       
-      . <code>
-        Store.state(UI_DEPLOYMENTS).wire()
-      </code>
+      . Shows the publish workload's log from its start
     </td>
   </tr>
   
@@ -214,11 +214,7 @@ records it on `ProjectDeployment` and applies the same name rule to what it is t
         ProjectArtifactService.recordSbom
       </code>
       
-       → verify the flag is set; otherwise nothing runs. <code>
-        Store.state(SBOM).wire()
-      </code>
-      
-      , whether the run generated the SBOM
+       → verify the flag is set; otherwise nothing runs. Shows the SBOM workload's log from its start, and on completion whether the run generated the SBOM
     </td>
   </tr>
 </tbody>
@@ -376,9 +372,9 @@ workload-runner, the naive rule above) and reports them through
 `ProjectArtifactService.recordArtifacts`, which records `artifacts`, the commit they were found
 in included, on `ProjectDeployment`. The deploy job's third task, **Resolve
 artifacts**, binds them into the run as a `ProjectArtifacts` (its `MicroserviceArtifact`s
-and `UiArtifact`s) under the `artifacts` store name, wired to watchers. The job run page
-of the portal and of the system console lists what the commit contains on that task's row,
-and the sync task's row expands into the build VM's log in both.
+and `UiArtifact`s) under the `artifacts` store name, and shows them as its completion view. The
+job run page of the portal and of the system console lists what the commit contains on that
+task's row, and the sync task's row expands into the build VM's log in both.
 - **One VM per microservice.** `MicroserviceDeployment` rows, keyed `<projectId>:<name>` so
 the store enforces one per microservice, record each microservice's workload, machine
 identity, entry point and commit. The deploy job's fourth task, **Ensure runtime workloads**,
