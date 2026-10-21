@@ -2352,7 +2352,15 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
         403
       </code>
       
-       otherwise); an organization member's session is established, while an application member signs in at the application
+       otherwise); an organization member's session is established, while an application member's response names the application's <code>
+        primaryUiUrl
+      </code>
+      
+       (<code>
+        null
+      </code>
+      
+       until the application designates a primary UI), where the accept page sends the browser to sign in
     </td>
   </tr>
   
