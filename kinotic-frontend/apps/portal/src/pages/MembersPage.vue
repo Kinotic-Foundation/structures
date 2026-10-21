@@ -121,7 +121,7 @@ import {
   type IterablePage,
   type Page
 } from '@kinotic-ai/core'
-import type { Member, PendingInviteSummary } from '@kinotic-ai/management-api'
+import type { ApplicationParticipantIdentity, OrganizationMember, PendingInviteSummary } from '@kinotic-ai/management-api'
 
 import { CrudTable, FormDrawer, MemberDetail, SteppingDrawer, TINTS, useSteppingDrawer,
          type MemberSummary } from '@kinotic-ai/frontend-common'
@@ -235,9 +235,7 @@ onMounted(async () => {
 })
 
 async function load(pageable: Pageable, searchText: string | null): Promise<IterablePage<DescriptiveIdentifiable>> {
-  const membersPage = searchText
-    ? await Kinotic.members.searchMembers(searchText, props.applicationId, pageable)
-    : await Kinotic.members.findMembers(props.applicationId, pageable)
+  const membersPage = await loadMembers(pageable, searchText)
 
   const invites = await Kinotic.members.findPendingInvites(props.applicationId, Pageable.create(0, 100, null))
   let inviteRows = (invites.content ?? []).map(invite => toInviteRow(invite))
@@ -257,12 +255,29 @@ async function load(pageable: Pageable, searchText: string | null): Promise<Iter
   }
 
   const page: Page<DescriptiveIdentifiable> = {
-    content: [...inviteRows, ...(membersPage.content ?? []).map(user => toMemberRow(user))],
+    content: [...inviteRows, ...(membersPage.content ?? [])],
     totalElements: (membersPage.totalElements ?? 0) + inviteTotal,
     cursor: undefined
   }
 
   return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
+}
+
+async function loadMembers(pageable: Pageable, searchText: string | null): Promise<Page<MemberRow>> {
+  const applicationId = props.applicationId
+  let ret: Page<MemberRow>
+  if (applicationId === null) {
+    const page = searchText
+      ? await Kinotic.members.searchMembers(searchText, pageable)
+      : await Kinotic.members.findMembers(pageable)
+    ret = { ...page, content: (page.content ?? []).map(member => toMemberRow(member)) }
+  } else {
+    const page = searchText
+      ? await Kinotic.members.searchApplicationUsers(searchText, applicationId, pageable)
+      : await Kinotic.members.findApplicationUsers(applicationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(user => toApplicationUserRow(user)) }
+  }
+  return ret
 }
 
 function pageNumberOf(pageable: Pageable): number {
@@ -280,7 +295,7 @@ function toInviteRow(invite: PendingInviteSummary): MemberRow {
   }
 }
 
-function toMemberRow(member: Member): MemberRow {
+function toMemberRow(member: OrganizationMember): MemberRow {
   return {
     id: member.id ?? '',
     email: member.email,
@@ -289,6 +304,18 @@ function toMemberRow(member: Member): MemberRow {
     created: member.joined,
     enabled: member.enabled,
     pending: member.pending
+  }
+}
+
+function toApplicationUserRow(user: ApplicationParticipantIdentity): MemberRow {
+  return {
+    id: user.id ?? '',
+    email: user.email,
+    displayName: user.displayName,
+    status: user.enabled ? 'Active' : 'Disabled',
+    created: user.created,
+    enabled: user.enabled,
+    pending: false
   }
 }
 

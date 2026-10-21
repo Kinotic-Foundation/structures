@@ -6,7 +6,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 
 /**
  * The platform's own members: the system users who sign in to the system console, and the
@@ -24,7 +24,7 @@ public interface SystemMemberService {
      * @param pageable the page settings to use
      * @return a page of system users
      */
-    Future<Page<Member>> findUsers(Pageable pageable);
+    Future<Page<SystemParticipantIdentity>> findUsers(Pageable pageable);
 
     /**
      * Searches the system users by email and display name.
@@ -33,7 +33,7 @@ public interface SystemMemberService {
      * @param pageable the page settings to use
      * @return a page of matching system users
      */
-    Future<Page<Member>> searchUsers(String searchText, Pageable pageable);
+    Future<Page<SystemParticipantIdentity>> searchUsers(String searchText, Pageable pageable);
 
     /**
      * Lists the platform's machines, disabled ones included.

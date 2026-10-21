@@ -10,7 +10,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.exceptions.UserDisabledException;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
@@ -75,7 +75,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     }
 
     @Override
-    public Future<Page<Member>> findMembers(String organizationId, Pageable pageable) {
+    public Future<Page<OrganizationMember>> findMembers(String organizationId, Pageable pageable) {
         return membershipRepository.findByOrganization(organizationId, pageable)
                                    .compose(page -> {
                                        List<String> ids = page.getContent().stream().map(OrganizationMembership::getOrganizationUserId).toList();
@@ -85,12 +85,12 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     }
 
     // the page's memberships joined with their organization users, in the page's order; a membership whose user is gone is left out
-    private static Page<Member> members(Page<OrganizationMembership> page, List<ParticipantIdentity> identities, Set<String> claimed) {
+    private static Page<OrganizationMember> members(Page<OrganizationMembership> page, List<ParticipantIdentity> identities, Set<String> claimed) {
         Map<String, OrganizationParticipantIdentity> byId = identities.stream()
                                                                           .filter(OrganizationParticipantIdentity.class::isInstance)
                                                                           .map(OrganizationParticipantIdentity.class::cast)
                                                                           .collect(Collectors.toMap(ParticipantIdentity::getId, Function.identity()));
-        List<Member> members = page.getContent().stream()
+        List<OrganizationMember> members = page.getContent().stream()
                                    .filter(membership -> byId.containsKey(membership.getOrganizationUserId()))
                                    .map(membership -> member(byId.get(membership.getOrganizationUserId()), membership,
                                                              claimed.contains(membership.getOrganizationUserId())))
@@ -98,8 +98,8 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
         return new Page<>(members, page.getTotalElements() - (page.getContent().size() - members.size()));
     }
 
-    private static Member member(OrganizationParticipantIdentity user, OrganizationMembership membership, boolean claimed) {
-        return new Member(user.getId(), user.getEmail(), user.getDisplayName(), membership.isEnabled(), membership.getCreated(), !claimed);
+    private static OrganizationMember member(OrganizationParticipantIdentity user, OrganizationMembership membership, boolean claimed) {
+        return new OrganizationMember(user.getId(), user.getEmail(), user.getDisplayName(), membership.isEnabled(), membership.getCreated(), !claimed);
     }
 
     // the organization users among ids that a sign-in method signs in: a password, or a provider identity bound to them
@@ -113,8 +113,8 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     }
 
     @Override
-    public Future<Page<Member>> searchMembers(String searchText, String organizationId, Pageable pageable) {
-        Future<Page<Member>> ret;
+    public Future<Page<OrganizationMember>> searchMembers(String searchText, String organizationId, Pageable pageable) {
+        Future<Page<OrganizationMember>> ret;
         if (searchText == null || searchText.isBlank()) {
             ret = findMembers(organizationId, pageable);
         } else {

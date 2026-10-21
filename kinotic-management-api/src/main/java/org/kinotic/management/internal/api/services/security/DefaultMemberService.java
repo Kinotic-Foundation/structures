@@ -7,7 +7,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
@@ -38,26 +38,28 @@ public class DefaultMemberService implements MemberService {
     private final ApplicationRepository applicationRepository;
 
     @Override
-    public Future<Page<Member>> findMembers(String applicationId, Pageable pageable) {
-        OrganizationParticipant participant = requireOrgParticipant();
-        // an application's members are its users; scope-composed query, so a foreign or unknown application matches nothing
-        return applicationId == null
-                ? membershipService.findMembers(participant.getOrganizationId(), pageable)
-                : identityService.findApplicationUsers(participant.getOrganizationId(), applicationId, pageable)
-                                 .map(page -> page.map(Member::of));
+    public Future<Page<OrganizationMember>> findMembers(Pageable pageable) {
+        return membershipService.findMembers(requireOrgParticipant().getOrganizationId(), pageable);
     }
 
     @Override
-    public Future<Page<Member>> searchMembers(String searchText, String applicationId, Pageable pageable) {
-        OrganizationParticipant participant = requireOrgParticipant();
-        return applicationId == null
-                ? membershipService.searchMembers(searchText, participant.getOrganizationId(), pageable)
-                : identityService.searchApplicationUsers(searchText, participant.getOrganizationId(), applicationId, pageable)
-                                 .map(page -> page.map(Member::of));
+    public Future<Page<OrganizationMember>> searchMembers(String searchText, Pageable pageable) {
+        return membershipService.searchMembers(searchText, requireOrgParticipant().getOrganizationId(), pageable);
+    }
+
+    // scope-composed queries, so a foreign or unknown application matches nothing
+    @Override
+    public Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String applicationId, Pageable pageable) {
+        return identityService.findApplicationUsers(requireOrgParticipant().getOrganizationId(), applicationId, pageable);
     }
 
     @Override
-    public Future<Member> addMember(String email, String displayName, boolean sendInvitation) {
+    public Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText, String applicationId, Pageable pageable) {
+        return identityService.searchApplicationUsers(searchText, requireOrgParticipant().getOrganizationId(), applicationId, pageable);
+    }
+
+    @Override
+    public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation) {
         Validate.notBlank(email, "email is required");
         OrganizationParticipant participant = requireOrgParticipant();
         String address = DomainUtil.normalizeEmail(email);
@@ -67,13 +69,13 @@ public class DefaultMemberService implements MemberService {
                                       // the organization user is someone's, or another organization's member to claim: joining
                                       // it to this organization needs its holder's acceptance, whatever was asked
                                       : invite(participant, address, displayName, null)
-                                              .map(invite -> new Member(null, invite.getEmail(), invite.getDisplayName(), true,
+                                              .map(invite -> new OrganizationMember(null, invite.getEmail(), invite.getDisplayName(), true,
                                                                         invite.getCreated(), true)));
     }
 
     // the organization creates the organization user and its membership at once: an invitation lets the address
     // claim the user, and without one only the organization's own provider can, so it must have one
-    private Future<Member> provision(OrganizationParticipant participant, String address, String displayName, boolean sendInvitation) {
+    private Future<OrganizationMember> provision(OrganizationParticipant participant, String address, String displayName, boolean sendInvitation) {
         String organizationId = participant.getOrganizationId();
         Future<Void> admissible = sendInvitation ? Future.succeededFuture() : requireOwnProvider(organizationId);
         OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
@@ -85,7 +87,7 @@ public class DefaultMemberService implements MemberService {
                                      Future<Void> invited = sendInvitation
                                              ? invite(participant, address, displayName, null).mapEmpty()
                                              : Future.succeededFuture();
-                                     return invited.map(v -> new Member(created.getId(), created.getEmail(), created.getDisplayName(),
+                                     return invited.map(v -> new OrganizationMember(created.getId(), created.getEmail(), created.getDisplayName(),
                                                                         true, membership.getCreated(), true));
                                  }));
     }

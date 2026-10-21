@@ -9,7 +9,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.exceptions.UserDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
@@ -125,9 +125,9 @@ public class InvitationTests extends KinoticTestBase {
         await(memberships.addMembership(member.getId(), TEST_ORG_ID));
 
         // the search reads the index, which sees a write only once it has refreshed
-        Page<Member> found = awaitUntil(() -> memberships.searchMembers(name, TEST_ORG_ID, Pageable.ofSize(10)),
+        Page<OrganizationMember> found = awaitUntil(() -> memberships.searchMembers(name, TEST_ORG_ID, Pageable.ofSize(10)),
                                         page -> !page.getContent().isEmpty());
-        assertEquals(List.of(member.getId()), found.getContent().stream().map(Member::id).toList());
+        assertEquals(List.of(member.getId()), found.getContent().stream().map(OrganizationMember::id).toList());
         assertEquals(1, found.getTotalElements());
     }
 

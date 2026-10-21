@@ -9,7 +9,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
@@ -110,7 +110,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aMemberAddedWithoutAnInvitationIsClaimedByTheOrganizationsProviderOnce() throws Exception {
         String email = "pending-" + suffix() + "@example.test";
-        Member added = await(asAdministrator(() -> members.addMember(email, "Pat Pending", false)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Pending", false)));
         assertNotNull(added.id());
         assertTrue(added.pending());
         assertTrue(added.enabled());
@@ -152,7 +152,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         }
         assertEquals(1, added, "exactly one addition succeeds");
         await(identities.syncIndex());
-        Page<Member> page = await(asAdministrator(() -> members.findMembers(null, Pageable.ofSize(1000))));
+        Page<OrganizationMember> page = await(asAdministrator(() -> members.findMembers(Pageable.ofSize(1000))));
         assertEquals(added, page.getContent().stream().filter(member -> email.equals(member.email())).count());
     }
 
@@ -165,7 +165,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         await(identities.syncIndex());
 
         // the address has no organization user, so the organization adds one, pending, beside the system user
-        Member added = await(asAdministrator(() -> members.addMember(email, "Sam Member", false)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Sam Member", false)));
         assertNotNull(added.id());
         assertNotEquals(systemUser.getId(), added.id());
         assertTrue(added.pending());
@@ -187,7 +187,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aMemberAddedWithAnInvitationClaimsTheOrganizationUserByAccepting() throws Exception {
         String withPassword = "accepts-" + suffix() + "@example.test";
-        Member added = await(asAdministrator(() -> members.addMember(withPassword, "Pat Accepts", true)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(withPassword, "Pat Accepts", true)));
         await(identities.syncIndex());
         PendingInvite invite = await(invites.findPendingInvite(withPassword, organization.getId()));
         assertNotNull(invite);
@@ -201,7 +201,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
 
         // or through one of the organization's providers, which binds the identity
         String withProvider = "binds-" + suffix() + "@example.test";
-        Member bound = await(asAdministrator(() -> members.addMember(withProvider, "Pat Binds", true)));
+        OrganizationMember bound = await(asAdministrator(() -> members.addMember(withProvider, "Pat Binds", true)));
         await(identities.syncIndex());
         PendingInvite providerInvite = await(invites.findPendingInvite(withProvider, organization.getId()));
         Participant viaProvider = await(invites.acceptOidcInvite(providerInvite.getVerificationToken(), "sub-" + suffix(), okta.getId(), withProvider));
@@ -215,7 +215,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing person"), PASSWORD));
         await(identities.syncIndex());
 
-        Member invited = await(asAdministrator(() -> members.addMember(email, null, false)));
+        OrganizationMember invited = await(asAdministrator(() -> members.addMember(email, null, false)));
         assertNull(invited.id());
         assertTrue(invited.pending());
         assertNotNull(await(invites.findPendingInvite(email, organization.getId())));
@@ -230,14 +230,14 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void removingAPendingMemberRemovesTheOrganizationUserNobodySignedInAs() throws Exception {
         String email = "removed-" + suffix() + "@example.test";
-        Member added = await(asAdministrator(() -> members.addMember(email, "Pat Removed", true)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Removed", true)));
 
         await(asAdministrator(() -> members.removeMember(added.id())));
         assertNull(await(identities.findById(added.id())));
         assertNull(await(invites.findPendingInvite(email, organization.getId())));
 
         // the address can be added again: the organization user takes the id the address derives, and nothing of the old one is left
-        Member again = await(asAdministrator(() -> members.addMember(email, "Pat Again", false)));
+        OrganizationMember again = await(asAdministrator(() -> members.addMember(email, "Pat Again", false)));
         assertEquals(added.id(), again.id());
         assertTrue(again.pending());
         assertFalse(await(identities.hasSignInMethod(again.id())));
@@ -250,8 +250,8 @@ public class MemberProvisioningTests extends KinoticTestBase {
     }
 
     // the member at email as the organization's members page lists them
-    private Member listed(String email) throws Exception {
-        Page<Member> page = await(asAdministrator(() -> members.findMembers(null, Pageable.ofSize(1000))));
+    private OrganizationMember listed(String email) throws Exception {
+        Page<OrganizationMember> page = await(asAdministrator(() -> members.findMembers(Pageable.ofSize(1000))));
         return page.getContent().stream().filter(member -> email.equals(member.email())).findFirst().orElseThrow();
     }
 

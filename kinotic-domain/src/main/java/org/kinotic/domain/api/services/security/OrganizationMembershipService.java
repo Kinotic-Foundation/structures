@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 
@@ -34,13 +34,13 @@ public interface OrganizationMembershipService {
     Future<List<OrganizationMembership>> findMemberships(String organizationUserId);
 
     /** The members of organization {@code organizationId}, each as the organization user joined with its membership. */
-    Future<Page<Member>> findMembers(String organizationId, Pageable pageable);
+    Future<Page<OrganizationMember>> findMembers(String organizationId, Pageable pageable);
 
     /**
      * The members of the organization whose email or display name matches {@code searchText}; blank text lists
      * them all as {@link #findMembers} does.
      */
-    Future<Page<Member>> searchMembers(String searchText, String organizationId, Pageable pageable);
+    Future<Page<OrganizationMember>> searchMembers(String searchText, String organizationId, Pageable pageable);
 
     /**
      * The participant {@code user} signs in to organization {@code organizationId} as, through its membership of it,

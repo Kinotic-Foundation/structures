@@ -8,7 +8,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.system.api.services.SystemMemberService;
@@ -21,13 +21,13 @@ public class DefaultSystemMemberService implements SystemMemberService {
     private final ParticipantIdentityService identityService;
 
     @Override
-    public Future<Page<Member>> findUsers(Pageable pageable) {
-        return identityService.findSystemUsers(pageable).map(page -> page.map(Member::of));
+    public Future<Page<SystemParticipantIdentity>> findUsers(Pageable pageable) {
+        return identityService.findSystemUsers(pageable);
     }
 
     @Override
-    public Future<Page<Member>> searchUsers(String searchText, Pageable pageable) {
-        return identityService.searchSystemUsers(searchText, pageable).map(page -> page.map(Member::of));
+    public Future<Page<SystemParticipantIdentity>> searchUsers(String searchText, Pageable pageable) {
+        return identityService.searchSystemUsers(searchText, pageable);
     }
 
     @Override
