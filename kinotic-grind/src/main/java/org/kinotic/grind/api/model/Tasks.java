@@ -1,6 +1,7 @@
 package org.kinotic.grind.api.model;
 
 import org.apache.commons.lang3.Validate;
+import org.kinotic.grind.internal.api.model.DefaultTask;
 
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -8,7 +9,8 @@ import java.util.function.Supplier;
 
 /**
  * Static factories for the common {@link Task} shapes, so a single task does not require a
- * class of its own.
+ * class of its own. Each takes what every task needs, its description and its work; the rest is
+ * set with the returned task's fluent methods.
  */
 public class Tasks {
 
@@ -35,22 +37,14 @@ public class Tasks {
      */
     public static <R> Task<R> fromClass(String description, Class<? extends Callable<R>> taskClass) {
         Validate.notNull(taskClass, "taskClass cannot be null");
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
-            }
-
-            @Override
-            public R execute(JobContext context) throws Exception {
-                return context.instantiate(taskClass).call();
-            }
-        };
+        return DefaultTask.of(description, context -> context.instantiate(taskClass).call());
     }
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Callable#call()} for the result.
+     * job scope, then invokes {@link Callable#call()} for the result. The instance is injected on
+     * each execution, so it serves one execution at a time; a task that runs concurrently, in
+     * parallel definitions or concurrent runs, is built per execution with {@link #fromClass(String, Class)}.
      * @param description of the task
      * @param callable to inject and invoke
      * @param <R> the result type
@@ -58,23 +52,17 @@ public class Tasks {
      */
     public static <R> Task<R> fromCallable(String description, Callable<R> callable) {
         Validate.notNull(callable, "callable cannot be null");
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
-            }
-
-            @Override
-            public R execute(JobContext context) throws Exception {
-                context.autowire(callable);
-                return callable.call();
-            }
-        };
+        return DefaultTask.of(description, context -> {
+            context.autowire(callable);
+            return callable.call();
+        });
     }
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Supplier#get()} for the result.
+     * job scope, then invokes {@link Supplier#get()} for the result. The instance is injected on
+     * each execution, so it serves one execution at a time, as {@link #fromCallable(String, Callable)}
+     * describes.
      * @param description of the task
      * @param supplier to inject and invoke
      * @param <R> the result type
@@ -82,42 +70,27 @@ public class Tasks {
      */
     public static <R> Task<R> fromSupplier(String description, Supplier<R> supplier) {
         Validate.notNull(supplier, "supplier cannot be null");
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
-            }
-
-            @Override
-            public R execute(JobContext context) {
-                context.autowire(supplier);
-                return supplier.get();
-            }
-        };
+        return DefaultTask.of(description, context -> {
+            context.autowire(supplier);
+            return supplier.get();
+        });
     }
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Runnable#run()}.
+     * job scope, then invokes {@link Runnable#run()}. The instance is injected on each execution,
+     * so it serves one execution at a time, as {@link #fromCallable(String, Callable)} describes.
      * @param description of the task
      * @param runnable to inject and invoke
      * @return the task
      */
     public static Task<Void> fromRunnable(String description, Runnable runnable) {
         Validate.notNull(runnable, "runnable cannot be null");
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
-            }
-
-            @Override
-            public Void execute(JobContext context) {
-                context.autowire(runnable);
-                runnable.run();
-                return null;
-            }
-        };
+        return DefaultTask.of(description, context -> {
+            context.autowire(runnable);
+            runnable.run();
+            return null;
+        });
     }
 
     /**
@@ -128,17 +101,7 @@ public class Tasks {
      * @return the task
      */
     public static <R> Task<R> fromValue(String description, R value) {
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
-            }
-
-            @Override
-            public R execute(JobContext context) {
-                return value;
-            }
-        };
+        return DefaultTask.of(description, context -> value);
     }
 
     /**
@@ -152,7 +115,9 @@ public class Tasks {
     }
 
     /**
-     * Creates a {@link Task} applying the given transformation to another task's result.
+     * Creates a {@link Task} applying the given transformation to another task's result. The new
+     * task has the other task's description and icon; its store and views, which concern the
+     * transformed value, are declared on the returned task.
      * @param from the task producing the value
      * @param transformer applied to the produced value
      * @param <T> the produced type
@@ -160,17 +125,8 @@ public class Tasks {
      * @return the task
      */
     public static <T, R> Task<R> transformResult(Task<T> from, Function<T, R> transformer) {
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return from.getDescription();
-            }
-
-            @Override
-            public R execute(JobContext context) throws Exception {
-                return transformer.apply(from.execute(context));
-            }
-        };
+        return DefaultTask.<R>of(from.getDescription(), context -> transformer.apply(from.execute(context)))
+                          .icon(from.getIcon());
     }
 
 }
