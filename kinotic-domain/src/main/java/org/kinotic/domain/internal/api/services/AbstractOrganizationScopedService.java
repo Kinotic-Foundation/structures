@@ -97,19 +97,20 @@ public abstract class AbstractOrganizationScopedService<T extends OrganizationSc
     }
 
     /**
-     * Hook run on every write after {@link #beforeSave} and the check of the entity's organization, so the entity's
-     * id and organization are final. Override to refuse a write that would move the stored record out of a scope
-     * it belongs to.
+     * Hook run on every write after {@link #beforeSave}, so the entity's id is final, and before the check of the
+     * entity's organization. Override to refuse a write that would move the record the caller's organization stores
+     * under that id out of a scope it belongs to.
      */
     protected Future<Void> beforeWrite(T entity) {
         return Future.succeededFuture();
     }
 
     private Future<Void> prepare(T value) {
-        return beforeSave(value).compose(v -> {
-            enforceOrgOnSave(value);
-            return beforeWrite(value);
-        });
+        return beforeSave(value).compose(v -> beforeWrite(value))
+                                .compose(v -> {
+                                    enforceOrgOnSave(value);
+                                    return Future.succeededFuture();
+                                });
     }
 
     @Override

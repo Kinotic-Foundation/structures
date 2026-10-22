@@ -26,7 +26,7 @@ public abstract class AbstractApplicationScopedService<T extends ApplicationScop
     protected Future<Void> beforeWrite(T entity) {
         return entity.getId() == null
                 ? Future.succeededFuture()
-                : scopedRepository.findById(entity.getId(), entity.getOrganizationId()).map(stored -> {
+                : scopedRepository.findById(entity.getId(), requireOrganizationId()).map(stored -> {
                     if (stored != null && !stored.getApplicationId().equals(entity.getApplicationId())) {
                         throw new IllegalArgumentException("The %s '%s' belongs to application '%s'; a record cannot move to another application"
                                                                    .formatted(scopedRepository.getType().getSimpleName(), stored.getId(), stored.getApplicationId()));
