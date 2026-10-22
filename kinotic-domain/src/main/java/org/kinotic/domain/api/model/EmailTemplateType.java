@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-public enum EmailTemplateKind {
+public enum EmailTemplateType {
     /**
      * The invitation into an organization or one of its applications. Variables: {@code inviterName},
      * {@code organizationName}, {@code applicationName} (absent for an organization invitation), {@code acceptUrl}

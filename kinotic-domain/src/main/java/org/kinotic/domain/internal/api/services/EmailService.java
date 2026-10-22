@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.EmailTemplate;
-import org.kinotic.domain.api.model.EmailTemplateKind;
+import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.PlatformEmailTemplate;
@@ -75,13 +75,13 @@ public class EmailService {
     private volatile EmailClient emailClient;
 
     /**
-     * Sends a verification email to the given address, rendered with the {@link EmailTemplateKind#VERIFICATION}
+     * Sends a verification email to the given address, rendered with the {@link EmailTemplateType#VERIFICATION}
      * {@link PlatformEmailTemplate} {@code emailTemplateId}, whose UI's verification page the link opens.
      *
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
      * @param verificationToken the token to include in the verification URL
-     * @param emailTemplateId   the template to send, or {@code null} for the kind's default
+     * @param emailTemplateId   the template to send, or {@code null} for the type's default
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
      * @throws IllegalArgumentException when no verification template has id {@code emailTemplateId}
      */
@@ -89,7 +89,7 @@ public class EmailService {
                                               String displayName,
                                               String verificationToken,
                                               String emailTemplateId) {
-        return findPlatformTemplate(emailTemplateId, EmailTemplateKind.VERIFICATION).compose(template -> {
+        return findPlatformTemplate(emailTemplateId, EmailTemplateType.VERIFICATION).compose(template -> {
             String verificationUrl = uiBaseUrl(template) + VERIFICATION_PATH + verificationToken;
             Future<Void> ret;
             if (properties.getDomain().getEmail().isEnabled()) {
@@ -107,18 +107,18 @@ public class EmailService {
 
     /**
      * Sends an invitation email carrying the accept link for the given invite, which opens the invitation page of the
-     * UI of the {@link EmailTemplateKind#INVITATION} {@link PlatformEmailTemplate} {@code emailTemplateId}. The email
+     * UI of the {@link EmailTemplateType#INVITATION} {@link PlatformEmailTemplate} {@code emailTemplateId}. The email
      * is rendered with that template, or with the application's {@link InviteEmailTemplate} for an application invite
      * whose application has one.
      *
      * @param invite           the saved invitation (token, recipient, scope, inviter attribution)
      * @param organizationName display name of the inviting organization
-     * @param emailTemplateId  the template to send, or {@code null} for the kind's default
+     * @param emailTemplateId  the template to send, or {@code null} for the type's default
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
      * @throws IllegalArgumentException when no invitation template has id {@code emailTemplateId}
      */
     public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName, String emailTemplateId) {
-        return findPlatformTemplate(emailTemplateId, EmailTemplateKind.INVITATION).compose(platformTemplate -> {
+        return findPlatformTemplate(emailTemplateId, EmailTemplateType.INVITATION).compose(platformTemplate -> {
             String acceptUrl = uiBaseUrl(platformTemplate) + INVITE_PATH + invite.getVerificationToken();
             String toName = invite.getDisplayName() != null ? invite.getDisplayName() : invite.getEmail();
             Future<Void> ret;
@@ -155,14 +155,14 @@ public class EmailService {
                 : Future.succeededFuture();
     }
 
-    private Future<PlatformEmailTemplate> findPlatformTemplate(String emailTemplateId, EmailTemplateKind kind) {
-        String id = emailTemplateId != null ? emailTemplateId : kind.getDefaultTemplateId();
+    private Future<PlatformEmailTemplate> findPlatformTemplate(String emailTemplateId, EmailTemplateType type) {
+        String id = emailTemplateId != null ? emailTemplateId : type.getDefaultTemplateId();
         return platformEmailTemplateRepository.findById(id).map(found -> {
             if (emailTemplateId == null) {
                 // the seed migration gives every environment the defaults, and the console refuses to delete them
-                Validate.validState(found != null, "The default %s email template %s is missing", kind, id);
+                Validate.validState(found != null, "The default %s email template %s is missing", type, id);
             }
-            Validate.isTrue(found != null && found.getKind() == kind, "No %s email template has id '%s'", kind, id);
+            Validate.isTrue(found != null && found.getType() == type, "No %s email template has id '%s'", type, id);
             return found;
         });
     }
@@ -213,15 +213,15 @@ public class EmailService {
     }
 
     /**
-     * Parses and test-renders a template's sources with sample values of its kind's variables, so a broken template
+     * Parses and test-renders a template's sources with sample values of its type's variables, so a broken template
      * fails at save time rather than when the next email is sent.
      *
      * @throws IllegalArgumentException carrying the Handlebars message when a source does
      *                                  not compile or render
      */
-    public void validateTemplate(EmailTemplate template, EmailTemplateKind kind) {
+    public void validateTemplate(EmailTemplate template, EmailTemplateType type) {
         Map<String, Object> sample = new HashMap<>();
-        switch (kind) {
+        switch (type) {
             case INVITATION -> {
                 sample.put("inviterName", "Inviter Name");
                 sample.put("organizationName", "Organization Name");

@@ -394,7 +394,7 @@ CREATE TABLE IF NOT EXISTS kinotic_invite_email_template (
 -- the portal's when it is absent. System users manage them in the system console (PlatformEmailTemplateService).
 CREATE TABLE IF NOT EXISTS kinotic_platform_email_template (
     id KEYWORD,
-    kind KEYWORD,
+    type KEYWORD,
     uiBaseUrl KEYWORD NOT INDEXED,
     subject TEXT,
     htmlBody TEXT,

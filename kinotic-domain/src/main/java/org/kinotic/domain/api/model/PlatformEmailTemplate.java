@@ -9,10 +9,10 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * An email of one {@link EmailTemplateKind} that a UI built on Kinotic sends in its own name, chosen by the call that
- * sends it naming the template's {@link #id}. A call that names none sends its kind's
- * {@link EmailTemplateKind#getDefaultTemplateId() default}. Subject and bodies are Handlebars sources rendered with the
- * kind's variables. An application's own {@link InviteEmailTemplate} takes precedence over the content of an
+ * An email of one {@link EmailTemplateType} that a UI built on Kinotic sends in its own name, chosen by the call that
+ * sends it naming the template's {@link #id}. A call that names none sends its type's
+ * {@link EmailTemplateType#getDefaultTemplateId() default}. Subject and bodies are Handlebars sources rendered with the
+ * type's variables. An application's own {@link InviteEmailTemplate} takes precedence over the content of an
  * invitation's template.
  */
 @Getter
@@ -24,7 +24,7 @@ public class PlatformEmailTemplate implements Identifiable<String>, EmailTemplat
     /** The name callers choose the template by, such as {@code builder-invitation}. */
     private String id;
 
-    private EmailTemplateKind kind;
+    private EmailTemplateType type;
 
     /**
      * The base URL of the UI whose page the email's link opens, such as {@code https://builder.example.com}; the

@@ -17,12 +17,12 @@ export interface IPlatformEmailTemplateService {
     /**
      * Saves a template, replacing the one with its id if there is one, and resolves to it as saved, its UI base URL
      * without a trailing slash. Its id must be lowercase letters, digits and interior dashes, its UI base URL an http
-     * or https URL, a kind's default must stay that kind, and its sources must render with sample values of its
-     * kind's variables.
+     * or https URL, a type's default must stay that type, and its sources must render with sample values of its
+     * type's variables.
      */
     save(template: PlatformEmailTemplate): Promise<PlatformEmailTemplate>
 
-    /** Deletes the template; a kind's default cannot be deleted. */
+    /** Deletes the template; a type's default cannot be deleted. */
     deleteById(id: string): Promise<void>
 }
 

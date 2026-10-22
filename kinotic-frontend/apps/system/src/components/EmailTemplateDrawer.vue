@@ -11,8 +11,8 @@
       </div>
 
       <div>
-        <label for="email-template-kind" class="mb-2 block text-sm font-medium">Email</label>
-        <Select input-id="email-template-kind" v-model="kind" :options="KINDS" option-label="label" option-value="value"
+        <label for="email-template-type" class="mb-2 block text-sm font-medium">Email</label>
+        <Select input-id="email-template-type" v-model="type" :options="TYPES" option-label="label" option-value="value"
                 :disabled="isDefault" class="w-full" />
       </div>
 
@@ -47,7 +47,7 @@
       <div>
         <span class="mb-2 block text-sm font-medium">Variables</span>
         <div class="flex flex-wrap gap-2">
-          <code v-for="variable in EMAIL_TEMPLATE_KINDS[kind].variables" :key="variable"
+          <code v-for="variable in EMAIL_TEMPLATE_TYPES[type].variables" :key="variable"
                 class="rounded-md bg-indigo-50 px-2 py-1 font-mono text-[13px] text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{{ placeholderOf(variable) }}</code>
         </div>
       </div>
@@ -68,9 +68,9 @@ import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateKind, PlatformEmailTemplate } from '@kinotic-ai/system-api'
+import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateType, PlatformEmailTemplate } from '@kinotic-ai/system-api'
 import { FormDrawer, showErrorToast, TemplateCodeEditor } from '@kinotic-ai/frontend-common'
-import { EMAIL_TEMPLATE_KINDS } from '@/util/EmailTemplateKinds'
+import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
 
 /**
  * Adds an email template, or edits the one given.
@@ -85,7 +85,7 @@ const emit = defineEmits<{
   (e: 'saved', template: PlatformEmailTemplate): void
 }>()
 
-const KINDS = Object.values(EmailTemplateKind).map(value => ({ label: EMAIL_TEMPLATE_KINDS[value].label, value }))
+const TYPES = Object.values(EmailTemplateType).map(value => ({ label: EMAIL_TEMPLATE_TYPES[value].label, value }))
 
 const BODY_FORMATS = [
   { label: 'HTML', value: 'html' },
@@ -96,7 +96,7 @@ const toast = useToast()
 
 const id = ref('')
 const uiBaseUrl = ref('')
-const kind = ref<EmailTemplateKind>(EmailTemplateKind.INVITATION)
+const type = ref<EmailTemplateType>(EmailTemplateType.INVITATION)
 const subject = ref('')
 const htmlBody = ref('')
 const textBody = ref('')
@@ -113,7 +113,7 @@ watch(() => props.visible, visible => {
     const template = props.template
     id.value = template?.id ?? ''
     uiBaseUrl.value = template?.uiBaseUrl ?? ''
-    kind.value = template?.kind ?? EmailTemplateKind.INVITATION
+    type.value = template?.type ?? EmailTemplateType.INVITATION
     subject.value = template?.subject ?? ''
     htmlBody.value = template?.htmlBody ?? ''
     textBody.value = template?.textBody ?? ''
@@ -129,7 +129,7 @@ async function submit(): Promise<void> {
   if (!complete.value) {
     return
   }
-  const template = Object.assign(new PlatformEmailTemplate(id.value.trim(), kind.value, subject.value, htmlBody.value, textBody.value), {
+  const template = Object.assign(new PlatformEmailTemplate(id.value.trim(), type.value, subject.value, htmlBody.value, textBody.value), {
     uiBaseUrl: uiBaseUrl.value.trim() || null,
     created: props.template?.created ?? null
   })

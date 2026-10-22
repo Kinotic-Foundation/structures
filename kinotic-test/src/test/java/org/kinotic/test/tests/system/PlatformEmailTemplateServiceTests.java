@@ -2,7 +2,7 @@ package org.kinotic.test.tests.system;
 
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
-import org.kinotic.domain.api.model.EmailTemplateKind;
+import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.PlatformEmailTemplate;
 import org.kinotic.system.api.services.PlatformEmailTemplateService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Verifies what a platform email template must be to be saved: a readable id, an http or https UI base URL, and
- * sources that render with the kind's variables; and that the defaults every unnamed send uses stay in place.
+ * sources that render with the type's variables; and that the defaults every unnamed send uses stay in place.
  */
 @SpringBootTest
 public class PlatformEmailTemplateServiceTests extends KinoticTestBase {
@@ -46,13 +46,13 @@ public class PlatformEmailTemplateServiceTests extends KinoticTestBase {
 
     @Test
     public void theDefaultsAreSeededAndStay() throws Exception {
-        for (EmailTemplateKind kind : EmailTemplateKind.values()) {
-            PlatformEmailTemplate seeded = await(templates.findById(kind.getDefaultTemplateId()));
+        for (EmailTemplateType type : EmailTemplateType.values()) {
+            PlatformEmailTemplate seeded = await(templates.findById(type.getDefaultTemplateId()));
             assertNotNull(seeded);
-            assertEquals(kind, seeded.getKind());
-            assertRefused(() -> templates.deleteById(kind.getDefaultTemplateId()));
+            assertEquals(type, seeded.getType());
+            assertRefused(() -> templates.deleteById(type.getDefaultTemplateId()));
         }
-        assertRefused(() -> templates.save(invitation(EmailTemplateKind.VERIFICATION.getDefaultTemplateId())));
+        assertRefused(() -> templates.save(invitation(EmailTemplateType.VERIFICATION.getDefaultTemplateId())));
     }
 
     @Test
@@ -72,7 +72,7 @@ public class PlatformEmailTemplateServiceTests extends KinoticTestBase {
 
     private static PlatformEmailTemplate invitation(String id) {
         return new PlatformEmailTemplate().setId(id)
-                                          .setKind(EmailTemplateKind.INVITATION)
+                                          .setType(EmailTemplateType.INVITATION)
                                           .setSubject("Join {{organizationName}}")
                                           .setHtmlBody("<a href=\"{{{acceptUrl}}}\">Accept</a>")
                                           .setTextBody("Accept: {{acceptUrl}}");

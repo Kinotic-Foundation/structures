@@ -11,7 +11,7 @@ import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.EmailTemplateKind;
+import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
@@ -270,8 +270,8 @@ public class MemberProvisioningTests extends KinoticTestBase {
         String email = "templated-" + suffix() + "@example.test";
         await(asAdministrator(() -> members.addMember(email, "Pat Templated", true, null)));
 
-        await(asAdministrator(() -> members.sendInvitation(email, EmailTemplateKind.INVITATION.getDefaultTemplateId())));
-        assertTrue(failure(() -> members.sendInvitation(email, EmailTemplateKind.VERIFICATION.getDefaultTemplateId()))
+        await(asAdministrator(() -> members.sendInvitation(email, EmailTemplateType.INVITATION.getDefaultTemplateId())));
+        assertTrue(failure(() -> members.sendInvitation(email, EmailTemplateType.VERIFICATION.getDefaultTemplateId()))
                            .getMessage().contains("No INVITATION email template"));
         assertTrue(failure(() -> members.sendInvitation(email, "no-such-template-" + suffix()))
                            .getMessage().contains("No INVITATION email template"));

@@ -49,21 +49,21 @@ import {
 } from '@kinotic-ai/frontend-common'
 
 import EmailTemplateDrawer from '@/components/EmailTemplateDrawer.vue'
-import { EMAIL_TEMPLATE_KINDS } from '@/util/EmailTemplateKinds'
+import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
 
 /** One row: a template and the columns it is listed by. */
 interface TemplateRow extends DescriptiveIdentifiable {
   id: string
   template: PlatformEmailTemplate
   ui: string
-  kind: string
+  type: string
   subject: string
   updated: string | null
 }
 
 const headers: CrudHeader[] = [
   { field: 'id', header: 'Id', sortable: false, width: '24%' },
-  { field: 'kind', header: 'Email', sortable: false, width: '16%' },
+  { field: 'type', header: 'Email', sortable: false, width: '16%' },
   { field: 'ui', header: 'Links open', sortable: false, optional: true, width: '28%' },
   { field: 'subject', header: 'Subject', sortable: false, optional: true, width: '20%' },
   { field: 'updated', header: 'Updated', sortable: false, optional: true, width: '12%' }
@@ -73,7 +73,7 @@ const confirm = useConfirm()
 const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePage(
   filteredPageLoader((pageable: Pageable) => Kinotic.platformEmailTemplates.findAll(pageable),
                      toRow,
-                     row => [row.id, row.ui, row.kind, row.subject])
+                     row => [row.id, row.ui, row.type, row.subject])
 )
 
 const drawerVisible = ref(false)
@@ -84,7 +84,7 @@ function toRow(template: PlatformEmailTemplate): TemplateRow {
     id: template.id,
     template,
     ui: template.uiBaseUrl ?? 'The portal',
-    kind: EMAIL_TEMPLATE_KINDS[template.kind]?.label ?? template.kind,
+    type: EMAIL_TEMPLATE_TYPES[template.type]?.label ?? template.type,
     subject: template.subject,
     updated: template.updated
   }
@@ -95,7 +95,7 @@ function openDrawer(template: PlatformEmailTemplate | null): void {
   drawerVisible.value = true
 }
 
-// a kind's default is sent by every call that names no template, so it can be edited but not deleted
+// a type's default is sent by every call that names no template, so it can be edited but not deleted
 function rowActions(row: TemplateRow): MenuItem[] {
   const actions: MenuItem[] = [{ label: 'Edit', icon: 'pi pi-pencil', command: () => openDrawer(row.template) }]
   if (!Object.values(DEFAULT_EMAIL_TEMPLATE_IDS).includes(row.id)) {
@@ -107,7 +107,7 @@ function rowActions(row: TemplateRow): MenuItem[] {
 function confirmDelete(row: TemplateRow): void {
   confirm.require({
     header: 'Delete template',
-    message: `Delete the ${row.kind.toLowerCase()} email ${row.id}? Calls that name it fail until a template with that id is added again.`,
+    message: `Delete the ${row.type.toLowerCase()} email ${row.id}? Calls that name it fail until a template with that id is added again.`,
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Delete', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
