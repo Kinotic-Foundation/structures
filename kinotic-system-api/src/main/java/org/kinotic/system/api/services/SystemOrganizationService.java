@@ -10,11 +10,12 @@ import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.management.api.model.PendingInviteSummary;
 
 /**
- * Cross-organization reads for platform operators. Published in the system zone, which only
+ * Cross-organization reads for system users. Published in the system zone, which only
  * SYSTEM participants may address, so every method takes the target organization explicitly
  * instead of resolving it from the caller's scope. A read of one organization is checked on that
  * organization, and a read across organizations on the platform; a grant made on the platform
@@ -75,34 +76,53 @@ public interface SystemOrganizationService {
     Future<Page<Project>> findProjects(String organizationId, Pageable pageable);
 
     /**
-     * Returns the given organization's members, or one application's members when
-     * {@code applicationId} is set.
+     * Returns the given organization's members.
      *
      * @param organizationId the organization whose members to return
-     * @param applicationId the application to narrow to, or null for organization members
      * @param pageable the page settings to use
-     * @return a page of members
+     * @return a page of {@link OrganizationMember}s
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
-    Future<Page<Member>> findMembers(String organizationId,
-                                                                 String applicationId,
-                                                                 Pageable pageable);
+    Future<Page<OrganizationMember>> findMembers(String organizationId, Pageable pageable);
 
     /**
-     * Searches the given organization's members, or one application's members when
-     * {@code applicationId} is set.
+     * Searches the given organization's members by email and display name.
      *
      * @param searchText the text to match members against
      * @param organizationId the organization whose members to search
-     * @param applicationId the application to narrow to, or null for organization members
      * @param pageable the page settings to use
-     * @return a page of matching members
+     * @return a page of matching {@link OrganizationMember}s
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
-    Future<Page<Member>> searchMembers(String searchText,
-                                                                   String organizationId,
-                                                                   String applicationId,
-                                                                   Pageable pageable);
+    Future<Page<OrganizationMember>> searchMembers(String searchText, String organizationId, Pageable pageable);
+
+    /**
+     * Returns the users of one of the given organization's applications.
+     *
+     * @param organizationId the organization that owns the application
+     * @param applicationId the application whose users to return
+     * @param pageable the page settings to use
+     * @return a page of the application's users
+     */
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId,
+                                                                      String applicationId,
+                                                                      Pageable pageable);
+
+    /**
+     * Searches the users of one of the given organization's applications by email and display name.
+     *
+     * @param searchText the text to match users against
+     * @param organizationId the organization that owns the application
+     * @param applicationId the application whose users to search
+     * @param pageable the page settings to use
+     * @return a page of the application's matching users
+     */
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
+                                                                        String organizationId,
+                                                                        String applicationId,
+                                                                        Pageable pageable);
 
     /**
      * Returns the given organization's pending invitations, or one application's when

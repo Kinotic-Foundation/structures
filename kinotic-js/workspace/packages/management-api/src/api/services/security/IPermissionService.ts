@@ -6,7 +6,7 @@ import type { Group } from '@/api/model/security/Group'
 import type { Resource } from '@/api/model/security/Resource'
 import type { RoleDefinition } from '@/api/model/security/RoleDefinition'
 import type { Subject } from '@/api/model/security/Subject'
-import type { UserParticipantIdentity } from '@/api/model/security/UserParticipantIdentity'
+import type { OrganizationParticipantIdentity } from '@/api/model/security/OrganizationParticipantIdentity'
 
 /**
  * The access control of the caller's organization: the permissions its services declare, the roles that bundle
@@ -46,7 +46,7 @@ export interface IPermissionService {
     deleteGroup(groupId: string): Promise<void>
 
     /** The members of a group. */
-    findGroupMembers(groupId: string): Promise<UserParticipantIdentity[]>
+    findGroupMembers(groupId: string): Promise<OrganizationParticipantIdentity[]>
 
     /** Puts a member of the organization in a group. */
     addGroupMember(groupId: string, userId: string): Promise<void>
@@ -121,7 +121,7 @@ export class PermissionService implements IPermissionService {
         return this.serviceProxy.invoke('deleteGroup', [groupId])
     }
 
-    public findGroupMembers(groupId: string): Promise<UserParticipantIdentity[]> {
+    public findGroupMembers(groupId: string): Promise<OrganizationParticipantIdentity[]> {
         return this.serviceProxy.invoke('findGroupMembers', [groupId])
     }
 

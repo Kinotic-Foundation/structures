@@ -27,18 +27,18 @@ import static org.mockito.Mockito.when;
 
 /**
  * Base of the tests that call a published service as a participant: an organization user of
- * acme, a platform operator granted the telemetry of every organization on the platform, and a
- * platform participant granted nothing, each call run on a Vert.x context with the participant
- * bound, mirroring how the gateway invokes published services.
+ * acme, a system user granted the telemetry of every organization on the platform, and a system
+ * user granted nothing, each call run on a Vert.x context with the participant bound, mirroring
+ * how the gateway invokes published services.
  */
 abstract class ParticipantCallTest {
 
     protected static final Participant ACME_USER =
             new DefaultOrganizationParticipant("user-1", "acme", Map.of(), List.of("USER"));
     protected static final Participant PLATFORM_OPERATOR =
-            new DefaultSystemParticipant("operator-1", Map.of(), List.of("ADMIN"));
+            new DefaultSystemParticipant("system-user-1", Map.of(), List.of("ADMIN"));
     protected static final Participant PLATFORM_NEWCOMER =
-            new DefaultSystemParticipant("newcomer-1", Map.of(), List.of());
+            new DefaultSystemParticipant("system-newcomer-1", Map.of(), List.of());
 
     protected static SecurityContext securityContext;
     protected static TenantAccess tenantAccess;
@@ -46,13 +46,13 @@ abstract class ParticipantCallTest {
 
     @BeforeAll
     static void startVertx() {
-        // SecurityContext registers its ContextLocal at class load, which must happen
+        // No Vertx provider, since callAs is unused. SecurityContext registers its ContextLocal at class load, which must happen
         // before any Vertx instance is created
-        securityContext = new SecurityContext();
+        securityContext = new SecurityContext(null);
         AuthzStoreService stores = mock(AuthzStoreService.class);
         when(stores.modelId(AuthzStoreService.PLATFORM)).thenReturn(Future.succeededFuture("model-1"));
         RelationshipService relationships = mock(RelationshipService.class);
-        // the operator holds what it is asked about on the platform, the newcomer nothing
+        // the system user holds what it is asked about on the platform, the newcomer nothing
         when(relationships.check(eq(AuthzStoreService.PLATFORM), eq("model-1"), any(), any()))
                 .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(2).user().equals(DomainUtil.authzUser(PLATFORM_OPERATOR))));
         tenantAccess = new TenantAccess(securityContext, stores, relationships);

@@ -6,9 +6,9 @@ import type { SignInMethod } from '@/api/model/security/SignInMethod'
 import type { UserParticipantIdentity } from '@/api/model/security/UserParticipantIdentity'
 
 /**
- * The signed-in account's own details, read and edited from the web app's account settings: the profile, the
- * ways the account signs in, and the organizations it may switch between. Every operation addresses the
- * calling account.
+ * The signed-in user's own details, read and edited from the web app's profile settings: the profile, the
+ * ways the user signs in, and the organizations it may switch between. Every operation addresses the
+ * calling user: a system user from the system console, an organization user from the portal.
  */
 export interface IProfileService {
 
@@ -16,30 +16,31 @@ export interface IProfileService {
 
     updateDisplayName(displayName: string): Promise<UserParticipantIdentity>
 
-    /** The ways the account signs in: its password, when it has one, and every provider identity bound to it. */
+    /** The ways the user signs in: its password, when it has one, and every provider identity bound to it. */
     findMySignInMethods(): Promise<SignInMethod[]>
 
     /**
-     * The configurations the account may connect as further sign-in methods and has not yet: the platform's
-     * registrations and the own configurations of the organizations the account may sign in to. Connecting one
-     * is a form POST to `/api/auth/account/methods/start/<configurationId>`.
+     * The configurations an organization user may connect as further sign-in methods and has not yet: the platform's
+     * registrations and the own configurations of the organizations it may sign in to; none for a system user,
+     * which signs in with a password alone. Connecting one
+     * is a form POST to `/api/auth/org/methods/start/<configurationId>`.
      */
     findConnectableProviders(): Promise<LoginProviderSummary[]>
 
     /**
-     * Sets the account's password. An account that has one gives its current password; one that signs in by
+     * Sets the user's password. A user that has one gives its current password; one that signs in by
      * a provider alone gives null and gains a password as a second method.
      */
     setPassword(currentPassword: string | null, newPassword: string): Promise<void>
 
     /**
-     * Removes a provider identity from the account's sign-in methods; the last method that still signs the account in
-     * (its password, a platform registration, or an organization's configuration while the account is a member there
-     * or the configuration admits whoever it verifies) cannot be removed.
+     * Removes a provider identity from the user's sign-in methods; the last method that still signs the user in
+     * (its password, a platform registration, or an organization's configuration while the user is a member there)
+     * cannot be removed.
      */
     removeSignInMethod(methodId: string): Promise<void>
 
-    /** The organizations the account is a member of and may sign in to, for switching between them. */
+    /** The organizations the organization user is a member of and may sign in to, for switching between them; none for a system user. */
     findMyOrganizations(): Promise<Organization[]>
 
 }

@@ -1,15 +1,15 @@
 <template>
   <FormDrawer :visible="visible" title="Grant access"
-              description="Give an operator or a machine a role on the platform, which reaches every organization and worker node on it."
+              description="Give a system user or a machine a role on the platform, which reaches every organization and worker node on it."
               @close="emit('update:visible', false)">
     <form id="platform-grant-form" @submit.prevent="submit">
       <div class="flex flex-col gap-5">
         <div>
           <span class="mb-2 block text-sm font-medium">Who</span>
           <SelectButton v-model="staff" :options="STAFF" :allow-empty="false" class="mb-3" />
-          <Select v-model="subjectId" :options="staff === 'Operator' ? operators : machines" option-label="label" option-value="subject.id"
-                  filter :filter-fields="['label', 'detail']" :placeholder="staff === 'Operator' ? 'Choose an operator' : 'Choose a machine'"
-                  class="w-full" :empty-message="staff === 'Operator' ? 'No operators' : 'No machines yet'">
+          <Select v-model="subjectId" :options="staff === 'System user' ? systemUsers : machines" option-label="label" option-value="subject.id"
+                  filter :filter-fields="['label', 'detail']" :placeholder="staff === 'System user' ? 'Choose a system user' : 'Choose a machine'"
+                  class="w-full" :empty-message="staff === 'System user' ? 'No system users' : 'No machines yet'">
             <template #option="{ option }">
               <div class="flex flex-col">
                 <span class="text-sm">{{ option.label }}</span>
@@ -57,13 +57,13 @@ import { FormDrawer, showErrorToast, summarizeRole } from '@kinotic-ai/frontend-
 import type { SubjectOption } from './useSubjects'
 
 /**
- * Grants a role to an operator or a machine on the platform: the subject holds every permission the role bundles
+ * Grants a role to a system user or a machine on the platform: the subject holds every permission the role bundles
  * on the platform and on everything on it.
  */
 const props = defineProps<{
   visible: boolean
   roles: RoleDefinition[]
-  operators: SubjectOption[]
+  systemUsers: SubjectOption[]
   machines: SubjectOption[]
 }>()
 
@@ -72,23 +72,23 @@ const emit = defineEmits<{
   (e: 'granted', grant: Grant): void
 }>()
 
-const STAFF = ['Operator', 'Machine']
+const STAFF = ['System user', 'Machine']
 
 const toast = useToast()
-const staff = ref<'Operator' | 'Machine'>('Operator')
+const staff = ref<'System user' | 'Machine'>('System user')
 const subjectId = ref<string | null>(null)
 const roleId = ref<string | null>(null)
 const granting = ref(false)
 
 watch(() => props.visible, visible => {
   if (visible) {
-    staff.value = 'Operator'
+    staff.value = 'System user'
     subjectId.value = null
     roleId.value = null
   }
 })
 
-// a picked operator is not a machine, so switching the kind clears the pick
+// a picked system user is not a machine, so switching the kind clears the pick
 watch(staff, () => { subjectId.value = null })
 
 async function submit(): Promise<void> {

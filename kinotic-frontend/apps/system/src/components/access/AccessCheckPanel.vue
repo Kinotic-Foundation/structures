@@ -1,11 +1,11 @@
 <template>
   <DashboardSection :icon="SearchCheck" :tint="tint" title="Check access"
-                    description="Ask whether an operator or a machine holds one of the platform's permissions, and which grants give it.">
+                    description="Ask whether a system user or a machine holds one of the platform's permissions, and which grants give it.">
     <div class="flex flex-col gap-4 p-5">
       <div class="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
         <Select v-model="subjectId" :options="subjectOptions" option-label="label" option-value="subject.id" filter
                 :filter-fields="['label', 'detail']" option-group-label="label" option-group-children="items"
-                placeholder="Operator or machine" class="w-full">
+                placeholder="System user or machine" class="w-full">
           <template #option="{ option }">
             <div class="flex flex-col">
               <span class="text-sm">{{ option.label }}</span>
@@ -55,12 +55,12 @@ import { DashboardSection, permissionLabel, showErrorToast, splitPermission } fr
 import type { SubjectOption } from './useSubjects'
 
 /**
- * Explains an operator's or a machine's access to the platform: whether it holds one of the platform's own
+ * Explains a system user's or a machine's access to the platform: whether it holds one of the platform's own
  * permissions, and the grants on the platform it holds the permission through.
  */
 const props = defineProps<{
   tint: string
-  operators: SubjectOption[]
+  systemUsers: SubjectOption[]
   machines: SubjectOption[]
   roles: RoleDefinition[]
   /** The model names of the platform's own permissions. */
@@ -79,7 +79,7 @@ const checkedLabel = ref('')
 const checkedPermission = ref('')
 
 const subjectOptions = computed(() => [
-  { label: 'Operators', items: props.operators },
+  { label: 'System users', items: props.systemUsers },
   { label: 'Machines', items: props.machines }
 ])
 
@@ -90,7 +90,7 @@ function roleName(roleId: string): string {
 }
 
 async function check(): Promise<void> {
-  const picked = [...props.operators, ...props.machines].find(option => option.subject.id === subjectId.value)
+  const picked = [...props.systemUsers, ...props.machines].find(option => option.subject.id === subjectId.value)
   if (!picked || !permission.value) {
     return
   }

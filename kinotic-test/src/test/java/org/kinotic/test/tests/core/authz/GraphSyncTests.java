@@ -19,6 +19,8 @@ import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.persistence.idl.decorators.TenantIdDecorator;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.PendingSignUp;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
@@ -134,7 +136,7 @@ public class GraphSyncTests extends KinoticTestBase {
 
     @Test
     public void aNewUserJoinsItsScope() throws Exception {
-        UserParticipantIdentity member = member(TEST_ORG_ID, "graph-sync");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "graph-sync");
         assertTrue(holds(new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID),
                                                AuthzUtil.MEMBER_RELATION,
                                                AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))),
@@ -237,7 +239,7 @@ public class GraphSyncTests extends KinoticTestBase {
     }
 
     private static UserParticipantIdentity user(String organizationId, String applicationId) {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("graph-" + suffix() + "@kinotic.test");
         user.setDisplayName("Graph User");
         user.setOrganizationId(organizationId);

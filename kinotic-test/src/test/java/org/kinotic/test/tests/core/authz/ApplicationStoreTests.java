@@ -20,7 +20,7 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.Tenant;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -135,7 +135,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         EntityDefinition car = await(runAsOrganization(() -> testData.createCarEntityDefinitionIfNotExists(null))).getLeft();
         String tenantId = "tenant-" + suffix();
-        UserParticipantIdentity bob = endUser(TEST_APP_ID, tenantId);
+        ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
@@ -161,7 +161,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         assertRefused(ADMIN_ENTITIES_SERVICE, "deleteByQuery", caller, List.of(person.getId(), "*", List.of(tenantId)), AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_DELETE));
         assertRefused(ENTITIES_SERVICE, "findById", caller, List.of(car.getId(), "row-1"), AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, carHere.id()));
         String otherTenant = "tenant-" + suffix();
-        UserParticipantIdentity alice = endUser(TEST_APP_ID, otherTenant);
+        ApplicationParticipantIdentity alice = endUser(TEST_APP_ID, otherTenant);
         Participant other = applicationParticipant(otherTenant, alice.getId());
         assertRefused(ENTITIES_SERVICE, "findById", other, readRow, "@" + otherTenant);
 
@@ -202,7 +202,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
     public void aGrantIsMadeOnWhatTheApplicationHoldsToOneOfItsOwnUsers() throws Exception {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         String editor = AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR);
-        UserParticipantIdentity bob = endUser(TEST_APP_ID, "tenant-" + suffix());
+        ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, "tenant-" + suffix());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, bob.getTenantId());
 
@@ -235,7 +235,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
     public void deletingATenantTakesItsGrantsAndMembershipsOutOfTheStore() throws Exception {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         Tenant tenant = await(runAsOrganization(() -> tenantService.createTenantIfNotExist(TEST_APP_ID, "Hooli " + suffix(), "A customer")));
-        UserParticipantIdentity bob = endUser(TEST_APP_ID, tenant.getId());
+        ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, tenant.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         String store = DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
         String tenantObject = AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenant.getId());
@@ -264,7 +264,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         assertNotNull(record);
         assertEquals(TEST_ORG_ID, record.getOrganizationId());
         assertNotNull(await(storeService.modelId(store)));
-        UserParticipantIdentity bob = endUser(application.getId(), "tenant-" + suffix());
+        ApplicationParticipantIdentity bob = endUser(application.getId(), "tenant-" + suffix());
         String me = AuthzUtil.object(AuthzUtil.USER_TYPE, bob.getId());
         assertTrue(await(relationships.holds(store, new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store)))));
         assertTrue(await(relationships.holds(store, new RelationshipTuple(me, AuthzUtil.MEMBER_RELATION, AuthzUtil.object(AuthzUtil.TENANT_TYPE, bob.getTenantId())))));
@@ -315,8 +315,8 @@ public class ApplicationStoreTests extends KinoticTestBase {
                                                                              .orElseThrow();
     }
 
-    private UserParticipantIdentity endUser(String applicationId, String tenantId) throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+    private ApplicationParticipantIdentity endUser(String applicationId, String tenantId) throws Exception {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("end-user-" + suffix() + "@kinotic.test");
         user.setDisplayName("End User");
         user.setOrganizationId(TEST_ORG_ID);

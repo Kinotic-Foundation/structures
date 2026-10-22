@@ -13,16 +13,12 @@ import java.util.Date;
 /**
  * A persisted identity that can authenticate and become a Participant, at any scope layer of
  * the IAM system. The concrete subtype states what kind of principal it is —
- * {@link UserParticipantIdentity} for a person, {@link DelegatingParticipantIdentity} for a
- * client acting on a person's behalf, {@link MachineParticipantIdentity} for a non-human
- * caller with its own credential — and carries the fields only that kind has. The scope
- * is encoded structurally by which of {@link #organizationId} / {@link #applicationId} is set:
- * <ul>
- *   <li>both null → SYSTEM for a machine or delegate (the platform's own); for a person, an account
- *       with no scope of its own, which acts in the scopes its {@link Membership}s name</li>
- *   <li>{@code organizationId} set, {@code applicationId} null → ORGANIZATION</li>
- *   <li>both set → APPLICATION (a user of an Application owned by an Organization)</li>
- * </ul>
+ * a {@link UserParticipantIdentity} subtype for a person of one scope, {@link DelegatingParticipantIdentity}
+ * for a client acting on a person's behalf, {@link MachineParticipantIdentity} for a non-human
+ * caller with its own credential — and carries the fields only that kind has. A
+ * {@link SystemParticipantIdentity} acts in the SYSTEM scope and an {@link OrganizationParticipantIdentity}
+ * in the organizations its {@link OrganizationMembership}s name; the others are
+ * {@link ScopedParticipantIdentity}s, which carry the scope they act in.
  * All subtypes share one id space and one index; {@link #getType()} is the persisted
  * discriminator the document is deserialized by.
  */
@@ -32,7 +28,9 @@ import java.util.Date;
 @NoArgsConstructor
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = UserParticipantIdentity.class, name = "USER"),
+        @JsonSubTypes.Type(value = SystemParticipantIdentity.class, name = "SYSTEM_USER"),
+        @JsonSubTypes.Type(value = OrganizationParticipantIdentity.class, name = "ORGANIZATION_USER"),
+        @JsonSubTypes.Type(value = ApplicationParticipantIdentity.class, name = "APPLICATION_USER"),
         @JsonSubTypes.Type(value = DelegatingParticipantIdentity.class, name = "DELEGATE"),
         @JsonSubTypes.Type(value = MachineParticipantIdentity.class, name = "MACHINE")
 })
@@ -42,28 +40,6 @@ public abstract sealed class ParticipantIdentity implements Identifiable<String>
     private String id;
 
     private String displayName;
-
-    /**
-     * The Organization this identity belongs to. {@code null} for SYSTEM identities; set for
-     * both ORGANIZATION and APPLICATION identities (an Application is owned by exactly one
-     * Org, so APP-scope identities intrinsically carry the owning org's id).
-     */
-    private String organizationId;
-
-    /**
-     * The Application this identity authenticates against. {@code null} for SYSTEM and
-     * ORGANIZATION identities; set for APPLICATION identities. When set,
-     * {@link #organizationId} must also be set (the org that owns the application).
-     */
-    private String applicationId;
-
-    /**
-     * The client tenant this identity belongs to within their application's data model.
-     * Only meaningful when {@link #applicationId} is set — application tenants partition
-     * the data of {@code MultiTenancyType.SHARED} entities owned by the app. Must be null
-     * for SYSTEM and ORGANIZATION scopes; those identities are not tenants.
-     */
-    private String tenantId;
 
     private boolean enabled;
 

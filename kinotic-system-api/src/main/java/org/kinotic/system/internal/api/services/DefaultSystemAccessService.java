@@ -17,8 +17,7 @@ import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -42,7 +41,6 @@ public class DefaultSystemAccessService implements SystemAccessService {
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final ParticipantIdentityService identities;
-    private final MembershipService memberships;
 
     @Override
     public Future<List<RoleDefinition>> findRoles() {
@@ -100,26 +98,17 @@ public class DefaultSystemAccessService implements SystemAccessService {
         return directory.findSystemDefinitions().map(generator::platformModel);
     }
 
-    // The platform's staff as the store holds them: an operator as its membership of the platform, a machine in
-    // SYSTEM scope as itself
+    // The platform's staff, a system user or a machine in SYSTEM scope, each held by the store as itself
     private Future<Subject> requireStaff(Subject subject) {
-        return identities.findById(subject.id()).compose(identity -> {
-            Future<Subject> ret;
-            if (identity instanceof MachineParticipantIdentity machine
-                    && machine.getOrganizationId() == null
-                    && machine.getApplicationId() == null) {
-                ret = Future.succeededFuture(subject);
-            } else if (identity instanceof UserParticipantIdentity user && user.isAccount()) {
-                ret = memberships.findMembership(subject.id(), null).map(membership -> {
-                    if (membership == null) {
-                        throw new IllegalArgumentException("No operator or machine of the platform has id " + subject.id());
-                    }
-                    return new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(subject.id(), null)));
-                });
-            } else {
-                throw new IllegalArgumentException("No operator or machine of the platform has id " + subject.id());
+        return identities.findById(subject.id()).map(identity -> {
+            boolean staff = identity instanceof SystemParticipantIdentity
+                    || (identity instanceof MachineParticipantIdentity machine
+                        && machine.getOrganizationId() == null
+                        && machine.getApplicationId() == null);
+            if (!staff) {
+                throw new IllegalArgumentException("No system user or machine of the platform has id " + subject.id());
             }
-            return ret;
+            return subject;
         });
     }
 

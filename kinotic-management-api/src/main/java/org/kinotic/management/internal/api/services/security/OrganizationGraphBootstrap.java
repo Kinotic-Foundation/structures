@@ -12,9 +12,9 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.services.OrganizationService;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -42,7 +42,7 @@ public class OrganizationGraphBootstrap {
 
     private final Vertx vertx;
     private final OrganizationService organizations;
-    private final MembershipService memberships;
+    private final OrganizationMembershipService memberships;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
 
@@ -102,7 +102,7 @@ public class OrganizationGraphBootstrap {
     private Future<Void> members(String organizationId, int pageNumber) {
         return memberships.findMembers(organizationId, Pageable.create(pageNumber, PAGE_SIZE, null)).compose(page -> {
             List<RelationshipTuple> enabled = page.getContent().stream()
-                                                  .filter(Member::enabled)
+                                                  .filter(OrganizationMember::enabled)
                                                   .map(member -> new RelationshipTuple(DomainUtil.authzMember(member.id(), organizationId),
                                                                                        AuthzUtil.MEMBER_RELATION,
                                                                                        AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId)))

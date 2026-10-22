@@ -6,7 +6,7 @@ import { NodeHealth, nodeHealth, nodeUnreachable as nodeMark } from './nodes'
 import { scopePath, type Scope } from './scope'
 import { nodeUnreachable } from './workloads'
 
-/** One thing an operator has to look at, and where it is handled. */
+/** One thing a system user has to look at, and where it is handled. */
 export interface AttentionItem {
     kind: AttentionType
     /** What it is, in a few words: the project, workload or node it concerns. */
@@ -29,7 +29,7 @@ const FULL_SHA = /\b[0-9a-f]{40}\b/
 const MAX_PER_KIND = 5
 
 function relative(timestamp: string | null): string {
-    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp).toLowerCase() : ''
+    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp) : ''
 }
 
 /** The short form of the commit sha a run's description names, or null when it names none. */
@@ -149,7 +149,7 @@ function versionSkew(cluster: KinoticClusterInfo | null): AttentionItem[] {
     return ret
 }
 
-/** What needs an operator across the platform, failures first. */
+/** What needs a system user across the platform, failures first. */
 export function platformAttention(cluster: KinoticClusterInfo | null, nodes: VmNode[], workloads: Workload[],
                                   runs: JobRun[]): AttentionItem[] {
     const scope: Scope = {}
@@ -162,7 +162,7 @@ export function platformAttention(cluster: KinoticClusterInfo | null, nodes: VmN
     ]
 }
 
-/** What needs an operator within one organization, failures first. */
+/** What needs a system user within one organization, failures first. */
 export function organizationAttention(organization: Organization, workloads: Workload[], runs: JobRun[]): AttentionItem[] {
     const scope: Scope = { organizationId: organization.id ?? '' }
     return [

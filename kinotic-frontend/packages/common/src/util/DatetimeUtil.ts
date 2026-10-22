@@ -18,20 +18,63 @@ export default class DatetimeUtil {
         }
         return ret
     }
-public static formatRelativeDate(dateStr: string | number | Date): string {
+/**
+ * When a timestamp was, relative to nowMs, to the minute: "just now" and "5 minutes ago" within the
+ * last hour, then the clock time: "today at 2:54 AM", "yesterday at 11:02 PM", "Oct 16 at 3:10 PM".
+ * Returns an empty string when the timestamp is absent or unreadable.
+ */
+public static formatRelativeDate(dateStr: string | number | Date | null | undefined, nowMs: number = Date.now()): string {
     if (!dateStr) return ''
 
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return ''
 
-    const now = new Date()
-    const diffTime = now.getTime() - date.getTime()
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return '1 day ago'
-    return `${diffDays} days ago`
+    // a timestamp slightly ahead of this clock reads as just now
+    const minutes = Math.max(0, Math.floor((nowMs - date.getTime()) / 60000))
+    let ret: string
+    if (minutes === 0) {
+        ret = 'just now'
+    } else if (minutes < 60) {
+        ret = minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`
+    } else {
+        const daysAgo = DatetimeUtil.calendarDaysAgo(date, nowMs)
+        const day = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : DatetimeUtil.formatCalendarDate(date, nowMs)
+        ret = `${day} at ${date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+    }
+    return ret
 }
+
+/** The calendar day of a timestamp, in words for today and yesterday: "Today", "Yesterday", "Sep 30". */
+public static formatDayLabel(timestamp: number | string | Date): string {
+    const day = new Date(timestamp)
+    const nowMs = Date.now()
+    const daysAgo = DatetimeUtil.calendarDaysAgo(day, nowMs)
+    let ret: string
+    if (daysAgo === 0) {
+        ret = 'Today'
+    } else if (daysAgo === 1) {
+        ret = 'Yesterday'
+    } else {
+        ret = DatetimeUtil.formatCalendarDate(day, nowMs)
+    }
+    return ret
+}
+
+/** How many local calendar days before the day of nowMs a date falls: 0 today, 1 yesterday. */
+private static calendarDaysAgo(date: Date, nowMs: number): number {
+    const now = new Date(nowMs)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    // rounds away the hour a daylight-saving change adds to or removes from a day
+    return Math.round((startOfToday - startOfDay) / 86400000)
+}
+
+/** A date's month and day, with the year when it differs from that of nowMs: "Sep 30", "Sep 30, 2025". */
+private static formatCalendarDate(date: Date, nowMs: number): string {
+    const year = date.getFullYear() === new Date(nowMs).getFullYear() ? undefined : 'numeric'
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year })
+}
+
 /** Renders a timestamp (epoch millis or an ISO-8601 string) as the 24-hour locale time of day. */
 public static formatTime(timestamp: number | string): string {
     return new Date(timestamp).toLocaleTimeString('en-US', { hour12: false })

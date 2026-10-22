@@ -6,8 +6,8 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 /**
- * A provider registration Kinotic made once and the platform operator manages, as opposed to one an
- * organization made for itself. Its client secret is one the operator placed in the platform's secret
+ * A provider registration Kinotic made once and system users manage, as opposed to one an
+ * organization made for itself. Its client secret is one placed in the platform's secret
  * storage under the name {@link #secretNameRef}, and it alone may name a provider's endpoints explicitly,
  * for a provider such as GitHub that publishes no OIDC discovery document. The concrete subtype states
  * whom the registration signs in: {@link OrgSignupOidcConfiguration} organization users at sign-up and

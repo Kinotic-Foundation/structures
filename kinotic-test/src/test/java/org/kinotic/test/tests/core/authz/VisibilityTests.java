@@ -21,7 +21,7 @@ import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.persistence.idl.decorators.TenantIdDecorator;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
@@ -102,7 +102,7 @@ public class VisibilityTests extends KinoticTestBase {
         Project b = project(x);
         Application y = application();
         project(y);
-        UserParticipantIdentity sally = member(TEST_ORG_ID, "visible");
+        OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "visible");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         OrganizationParticipant caller = participant(sally.getId());
@@ -137,7 +137,7 @@ public class VisibilityTests extends KinoticTestBase {
         Project a = project(x);
         Project b = project(x);
         EntityDefinition definition = await(runAsOrganization(() -> entityDefinitionService.create(definition(x.getId(), a.getId()))));
-        UserParticipantIdentity sally = member(TEST_ORG_ID, "visible");
+        OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "visible");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.viewer",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         OrganizationParticipant caller = participant(sally.getId());

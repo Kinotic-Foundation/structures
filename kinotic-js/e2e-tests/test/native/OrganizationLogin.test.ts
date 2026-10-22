@@ -52,7 +52,7 @@ describe('Organization login routes', () => {
 
     it('refuses the member at an organization it does not belong to, with the generic 401', async () => {
         expect((await login('nobody')).status).toBe(401)
-        // the platform membership's slot is no organization's
+        // the platform's own id names no organization
         expect((await login('system')).status).toBe(401)
         expect((await login(E2E_ORGANIZATION_ID, E2E_ORG_USER_EMAIL, 'wrong-password')).status).toBe(401)
     })
@@ -95,17 +95,17 @@ describe('Organization login routes', () => {
         expect(await signedIn.json()).toEqual([])
     })
 
-    it('connects a sign-in method for the platform\'s registrations and the configurations of organizations the account belongs to only', async () => {
-        expect((await post('/api/auth/account/methods/start/github-platform', {})).status).toBe(401)
+    it('connects a sign-in method for the platform\'s registrations and the configurations of organizations the user belongs to only', async () => {
+        expect((await post('/api/auth/org/methods/start/github-platform', {})).status).toBe(401)
         const cookie = sessionCookie(await login(E2E_ORGANIZATION_ID))
 
         // another organization's configuration is refused, so a link cannot bind its directory's identities to an
-        // account that organization never admitted
-        expect((await post(`/api/auth/account/methods/start/${OTHER_ORGANIZATION_CONFIGURATION_ID}`, {}, cookie)).status).toBe(403)
-        expect((await post('/api/auth/account/methods/start/no-such-configuration', {}, cookie)).status).toBe(400)
+        // user that organization never admitted
+        expect((await post(`/api/auth/org/methods/start/${OTHER_ORGANIZATION_CONFIGURATION_ID}`, {}, cookie)).status).toBe(403)
+        expect((await post('/api/auth/org/methods/start/no-such-configuration', {}, cookie)).status).toBe(400)
 
         // the platform's registration starts the round-trip to its provider
-        const started = await fetch(`${baseUrl}/api/auth/account/methods/start/github-platform`,
+        const started = await fetch(`${baseUrl}/api/auth/org/methods/start/github-platform`,
                                     {method: 'POST', headers: {Cookie: cookie}, redirect: 'manual'})
         expect(started.status).toBe(302)
         expect(started.headers.get('location')).toContain('github.com/login/oauth/authorize')

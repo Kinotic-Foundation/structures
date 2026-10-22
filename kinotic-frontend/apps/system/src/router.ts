@@ -1,7 +1,7 @@
 import type { Component } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import {
-    Box, Building2, ChartLine, CloudUpload, Cpu, Gauge, LaptopMinimalCheck, LayoutDashboard, LayoutGrid, Link, LockKeyhole, Network, ScrollText, Server, Users
+    Box, BrainCircuit, Building2, ChartLine, CloudUpload, Cpu, Gauge, LaptopMinimalCheck, LayoutDashboard, LayoutGrid, Link, LockKeyhole, Network, ScrollText, Server, Users, Workflow
 } from '@lucide/vue'
 import { ConnectedAppsPage, OAuthConsentPage, ProjectsIcon, type SidebarItemMeta } from '@kinotic-ai/frontend-common'
 
@@ -9,7 +9,7 @@ import { SYSTEM_USER_STATE } from './states/SystemUserState'
 
 /**
  * The console has five scopes, each with its own sidebar group: the platform, one organization,
- * one of its applications, one of its projects, and the signed-in operator's own account. A page
+ * one of its applications, one of its projects, and the signed-in system user's own settings. A page
  * opened from a list (a node, a workload, a job run, a trace) nests under the list's path and
  * declares the group alone, so the sidebar keeps the list highlighted and the page header can
  * point back to it.
@@ -145,10 +145,29 @@ const routes: RouteRecordRaw[] = [
             // The platform's runtime sits in the Platform section rather than one of its own
             ...runtimeRoutes('', '', (label, icon, order) => consoleItem(label, icon, order, 'Platform'), 'console', 40, true),
             {
+                name: 'system-jobs',
+                path: 'system-jobs',
+                component: () => import('./pages/SystemJobsPage.vue'),
+                meta: { sidebar: consoleItem('System jobs', Workflow, 55, 'Platform') }
+            },
+            {
+                name: 'system-job-run',
+                path: 'system-jobs/:jobRunId',
+                component: () => import('./pages/SystemJobRunPage.vue'),
+                props: true,
+                meta: { sidebarGroup: 'console' }
+            },
+            {
                 name: 'change-log',
                 path: 'change-log',
                 component: () => import('./pages/ChangeLogPage.vue'),
                 meta: { sidebar: consoleItem('Change log', ScrollText, 65, 'Platform') }
+            },
+            {
+                name: 'llm-configurations',
+                path: 'llm-configurations',
+                component: () => import('./pages/LlmConfigurationsPage.vue'),
+                meta: { sidebar: consoleItem('LLM configurations', BrainCircuit, 67, 'Platform') }
             },
             {
                 name: 'organizations',
@@ -156,7 +175,7 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('./pages/OrganizationsPage.vue'),
                 meta: { sidebar: consoleItem('Organizations', Building2, 70, 'Tenants') }
             },
-            // The platform's own members: MembersPage with no scope lists the operators
+            // The platform's own members: MembersPage with no scope lists the system users
             {
                 name: 'platform-users',
                 path: 'members/users',
@@ -169,7 +188,7 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('./pages/MachinesPage.vue'),
                 meta: { sidebar: consoleItem('Machines', Cpu, 90, 'Members') }
             },
-            // The platform's grants: who runs it, and what each operator and machine may do
+            // The platform's grants: who runs it, and what each system user and machine may do
             {
                 name: 'platform-access',
                 path: 'members/access',

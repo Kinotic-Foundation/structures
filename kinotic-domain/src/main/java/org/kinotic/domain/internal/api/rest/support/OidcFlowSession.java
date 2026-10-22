@@ -46,8 +46,8 @@ public class OidcFlowSession implements ClusterSerializable {
      */
     private String inviteToken;
 
-    /** The account an {@link OidcFlowPurpose#CONNECT} flow binds the identity to. */
-    private String accountId;
+    /** The organization user an {@link OidcFlowPurpose#CONNECT} flow binds the identity to. */
+    private String organizationUserId;
 
     /**
      * Origin of the page that started the flow, which the completed login is bound to, or {@code null}
@@ -67,7 +67,7 @@ public class OidcFlowSession implements ClusterSerializable {
                 .put("applicationId", applicationId)
                 .put("tenantId", tenantId)
                 .put("inviteToken", inviteToken)
-                .put("accountId", accountId)
+                .put("organizationUserId", organizationUserId)
                 .put("origin", origin)
                 .writeToBuffer(buffer);
     }
@@ -85,7 +85,7 @@ public class OidcFlowSession implements ClusterSerializable {
         this.applicationId = json.getString("applicationId");
         this.tenantId = json.getString("tenantId");
         this.inviteToken = json.getString("inviteToken");
-        this.accountId = json.getString("accountId");
+        this.organizationUserId = json.getString("organizationUserId");
         this.origin = json.getString("origin");
         return read;
     }

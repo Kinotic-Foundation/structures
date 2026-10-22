@@ -276,7 +276,7 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                     if (node == null) {
                         ret = Future.failedFuture(new IllegalArgumentException("Node not registered: " + nodeId));
                     } else if (StatusConditions.has(node.getState().getConditions(), StatusConditionType.NODE_UNREACHABLE)) {
-                        // The operator's word that a silent node is not coming back settles what its
+                        // A system user's word that a silent node is not coming back settles what its
                         // silence left open: the finalizer records its open runs FAILED
                         ret = vmNodeRepository.requestDeletion(nodeId, "deregisterNode");
                     } else {

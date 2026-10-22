@@ -28,7 +28,7 @@ const route = useRoute()
 const router = useRouter()
 
 const profile = ref<UserParticipantIdentity | null>(null)
-const profileName = computed(() => profile.value?.displayName ?? 'System operator')
+const profileName = computed(() => profile.value?.displayName ?? 'System user')
 const profileDetail = computed(() => profile.value?.email ?? '')
 const initials = computed(() => avatarInitials(profileName.value, profile.value?.email))
 
@@ -43,7 +43,7 @@ onMounted(async () => {
     try {
         profile.value = await Kinotic.profile.findMyProfile()
     } catch (error) {
-        // the menu falls back to the generic operator name
+        // the menu falls back to the generic system user name
         debug('Failed to load profile: %O', error)
     }
 })
@@ -68,7 +68,7 @@ const isDark = computed(() => darkMode.value)
 /**
  * Every scope's sidebar has the portal's shape: the row above the name leads to the parent
  * scope's landing page and is labelled with the parent's name, so the way up reads the same
- * whether the operator is in an organization, an application, or a project.
+ * whether the system user is in an organization, an application, or a project.
  */
 function scopeFor(group: string | null): SidebarScopeProps {
     const organizationId = route.params.organizationId as string | undefined
@@ -102,7 +102,7 @@ function scopeFor(group: string | null): SidebarScopeProps {
     } else if (group === 'account') {
         ret = {
             name: 'Account',
-            kind: 'Operator',
+            kind: 'System user',
             icon: User,
             backTo: '/dashboard',
             backLabel: 'System'

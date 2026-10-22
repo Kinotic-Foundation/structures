@@ -165,7 +165,7 @@ public class ApplicationStoreProvisioner {
                                            List<RelationshipTuple> placed = page.stream().map(DefaultEntityDefinitionService::containment).toList();
                                            return relationships.ensure(PLATFORM, placed).compose(w -> relationships.ensure(store, placed));
                                        }))
-                .compose(v -> eachPage(pageable -> identities.findUsersByScope(organizationId, applicationId, pageable),
+                .compose(v -> eachPage(pageable -> identities.findApplicationUsers(organizationId, applicationId, pageable),
                                        page -> {
                                            List<RelationshipTuple> endUsers = new ArrayList<>();
                                            List<RelationshipTuple> inApplication = new ArrayList<>();

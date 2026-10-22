@@ -19,6 +19,7 @@ import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
@@ -213,9 +214,9 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     }
 
     private static boolean belongs(ParticipantIdentity identity, Application application) {
-        return identity != null
-                && application.getOrganizationId().equals(identity.getOrganizationId())
-                && application.getId().equals(identity.getApplicationId());
+        return identity instanceof ScopedParticipantIdentity scoped
+                && application.getOrganizationId().equals(scoped.scope().organizationId())
+                && application.getId().equals(scoped.scope().applicationId());
     }
 
     private static String storeOf(Application application) {

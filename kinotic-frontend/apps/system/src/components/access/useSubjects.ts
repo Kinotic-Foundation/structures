@@ -1,34 +1,34 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import { type MachineParticipantIdentity, type Member, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type MachineParticipantIdentity, type Subject, SubjectKind, type SystemParticipantIdentity } from '@kinotic-ai/management-api'
 
 /** Who a platform grant can be made to, as the pickers and the grant rows show them. */
 export interface SubjectOption {
   subject: Subject
-  /** The operator's name or email, or the machine's name. */
+  /** The system user's name or email, or the machine's name. */
   label: string
-  /** The operator's email beneath the name, or the machine's client id. */
+  /** The system user's email beneath the name, or the machine's client id. */
   detail: string | null
-  /** What the subject is: an operator who signs in, or a machine that connects. */
-  staff: 'Operator' | 'Machine'
+  /** What the subject is: a system user who signs in, or a machine that connects. */
+  staff: 'System user' | 'Machine'
 }
 
-// The pickers and the names on the grant rows read the first pages of the platform's operators and machines,
+// The pickers and the names on the grant rows read the first pages of the platform's system users and machines,
 // which cover a platform of a few hundred of each; a subject beyond them is shown by its id
 const SUBJECT_PAGE_SIZE = 500
 
 /**
- * The platform's operators and machines as grant subjects, read once per page: the pickers list them and the
+ * The platform's system users and machines as grant subjects, read once per page: the pickers list them and the
  * grant rows name them.
  */
 export function useSubjects(): {
-  operators: Ref<SubjectOption[]>
+  systemUsers: Ref<SubjectOption[]>
   machines: Ref<SubjectOption[]>
   load: () => Promise<void>
   optionOf: ComputedRef<(subject: Subject) => SubjectOption | undefined>
   labelOf: ComputedRef<(subject: Subject) => string>
 } {
-  const operators = ref<SubjectOption[]>([])
+  const systemUsers = ref<SubjectOption[]>([])
   const machines = ref<SubjectOption[]>([])
 
   async function load(): Promise<void> {
@@ -36,14 +36,13 @@ export function useSubjects(): {
       Kinotic.systemMembers.findUsers(Pageable.create(0, SUBJECT_PAGE_SIZE)),
       Kinotic.systemMembers.findMachines(Pageable.create(0, SUBJECT_PAGE_SIZE))
     ])
-    // an operator added by email who has no account yet has no id to grant to until they first sign in
-    operators.value = (userPage.content ?? []).filter(user => user.id).map(operatorOption)
+    systemUsers.value = (userPage.content ?? []).map(systemUserOption)
     machines.value = (machinePage.content ?? []).map(machineOption)
   }
 
   const optionOf = computed(() => {
     const options = new Map<string, SubjectOption>()
-    for (const option of [...operators.value, ...machines.value]) {
+    for (const option of [...systemUsers.value, ...machines.value]) {
       options.set(option.subject.id, option)
     }
     return (subject: Subject) => options.get(subject.id)
@@ -51,15 +50,15 @@ export function useSubjects(): {
 
   const labelOf = computed(() => (subject: Subject) => optionOf.value(subject)?.label ?? subject.id)
 
-  return { operators, machines, load, optionOf, labelOf }
+  return { systemUsers, machines, load, optionOf, labelOf }
 }
 
-function operatorOption(user: Member): SubjectOption {
+function systemUserOption(user: SystemParticipantIdentity): SubjectOption {
   return {
     subject: { kind: SubjectKind.USER, id: user.id ?? '' },
     label: user.displayName || user.email,
     detail: user.displayName ? user.email : null,
-    staff: 'Operator'
+    staff: 'System user'
   }
 }
 

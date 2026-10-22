@@ -11,7 +11,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.persistence.idl.decorators.QueryDecorator;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -70,7 +70,7 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
         EntityDefinition person = createPersonDefinition();
         createRenameQuery(person);
         String tenantId = "tenant-" + suffix();
-        UserParticipantIdentity bob = endUser(tenantId);
+        ApplicationParticipantIdentity bob = endUser(tenantId);
         ScopedParticipant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
@@ -131,8 +131,8 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
                                                                  .compose(saved -> entityDefinitionService.publish(saved.getId()).map(saved))));
     }
 
-    private UserParticipantIdentity endUser(String tenantId) throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+    private ApplicationParticipantIdentity endUser(String tenantId) throws Exception {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("end-user-" + suffix() + "@kinotic.test");
         user.setDisplayName("End User");
         user.setOrganizationId(TEST_ORG_ID);

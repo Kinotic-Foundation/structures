@@ -1,6 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import { type Group, type MachineParticipantIdentity, type Member, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type ApplicationParticipantIdentity, type Group, type MachineParticipantIdentity, type OrganizationMember, type Subject,
+  SubjectKind } from '@kinotic-ai/management-api'
 
 /** Who a grant can be made to, as the pickers and the grant rows show them. */
 export interface SubjectOption {
@@ -35,13 +36,15 @@ export function useSubjects(applicationId: string | null = null): {
   const machines = ref<SubjectOption[]>([])
 
   async function load(): Promise<void> {
-    const memberPage = await Kinotic.members.findMembers(applicationId, Pageable.create(0, SUBJECT_PAGE_SIZE))
-    // a member added by email who has no account yet has no id to grant to until they first sign in
-    members.value = (memberPage.content ?? []).filter(member => member.id).map(memberOption)
     if (applicationId === null) {
+      const memberPage = await Kinotic.members.findMembers(Pageable.create(0, SUBJECT_PAGE_SIZE))
+      // a pending member listed without an id yet has nothing to grant to until the invitation is accepted
+      members.value = (memberPage.content ?? []).filter(member => member.id).map(memberOption)
       const groupPage = await Kinotic.permissions.findGroups(Pageable.create(0, SUBJECT_PAGE_SIZE))
       groups.value = (groupPage.content ?? []).map(groupOption)
     } else {
+      const userPage = await Kinotic.members.findApplicationUsers(applicationId, Pageable.create(0, SUBJECT_PAGE_SIZE))
+      members.value = (userPage.content ?? []).map(memberOption)
       const machinePage = await Kinotic.machines.findMachines(applicationId, Pageable.create(0, SUBJECT_PAGE_SIZE))
       machines.value = (machinePage.content ?? []).map(machineOption)
     }
@@ -63,7 +66,7 @@ export function keyOf(subject: Subject): string {
   return `${subject.kind}:${subject.id}`
 }
 
-function memberOption(member: Member): SubjectOption {
+function memberOption(member: OrganizationMember | ApplicationParticipantIdentity): SubjectOption {
   return {
     subject: { kind: SubjectKind.USER, id: member.id ?? '' },
     label: member.displayName || member.email,

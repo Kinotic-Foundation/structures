@@ -158,8 +158,8 @@ public class ProjectDeployIdentityService {
     private static MachineParticipantIdentity newMachine(Project project, MachineType kind, String role) {
         MachineParticipantIdentity machine = new MachineParticipantIdentity();
         machine.setMachineType(kind)
-               .setDisplayName((project.getName() != null ? project.getName() : project.getId()) + " " + role)
-               .setOrganizationId(project.getOrganizationId());
+               .setOrganizationId(project.getOrganizationId())
+               .setDisplayName((project.getName() != null ? project.getName() : project.getId()) + " " + role);
         return machine;
     }
 

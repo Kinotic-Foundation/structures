@@ -84,7 +84,7 @@ export function managementServer(): ServerInfo {
     return kinoticServer('kinotic-server-management')
 }
 
-/** The system server, where platform operators connect. */
+/** The system server, where system users connect. */
 export function systemServer(): ServerInfo {
     return kinoticServer('kinotic-server-system')
 }
@@ -183,7 +183,7 @@ export async function connectAppClient(applicationId: string, tenantId: string):
  */
 export async function appFixtureSubject(applicationId: string, tenantId: string, kinotic: KinoticSingleton = Kinotic): Promise<Subject> {
     const email = appFixtureEmail(applicationId, tenantId)
-    const users = await kinotic.members.findMembers(applicationId, Pageable.create(0, 100))
+    const users = await kinotic.members.findApplicationUsers(applicationId, Pageable.create(0, 100))
     const user = users.content?.find(member => member.email === email)
     if (!user?.id) {
         throw new Error(`No user ${email} is seeded for application ${applicationId}`)

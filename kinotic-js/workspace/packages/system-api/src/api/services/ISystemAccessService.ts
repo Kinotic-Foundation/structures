@@ -6,9 +6,9 @@ import { SYSTEM_API_ZONE,
 import type { IKinotic, IServiceProxy } from '@kinotic-ai/core'
 
 /**
- * Access control of the platform itself: the roles the platform's operators and machines can be
+ * Access control of the platform itself: the roles the platform's system users and machines can be
  * granted, and the grants made on the platform, which reach every organization and node on it. A
- * subject named must be one of the platform's own operators or machines.
+ * subject named must be one of the platform's own system users or machines.
  */
 export interface ISystemAccessService {
 
@@ -19,9 +19,9 @@ export interface ISystemAccessService {
     findGrants(): Promise<Grant[]>
 
     /**
-     * Grants a role to a platform operator or machine on the platform: the subject holds every
+     * Grants a role to a system user or machine on the platform: the subject holds every
      * permission the role bundles on the platform and on everything on it.
-     * @param subject a user naming an operator's or a machine's identity id
+     * @param subject a user naming a system user's or a machine's identity id
      * @param roleId a built-in role's id
      */
     grant(subject: Subject, roleId: string): Promise<Grant>
@@ -30,7 +30,7 @@ export interface ISystemAccessService {
     revoke(grantId: string): Promise<void>
 
     /**
-     * Whether a platform operator or machine holds a permission of the platform, and the grants it
+     * Whether a system user or machine holds a permission of the platform, and the grants it
      * holds the permission through.
      * @param permission the permission's short name, such as can_manage_workloads
      */

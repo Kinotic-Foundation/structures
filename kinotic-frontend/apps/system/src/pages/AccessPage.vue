@@ -16,7 +16,7 @@
           <Skeleton v-for="n in 2" :key="n" height="2.5rem" />
         </div>
         <EmptyChartCharacter v-else-if="shown.length === 0" class="py-6" :title="subjectFilter ? 'No grants for them yet' : 'No grants yet'"
-                             :hint="canManageAccess ? 'Grant an operator or a machine a role to give them access to the platform.' : 'Access to the platform comes from grants made here.'" />
+                             :hint="canManageAccess ? 'Grant a system user or a machine a role to give them access to the platform.' : 'Access to the platform comes from grants made here.'" />
         <DataTable v-else :value="shown">
           <Column header="Who" style="width: 40%">
             <template #body="{ data, index }">
@@ -36,10 +36,10 @@
         </DataTable>
       </DashboardSection>
 
-      <AccessCheckPanel :tint="TINTS.ink" :operators="operators" :machines="machines" :roles="roles" :catalog="catalog"
+      <AccessCheckPanel :tint="TINTS.ink" :systemUsers="systemUsers" :machines="machines" :roles="roles" :catalog="catalog"
                         :label-of="labelOf" :initial-subject-id="subjectFilter?.id" />
 
-      <GrantAccessDrawer v-model:visible="grantDrawerVisible" :roles="roles" :operators="operators" :machines="machines"
+      <GrantAccessDrawer v-model:visible="grantDrawerVisible" :roles="roles" :systemUsers="systemUsers" :machines="machines"
                          @granted="onGranted" />
     </div>
   </div>
@@ -66,7 +66,7 @@ import { useSubjects } from '@/components/access/useSubjects'
 import { SYSTEM_USER_STATE } from '@/states/SystemUserState'
 
 /**
- * The platform's Access page: the grants made on the platform, a grant of a role to an operator or a machine,
+ * The platform's Access page: the grants made on the platform, a grant of a role to a system user or a machine,
  * and a check that explains anyone's access. Opened for one subject from the Users or Machines page, it shows
  * that subject's grants alone.
  */
@@ -74,7 +74,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
-const { operators, machines, load: loadSubjects, optionOf, labelOf } = useSubjects()
+const { systemUsers, machines, load: loadSubjects, optionOf, labelOf } = useSubjects()
 
 const grants = ref<Grant[]>([])
 const roles = ref<RoleDefinition[]>([])
@@ -131,12 +131,12 @@ async function load(): Promise<void> {
   }
 }
 
-// whether the signed-in operator may grant and revoke, asked of the platform's access service about themself
+// whether the signed-in system user may grant and revoke, asked of the platform's access service about themself
 async function canManageSelf(): Promise<boolean> {
-  const operatorId = SYSTEM_USER_STATE.connectedInfo?.participant?.id
+  const systemUserId = SYSTEM_USER_STATE.connectedInfo?.participant?.id
   let ret = false
-  if (operatorId) {
-    ret = (await Kinotic.systemAccess.explain({ kind: SubjectKind.USER, id: operatorId }, 'can_manage_access')).allowed
+  if (systemUserId) {
+    ret = (await Kinotic.systemAccess.explain({ kind: SubjectKind.USER, id: systemUserId }, 'can_manage_access')).allowed
   }
   return ret
 }

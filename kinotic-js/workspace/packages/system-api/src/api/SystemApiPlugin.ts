@@ -9,6 +9,8 @@ import { SystemOrganizationService, type ISystemOrganizationService } from '@/ap
 import { SystemMemberService, type ISystemMemberService } from '@/api/services/ISystemMemberService'
 import { SystemAccessService, type ISystemAccessService } from '@/api/services/ISystemAccessService'
 import { WatchEventService, type IWatchEventService } from '@/api/services/IWatchEventService'
+import { LlmConfigurationService, type ILlmConfigurationService } from '@/api/services/ILlmConfigurationService'
+import { SystemJobService, type ISystemJobService } from '@/api/services/ISystemJobService'
 
 export interface ISystemApiExtension {
     vmNodes: IVmNodeService
@@ -20,6 +22,8 @@ export interface ISystemApiExtension {
     systemMembers: ISystemMemberService
     systemAccess: ISystemAccessService
     watchEvents: IWatchEventService
+    llmConfigurations: ILlmConfigurationService
+    systemJobs: ISystemJobService
 }
 
 export const SystemApiPlugin: KinoticPlugin<ISystemApiExtension> = {
@@ -34,6 +38,8 @@ export const SystemApiPlugin: KinoticPlugin<ISystemApiExtension> = {
             systemMembers: new SystemMemberService(kinotic),
             systemAccess: new SystemAccessService(kinotic),
             watchEvents: new WatchEventService(kinotic),
+            llmConfigurations: new LlmConfigurationService(kinotic),
+            systemJobs: new SystemJobService(kinotic),
         }
     }
 }

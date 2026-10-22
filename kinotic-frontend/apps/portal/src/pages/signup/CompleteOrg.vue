@@ -40,7 +40,7 @@
     <div v-else class="login-form">
       <h2 class="signup-title">Name your organization</h2>
       <p class="login-form__subtitle">
-        Welcome! Pick a name for your new organization to finish creating your account.
+        Welcome! Pick a name for your new organization to finish signing up.
       </p>
 
       <div class="login-form__step">

@@ -7,9 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
-import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -27,8 +26,8 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
 /**
  * Places the platform's staff and nodes in the authorization graph when the platform has no administrator, once
  * the server is up and the platform store runs a model: every node on the platform, every enabled platform
- * machine as a registrar of nodes, and every enabled platform operator as the platform's administrator. A
- * platform a migration seeds has operators, a vm-manager and nodes but no tuples, and this gives it the ones it
+ * machine as a registrar of nodes, and every enabled system user as the platform's administrator. A
+ * platform a migration seeds has system users, a vm-manager and nodes but no tuples, and this gives it the ones it
  * needs to be run; a platform with an administrator, whatever else was granted or revoked since, is left as it is.
  */
 @Slf4j
@@ -37,13 +36,12 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
 public class PlatformGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
-    // The platform's operators, machines and nodes fit one page: a platform has a handful of each
+    // The platform's system users, machines and nodes fit one page: a platform has a handful of each
     private static final int PAGE_SIZE = 1000;
     private static final String PLATFORM_OBJECT = AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID);
 
     private final Vertx vertx;
     private final ParticipantIdentityService identities;
-    private final MembershipService memberships;
     private final VmNodeRepository nodes;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
@@ -59,7 +57,7 @@ public class PlatformGraphBootstrap {
               .compose(administered -> administered ? Future.succeededFuture(0) : placeStaff())
               .onSuccess(bound -> {
                   if (bound > 0) {
-                      log.info("Bound {} platform operator(s) and machine(s) as the platform's staff", bound);
+                      log.info("Bound {} system user(s) and machine(s) as the platform's staff", bound);
                   }
               })
               // the reconciler writes the platform model shortly after the servers start, so a store that runs
@@ -90,13 +88,13 @@ public class PlatformGraphBootstrap {
                                                           .map(machine -> AuthzUtil.object(AuthzUtil.USER_TYPE, machine.getId()))
                                                           .toList(),
                                                   VmNodeOrchestrationService.REGISTRAR_ROLE))
-                    .compose(bound -> memberships.findMembers(null, page)
-                                                 .compose(operators -> bindEach(operators.getContent().stream()
-                                                                                         .filter(Member::enabled)
-                                                                                         .map(operator -> DomainUtil.authzMember(operator.id(), null))
-                                                                                         .toList(),
-                                                                                AuthzUtil.PLATFORM_ADMIN_ROLE))
-                                                 .map(more -> bound + more));
+                    .compose(bound -> identities.findSystemUsers(page)
+                                                .compose(users -> bindEach(users.getContent().stream()
+                                                                                .filter(SystemParticipantIdentity::isEnabled)
+                                                                                .map(user -> AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId()))
+                                                                                .toList(),
+                                                                           AuthzUtil.PLATFORM_ADMIN_ROLE))
+                                                .map(more -> bound + more));
     }
 
     // Each user is bound under an id of its own, so every server sweeping at once binds it once

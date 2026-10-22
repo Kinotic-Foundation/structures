@@ -306,7 +306,7 @@ async function loadUis(): Promise<void> {
 
 async function loadUsersCount(): Promise<void> {
   try {
-    const page = await Kinotic.members.findMembers(props.applicationId, Pageable.create(0, 1))
+    const page = await Kinotic.members.findApplicationUsers(props.applicationId, Pageable.create(0, 1))
     usersCount.value = page.totalElements ?? 0
   } catch (error) {
     debug('Failed to count users: %O', error)

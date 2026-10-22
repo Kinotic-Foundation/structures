@@ -23,6 +23,7 @@ import org.kinotic.domain.api.model.AuthzModelRevision;
 import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.model.security.Group;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
@@ -179,7 +180,7 @@ public class PermissionServiceTests extends KinoticTestBase {
     public void grantsReachDownTheTreeAndStopWhenRevoked() throws Exception {
         Application application = application();
         Project project = project(application);
-        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "permission");
         Subject subject = user(member);
         Resource onApplication = new Resource(AuthzUtil.APPLICATION_TYPE, application.getId());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
@@ -213,10 +214,10 @@ public class PermissionServiceTests extends KinoticTestBase {
     @Test
     public void groupsGrantThroughTheirMembers() throws Exception {
         Group group = await(runAsOrganization(() -> permissions.saveGroup(new Group().setName("QA " + suffix()).setDescription("tests everything"))));
-        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "permission");
         await(runAsOrganization(() -> permissions.addGroupMember(group.getId(), member.getId())));
-        List<UserParticipantIdentity> members = await(runAsOrganization(() -> permissions.findGroupMembers(group.getId())));
-        assertEquals(List.of(member.getId()), members.stream().map(UserParticipantIdentity::getId).toList());
+        List<OrganizationParticipantIdentity> members = await(runAsOrganization(() -> permissions.findGroupMembers(group.getId())));
+        assertEquals(List.of(member.getId()), members.stream().map(OrganizationParticipantIdentity::getId).toList());
         assertTrue(await(runAsOrganization(() -> permissions.findGroups(Pageable.ofSize(1000)))).getContent()
                            .stream().anyMatch(listed -> listed.getId().equals(group.getId())));
 
@@ -244,7 +245,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         Application application = application();
         Project granted = project(application);
         project(application);
-        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "permission");
         await(runAsOrganization(() -> permissions.grant(user(member), "project.viewer", new Resource(ProjectService.RESOURCE_TYPE, granted.getId()))));
 
         DefaultOrganizationParticipant caller = new DefaultOrganizationParticipant(member.getId(), TEST_ORG_ID,

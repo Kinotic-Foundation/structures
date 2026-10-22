@@ -15,7 +15,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -130,7 +130,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
 
         // an end user is refused until granted, and the declared permission needs the declared role
         String tenantId = "tenant-" + suffix();
-        UserParticipantIdentity bob = endUser(tenantId);
+        ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, tenantId);
@@ -175,7 +175,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         await(runAs(runtimeCaller, () -> directoryService.register(entry(TEST_APP_ID, ZONE, reports(name, type)))));
         assertTrue(awaitUntil(() -> roleIds().contains(AuthzUtil.roleId(type, AuthzUtil.VIEWER))), "the store never ran a model carrying the service");
         String tenantId = "tenant-" + suffix();
-        UserParticipantIdentity bob = endUser(tenantId);
+        ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         // the authorizer reads the contract and keeps it: generate is checked
         assertRefused(service, "generate", caller, List.of("q1"), type + "_can_generate on tenant:" + tenantId);
@@ -270,13 +270,13 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
     private MachineParticipantIdentity runtime() throws Exception {
         MachineParticipantIdentity machine = new MachineParticipantIdentity();
         machine.setMachineType(MachineType.APP_RUNTIME)
-               .setDisplayName("runtime " + suffix())
-               .setOrganizationId(TEST_ORG_ID);
+               .setOrganizationId(TEST_ORG_ID)
+               .setDisplayName("runtime " + suffix());
         return await(identityService.createMachine(machine)).machine();
     }
 
-    private UserParticipantIdentity endUser(String tenantId) throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+    private ApplicationParticipantIdentity endUser(String tenantId) throws Exception {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("directory-user-" + suffix() + "@kinotic.test");
         user.setDisplayName("Directory User");
         user.setOrganizationId(TEST_ORG_ID);

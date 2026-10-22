@@ -24,11 +24,11 @@ import org.kinotic.domain.api.model.security.Group;
 import org.kinotic.domain.api.model.security.Role;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.GroupRepository;
 import org.kinotic.domain.api.repositories.RoleRepository;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -63,7 +63,7 @@ public class DefaultPermissionService implements PermissionService {
     private final RoleRepository roles;
     private final GroupRepository groups;
     private final ParticipantIdentityService identities;
-    private final MembershipService memberships;
+    private final OrganizationMembershipService memberships;
 
     @Override
     public Future<Map<String, Set<String>>> findPermissions() {
@@ -174,7 +174,7 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    public Future<List<UserParticipantIdentity>> findGroupMembers(String groupId) {
+    public Future<List<OrganizationParticipantIdentity>> findGroupMembers(String groupId) {
         Validate.notBlank(groupId, "groupId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireGroup(groupId, organizationId)
@@ -183,15 +183,15 @@ public class DefaultPermissionService implements PermissionService {
                     List<Future<ParticipantIdentity>> members = new ArrayList<>();
                     for (RelationshipTuple tuple : held) {
                         if (AuthzUtil.MEMBER_RELATION.equals(tuple.relation()) && AuthzUtil.USER_TYPE.equals(AuthzUtil.typeOf(tuple.user()))) {
-                            members.add(identities.findById(DomainUtil.accountOf(AuthzUtil.idOf(tuple.user()))));
+                            members.add(identities.findById(DomainUtil.identityOf(AuthzUtil.idOf(tuple.user()))));
                         }
                     }
                     return Future.all(members);
                 })
                 .map(members -> members.<ParticipantIdentity>list()
                                        .stream()
-                                       .filter(UserParticipantIdentity.class::isInstance)
-                                       .map(UserParticipantIdentity.class::cast)
+                                       .filter(OrganizationParticipantIdentity.class::isInstance)
+                                       .map(OrganizationParticipantIdentity.class::cast)
                                        .toList());
     }
 
@@ -390,7 +390,7 @@ public class DefaultPermissionService implements PermissionService {
                     && organizationId.equals(machine.getOrganizationId())
                     && machine.getApplicationId() == null) {
                 ret = Future.succeededFuture(new Subject(SubjectKind.USER, id));
-            } else if (identity instanceof UserParticipantIdentity user && user.isAccount()) {
+            } else if (identity instanceof OrganizationParticipantIdentity) {
                 ret = requireMember(id, organizationId).map(new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(id, organizationId))));
             } else {
                 throw new IllegalArgumentException("No member or machine of the organization has id " + id);
@@ -399,10 +399,10 @@ public class DefaultPermissionService implements PermissionService {
         });
     }
 
-    private Future<Void> requireMember(String accountId, String organizationId) {
-        return memberships.findMembership(accountId, organizationId).map(membership -> {
+    private Future<Void> requireMember(String organizationUserId, String organizationId) {
+        return memberships.findMembership(organizationUserId, organizationId).map(membership -> {
             if (membership == null) {
-                throw new IllegalArgumentException("No member of the organization has id " + accountId);
+                throw new IllegalArgumentException("No member of the organization has id " + organizationUserId);
             }
             return null;
         });

@@ -13,9 +13,9 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 import java.util.List;
 
 /**
- * Access control of the platform itself, used by the system console: the roles the platform's operators and
+ * Access control of the platform itself, used by the system console: the roles the platform's system users and
  * machines can be granted, and the grants made on the platform, which reach every organization and node on
- * it. Every function acts on the platform, and a subject named must be one of the platform's own operators or
+ * it. Every function acts on the platform, and a subject named must be one of the platform's own system users or
  * machines.
  */
 @Publish
@@ -36,10 +36,10 @@ public interface SystemAccessService {
     Future<List<Grant>> findGrants();
 
     /**
-     * Grants a role to a platform operator or machine on the platform. The subject holds every permission the
+     * Grants a role to a system user or machine on the platform. The subject holds every permission the
      * role bundles on the platform and on everything on it: every organization, and every node.
      *
-     * @param subject who holds the grant, a user naming an operator's or a machine's identity id
+     * @param subject who holds the grant, a user naming a system user's or a machine's identity id
      * @param roleId  the role granted, a built-in role's id
      * @return the grant
      */
@@ -55,10 +55,10 @@ public interface SystemAccessService {
     Future<Void> revoke(String grantId);
 
     /**
-     * Whether a platform operator or machine holds a permission of the platform, and the grants it holds the
+     * Whether a system user or machine holds a permission of the platform, and the grants it holds the
      * permission through.
      *
-     * @param subject    the operator or machine
+     * @param subject    the system user or machine
      * @param permission the permission's short name, such as {@code can_manage_workloads}
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)

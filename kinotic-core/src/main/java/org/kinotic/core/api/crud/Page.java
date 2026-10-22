@@ -1,5 +1,8 @@
 package org.kinotic.core.api.crud;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.function.Function;
 
@@ -12,7 +15,9 @@ public class Page<T> {
     private final List<T> content;
     private final Long totalElements;
 
-    public Page(List<T> content, Long totalElements) {
+    @JsonCreator
+    public Page(@JsonProperty("content") List<T> content,
+                @JsonProperty("totalElements") Long totalElements) {
         this.content = content;
         this.totalElements = totalElements;
     }

@@ -26,9 +26,10 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -124,7 +125,7 @@ public abstract class KinoticTestBase {
     private ParticipantIdentityService participantIdentities;
 
     @Autowired
-    private MembershipService memberships;
+    private OrganizationMembershipService memberships;
 
     /**
      * Waits for the platform store to run the model of every platform service in the directory, and makes
@@ -243,20 +244,33 @@ public abstract class KinoticTestBase {
     }
 
     /**
-     * Creates an account and its membership of an organization, or of the platform, as signing up or accepting an
-     * invitation does.
+     * Creates an organization user and its membership of an organization, as signing up or accepting an invitation
+     * does.
      *
-     * @param organizationId the organization the account joins, or null for the platform's staff
-     * @param emailPrefix    the start of the account's email, which a random suffix makes unique
-     * @return the account
+     * @param organizationId the organization the user joins
+     * @param emailPrefix    the start of the user's email, which a random suffix makes unique
+     * @return the organization user
      */
-    protected UserParticipantIdentity member(String organizationId, String emailPrefix) throws Exception {
-        UserParticipantIdentity account = new UserParticipantIdentity();
-        account.setEmail(emailPrefix + "-" + suffix() + "@kinotic.test");
-        account.setDisplayName(emailPrefix);
-        UserParticipantIdentity ret = await(participantIdentities.createUser(account, "Member-1"));
-        await(memberships.addMember(ret.getId(), organizationId));
+    protected OrganizationParticipantIdentity member(String organizationId, String emailPrefix) throws Exception {
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
+        user.setEmail(emailPrefix + "-" + suffix() + "@kinotic.test");
+        user.setDisplayName(emailPrefix);
+        OrganizationParticipantIdentity ret = await(participantIdentities.createUser(user, "Member-1"));
+        await(memberships.addMembership(ret.getId(), organizationId));
         return ret;
+    }
+
+    /**
+     * Creates a system user, one of the platform's staff.
+     *
+     * @param emailPrefix the start of the user's email, which a random suffix makes unique
+     * @return the system user
+     */
+    protected SystemParticipantIdentity systemUser(String emailPrefix) throws Exception {
+        SystemParticipantIdentity user = new SystemParticipantIdentity();
+        user.setEmail(emailPrefix + "-" + suffix() + "@kinotic.test");
+        user.setDisplayName(emailPrefix);
+        return await(participantIdentities.createUser(user, "Member-1"));
     }
 
     /**

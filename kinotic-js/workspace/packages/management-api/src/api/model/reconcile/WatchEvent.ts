@@ -22,13 +22,13 @@ export interface WatchEvent {
     parent: WatchedParent | null
     /** What happened. */
     eventType: WatchEventType
-    /** What caused it: the node that reported, the operator, the orchestrator's inference. */
+    /** What caused it: the node that reported, a system user, the orchestrator's inference. */
     source: string
     /** The server node that wrote it. */
     serverNodeId: string
     /** The record's generation when written, null for a record that carries none. */
     generation: number | null
-    /** Why, for an operator. */
+    /** Why, for a system user. */
     message: string
     /** What was written, as JSON. */
     value: unknown

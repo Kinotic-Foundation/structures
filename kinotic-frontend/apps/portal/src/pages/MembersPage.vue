@@ -30,7 +30,7 @@
       </template>
 
       <template #item.created="{ item }">
-        {{ formatDate(item.created) }}
+        <TimePill :date="item.created" />
       </template>
 
     </CrudTable>
@@ -77,9 +77,9 @@
               <label for="member-send-invitation" class="text-sm font-medium text-surface-950 dark:text-surface-0">Send an invitation email</label>
               <p class="text-[0.8125rem] text-muted-color">
                 {{ sendInvitation
-                    ? 'They accept it to claim their account, with a password or one of the sign-in methods below.'
+                    ? 'They accept it to sign in for the first time, with a password or one of the sign-in methods below.'
                     : 'They sign in through one of your organization\'s own sign-in providers, which admits them the first time.' }}
-                People who already have a Kinotic account always receive an invitation, since joining needs their acceptance.
+                People who already sign in to Kinotic organizations always receive an invitation, since joining needs their acceptance.
               </p>
             </div>
           </div>
@@ -132,16 +132,15 @@ import {
   type IterablePage,
   type Page
 } from '@kinotic-ai/core'
-import type { Member, PendingInviteSummary } from '@kinotic-ai/management-api'
+import type { ApplicationParticipantIdentity, OrganizationMember, PendingInviteSummary } from '@kinotic-ai/management-api'
 
 import { CrudTable, FormDrawer, MemberDetail, SteppingDrawer, TINTS, useSteppingDrawer,
          type MemberSummary } from '@kinotic-ai/frontend-common'
-import { PageHeader } from '@kinotic-ai/frontend-common'
+import { PageHeader, TimePill } from '@kinotic-ai/frontend-common'
 import { statusSeverity, useCrudTablePage } from '@kinotic-ai/frontend-common'
 import type { CrudHeader } from '@kinotic-ai/frontend-common'
 import type { DescriptiveIdentifiable } from '@kinotic-ai/frontend-common'
 import { KinoticStates } from '@/states'
-import { DatetimeUtil } from '@kinotic-ai/frontend-common'
 import { apiUrl, showErrorToast } from '@kinotic-ai/frontend-common'
 import { createDebug } from '@kinotic-ai/frontend-common'
 
@@ -149,7 +148,7 @@ const debug = createDebug('members')
 
 /**
  * One table row — a member, pending while nobody has signed in as them yet, or, when {@link invite} is true, a
- * pending invitation to someone who already had an account.
+ * pending invitation to someone who already had an organization user.
  */
 interface MemberRow extends MemberSummary {
   enabled?: boolean
@@ -207,7 +206,6 @@ const shownMembers = computed(() => shownRows.value as MemberRow[])
 const { selected: selectedMember, visible: drawerVisible, position, open: openMember, step: stepMember,
         highlighted: highlightedMember, hover: hoverMember } = useSteppingDrawer(shownMembers, member => member.id)
 
-const formatDate = DatetimeUtil.formatLocaleDate
 
 // An application's members are its users, which tells them apart from the organization's members
 const title = computed<string>(() => props.applicationId !== null ? 'Users' : 'Members')
@@ -249,9 +247,7 @@ onMounted(async () => {
 })
 
 async function load(pageable: Pageable, searchText: string | null): Promise<IterablePage<DescriptiveIdentifiable>> {
-  const membersPage = searchText
-    ? await Kinotic.members.searchMembers(searchText, props.applicationId, pageable)
-    : await Kinotic.members.findMembers(props.applicationId, pageable)
+  const membersPage = await loadMembers(pageable, searchText)
 
   const invites = await Kinotic.members.findPendingInvites(props.applicationId, Pageable.create(0, 100, null))
   let inviteRows = (invites.content ?? []).map(invite => toInviteRow(invite))
@@ -271,12 +267,29 @@ async function load(pageable: Pageable, searchText: string | null): Promise<Iter
   }
 
   const page: Page<DescriptiveIdentifiable> = {
-    content: [...inviteRows, ...(membersPage.content ?? []).map(user => toMemberRow(user))],
+    content: [...inviteRows, ...(membersPage.content ?? [])],
     totalElements: (membersPage.totalElements ?? 0) + inviteTotal,
     cursor: undefined
   }
 
   return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
+}
+
+async function loadMembers(pageable: Pageable, searchText: string | null): Promise<Page<MemberRow>> {
+  const applicationId = props.applicationId
+  let ret: Page<MemberRow>
+  if (applicationId === null) {
+    const page = searchText
+      ? await Kinotic.members.searchMembers(searchText, pageable)
+      : await Kinotic.members.findMembers(pageable)
+    ret = { ...page, content: (page.content ?? []).map(member => toMemberRow(member)) }
+  } else {
+    const page = searchText
+      ? await Kinotic.members.searchApplicationUsers(searchText, applicationId, pageable)
+      : await Kinotic.members.findApplicationUsers(applicationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(user => toApplicationUserRow(user)) }
+  }
+  return ret
 }
 
 function pageNumberOf(pageable: Pageable): number {
@@ -294,7 +307,7 @@ function toInviteRow(invite: PendingInviteSummary): MemberRow {
   }
 }
 
-function toMemberRow(member: Member): MemberRow {
+function toMemberRow(member: OrganizationMember): MemberRow {
   return {
     id: member.id ?? '',
     email: member.email,
@@ -303,6 +316,18 @@ function toMemberRow(member: Member): MemberRow {
     created: member.joined,
     enabled: member.enabled,
     pending: member.pending
+  }
+}
+
+function toApplicationUserRow(user: ApplicationParticipantIdentity): MemberRow {
+  return {
+    id: user.id ?? '',
+    email: user.email,
+    displayName: user.displayName,
+    status: user.enabled ? 'Active' : 'Disabled',
+    created: user.created,
+    enabled: user.enabled,
+    pending: false
   }
 }
 
@@ -339,9 +364,9 @@ async function submitMember() {
       toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
     } else {
       const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value)
-      // an address that already had an account is invited to accept, whatever the switch said
+      // an address that already had an organization user is invited to accept, whatever the switch said
       const detail = added.id === null
-          ? `${email} already has a Kinotic account, so an invitation was emailed for them to accept`
+          ? `${email} already signs in to Kinotic organizations, so an invitation was emailed for them to accept`
           : sendInvitation.value
               ? `Added ${email} and emailed an invitation`
               : `Added ${email}; they sign in through your organization's provider`
@@ -430,8 +455,8 @@ function confirmRemove(item: MemberRow) {
   const message = props.applicationId !== null
       ? `Permanently remove ${item.email}? Their sign-in and stored credential are deleted.`
       : item.pending
-          ? `Remove ${item.email} from your organization? The account nobody has signed in to goes with it.`
-          : `Remove ${item.email} from your organization? Their account and other organizations stay as they are.`
+          ? `Remove ${item.email} from your organization? Nobody has signed in as them yet, so they are deleted entirely.`
+          : `Remove ${item.email} from your organization? Their other organizations stay as they are.`
   confirm.require({
     header: 'Remove member',
     message,

@@ -18,7 +18,7 @@ import { ArrowLeft, Lock } from '@lucide/vue'
 import { TINTS } from '../util/tints'
 
 /**
- * What a page shows in place of something the gateway refused: the signed-in member or operator holds no grant
+ * What a page shows in place of something the gateway refused: the signed-in member or system user holds no grant
  * that reaches it. An administrator grants access from the thing's Access page.
  */
 withDefaults(defineProps<{

@@ -15,6 +15,7 @@ import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.PendingSignUp;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
@@ -112,8 +113,8 @@ public class OrganizationIsolationTests extends KinoticTestBase {
                                               Consistency.HIGHER_CONSISTENCY)));
 
         // a tenant of the same id in each application, administered in ours
-        UserParticipantIdentity ourAdmin = endUser(TEST_ORG_ID, applicationId);
-        UserParticipantIdentity theirUser = endUser(otherOrganizationId, applicationId);
+        ApplicationParticipantIdentity ourAdmin = endUser(TEST_ORG_ID, applicationId);
+        ApplicationParticipantIdentity theirUser = endUser(otherOrganizationId, applicationId);
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, TENANT_ID);
         Grant grant = await(runAsOrganization(() -> access.grant(applicationId, user(ourAdmin), AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN), tenant)));
 
@@ -157,8 +158,8 @@ public class OrganizationIsolationTests extends KinoticTestBase {
                                                   List.of("ADMIN"));
     }
 
-    private UserParticipantIdentity endUser(String organizationId, String applicationId) throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+    private ApplicationParticipantIdentity endUser(String organizationId, String applicationId) throws Exception {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("isolated-" + suffix() + "@kinotic.test");
         user.setDisplayName("Isolated User");
         user.setOrganizationId(organizationId);

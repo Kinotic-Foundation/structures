@@ -14,7 +14,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.Group;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 
 import java.util.List;
 import java.util.Map;
@@ -98,7 +98,7 @@ public interface PermissionService {
      * @param groupId the group
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
-    Future<List<UserParticipantIdentity>> findGroupMembers(String groupId);
+    Future<List<OrganizationParticipantIdentity>> findGroupMembers(String groupId);
 
     /**
      * Adds a member of the organization to a group. A user already in the group is left as it is.

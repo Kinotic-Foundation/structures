@@ -1,11 +1,11 @@
 import type { OidcProviderType } from '@/api/model/security/OidcProviderType'
 import type { AuthType } from '@/api/model/security/AuthType'
 
-/** The id of the account's password as a sign-in method. */
+/** The id of the user's password as a sign-in method. */
 export const PASSWORD_SIGN_IN_METHOD_ID = 'password'
 
 /**
- * One way the signed-in account authenticates, as the profile page lists them: the account's password, or a
+ * One way the signed-in user authenticates, as the profile page lists them: the user's password, or a
  * provider identity bound to it. Nothing of the credential itself travels.
  */
 export interface SignInMethod {

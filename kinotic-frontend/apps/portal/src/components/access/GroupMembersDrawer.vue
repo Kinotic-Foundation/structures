@@ -48,7 +48,7 @@ import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import type { Group, UserParticipantIdentity } from '@kinotic-ai/management-api'
+import type { Group, OrganizationParticipantIdentity } from '@kinotic-ai/management-api'
 import { FormDrawer, InitialsTile, showErrorToast } from '@kinotic-ai/frontend-common'
 import { useAccess } from '@/composables/useAccess'
 import type { SubjectOption } from './useSubjects'
@@ -67,7 +67,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const { canManageAccess } = useAccess()
-const members = ref<UserParticipantIdentity[]>([])
+const members = ref<OrganizationParticipantIdentity[]>([])
 const loading = ref(false)
 const busy = ref(false)
 const adding = ref<string | null>(null)
@@ -111,7 +111,7 @@ async function add(): Promise<void> {
   }
 }
 
-async function remove(member: UserParticipantIdentity): Promise<void> {
+async function remove(member: OrganizationParticipantIdentity): Promise<void> {
   if (!props.group?.id || !member.id) {
     return
   }

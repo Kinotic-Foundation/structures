@@ -18,9 +18,12 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
@@ -94,10 +97,10 @@ public class DomainUtil {
     private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE);
 
     /**
-     * The user a participant acts as in the authorization stores, in {@code user:id} form. A person acts as the
-     * membership it signed in through, {@link #authzMember}, so a grant made in one organization never applies in
-     * another; a delegate acts as the membership of the owner it acts for; a machine and an application's user act
-     * as themselves.
+     * The user a participant acts as in the authorization stores, in {@code user:id} form. An organization user acts
+     * as the membership it signed in through, {@link #authzMember}, so a grant made in one organization never applies
+     * in another; a delegate acts as its owner would; a system user, a machine and an application's user act as
+     * themselves.
      *
      * @param participant the participant making a call
      * @return the user whose grants answer for it
@@ -107,36 +110,39 @@ public class DomainUtil {
         String owner = metadata.get(ON_BEHALF_OF_METADATA_KEY);
         String id = owner != null ? owner : participant.getId();
         String ret;
-        if (participant instanceof ApplicationParticipant
+        String organizationId = scopeOf(participant).organizationId();
+        if (organizationId == null
+                || participant instanceof ApplicationParticipant
                 || ParticipantConstants.PARTICIPANT_TYPE_MACHINE.equals(metadata.get(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY))) {
             ret = AuthzUtil.object(AuthzUtil.USER_TYPE, id);
         } else {
-            ret = authzMember(id, scopeOf(participant).organizationId());
+            ret = authzMember(id, organizationId);
         }
         return ret;
     }
 
     /**
-     * The user an account's membership is in the authorization stores, {@code user:<accountId>@<organizationId>},
-     * or {@code user:<accountId>@system} for a membership of the platform.
+     * The user an organization user's membership is in the authorization stores,
+     * {@code user:<organizationUserId>@<organizationId>}.
      *
-     * @param accountId      the account
-     * @param organizationId the organization, or null for the platform
+     * @param organizationUserId the organization user
+     * @param organizationId     the organization it is a member of
      * @return the membership's user
      */
-    public static String authzMember(String accountId, String organizationId) {
-        Validate.notBlank(accountId, "accountId cannot be blank");
-        return AuthzUtil.object(AuthzUtil.USER_TYPE, accountId + "@" + (organizationId != null ? organizationId : Membership.PLATFORM));
+    public static String authzMember(String organizationUserId, String organizationId) {
+        Validate.notBlank(organizationUserId, "organizationUserId cannot be blank");
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return AuthzUtil.object(AuthzUtil.USER_TYPE, organizationUserId + "@" + organizationId);
     }
 
     /**
-     * The identity a user id of the authorization stores names: the account of a membership's
-     * {@code <accountId>@<organizationId>}, and any other user id as it is.
+     * The identity a user id of the authorization stores names: the organization user of a membership's
+     * {@code <organizationUserId>@<organizationId>}, and any other user id as it is.
      *
      * @param userId the id of a {@code user} object
      * @return the identity's id
      */
-    public static String accountOf(String userId) {
+    public static String identityOf(String userId) {
         int at = userId.indexOf('@');
         return at < 0 ? userId : userId.substring(0, at);
     }
@@ -217,8 +223,7 @@ public class DomainUtil {
      * @param user an application's user
      * @return the tuples, the end user tuple first
      */
-    public static List<RelationshipTuple> applicationUserTuples(UserParticipantIdentity user) {
-        Validate.notBlank(user.getApplicationId(), "user %s is not an application's user", user.getId());
+    public static List<RelationshipTuple> applicationUserTuples(ApplicationParticipantIdentity user) {
         String me = AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId());
         String application = authzApplication(user.getOrganizationId(), user.getApplicationId());
         List<RelationshipTuple> ret = new ArrayList<>(List.of(new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, application)));
@@ -259,7 +264,7 @@ public class DomainUtil {
 
     /**
      * A grant read from the authorization stores, named as the resource's organization knows it: its resource by
-     * the resource's local id, and a member holding it by the member's account.
+     * the resource's local id, and a member holding it by the member's organization user.
      *
      * @param grant the grant as the stores hold it
      * @return the grant with local ids
@@ -268,7 +273,7 @@ public class DomainUtil {
         Resource resource = grant.resource();
         Subject subject = grant.subject();
         if (subject.kind() == SubjectKind.USER) {
-            subject = new Subject(SubjectKind.USER, accountOf(subject.id()));
+            subject = new Subject(SubjectKind.USER, identityOf(subject.id()));
         }
         return new Grant(grant.id(), grant.roleId(), subject, new Resource(resource.type(), localId(resource.type(), resource.id())));
     }
@@ -292,16 +297,19 @@ public class DomainUtil {
      */
     public static final String INDEX_PREFIX = "kinotic_";
 
+    /** The platform's id wherever a scope's id names an owner, such as a secret scope; no organization may take it. */
+    public static final String PLATFORM_ID = "system";
+
     // no organization carries the platform's name: an id beginning with it would put that name on a customer's
     // hosts, <org>--<app> under the apps-api domain and *.<org> under the sites domain
     private static final String RESERVED_ID_PREFIX = "kinotic";
     // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow;
     // the path segments the organization login's own routes claim under /api/auth/org/login/, which an
-    // organization's id would be mistaken for; and the organization slot of a platform membership's id
+    // organization's id would be mistaken for; and the platform's own id
     private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
                                                                          "console", "mail", "admin", "login", "status", "docs",
                                                                          "find", "social", "sso", "providers", "choices",
-                                                                         Membership.PLATFORM);
+                                                                         PLATFORM_ID);
 
     // Project ids may start with a digit because they embed application ids, which may
     // themselves start with a digit
@@ -569,45 +577,50 @@ public class DomainUtil {
     }
 
     /**
-     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}.
-     * Returns the typed subtype that matches the user's structural scope:
+     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}: a
+     * {@link DefaultSystemParticipant} for a system user, and for a {@link ScopedParticipantIdentity} the participant
+     * of the layer its scope is:
      * <ul>
-     *   <li>{@code organizationId == null} → {@link DefaultSystemParticipant}</li>
-     *   <li>{@code organizationId != null, applicationId == null} → {@link DefaultOrganizationParticipant}</li>
-     *   <li>both set → {@link DefaultApplicationParticipant} (also carrying {@code tenantId})</li>
+     *   <li>SYSTEM → {@link DefaultSystemParticipant}</li>
+     *   <li>ORGANIZATION → {@link DefaultOrganizationParticipant}</li>
+     *   <li>APPLICATION → {@link DefaultApplicationParticipant}, carrying the {@code tenantId} too</li>
      * </ul>
-     * Synchronous: every field needed lives on the user, no lookups required.
+     * An organization user acts through one of its memberships, by
+     * {@link #createParticipant(OrganizationParticipantIdentity, OrganizationMembership)}.
      *
-     * @param user the authenticated user
-     * @return the typed participant for the given user
+     * @param identity the authenticated identity, other than an organization user
+     * @return the typed participant for the given identity
      */
-    public static Participant createParticipant(ParticipantIdentity user) {
-        Validate.isTrue(!(user instanceof UserParticipantIdentity person && person.isAccount()),
-                        "An account acts through one of its memberships");
-        Map<String, String> metadata = participantMetadata(user);
-        if (user.getOrganizationId() == null) {
-            return DefaultSystemParticipant.builder()
-                                           .id(user.getId())
-                                           .metadata(metadata)
-                                           .roles(List.of())
-                                           .build();
+    public static Participant createParticipant(ParticipantIdentity identity) {
+        Validate.isTrue(!(identity instanceof OrganizationParticipantIdentity),
+                        "An organization user acts through one of its memberships");
+        ParticipantScope scope = scopeOf(identity);
+        Map<String, String> metadata = participantMetadata(identity);
+        Participant ret;
+        if (scope.organizationId() == null) {
+            ret = DefaultSystemParticipant.builder()
+                                          .id(identity.getId())
+                                          .metadata(metadata)
+                                          .roles(List.of())
+                                          .build();
+        } else if (scope.applicationId() == null) {
+            ret = DefaultOrganizationParticipant.builder()
+                                                .id(identity.getId())
+                                                .organizationId(scope.organizationId())
+                                                .metadata(metadata)
+                                                .roles(List.of())
+                                                .build();
+        } else {
+            ret = DefaultApplicationParticipant.builder()
+                                               .id(identity.getId())
+                                               .organizationId(scope.organizationId())
+                                               .applicationId(scope.applicationId())
+                                               .tenantId(scope.tenantId())
+                                               .metadata(metadata)
+                                               .roles(List.of())
+                                               .build();
         }
-        if (user.getApplicationId() == null) {
-            return DefaultOrganizationParticipant.builder()
-                                                 .id(user.getId())
-                                                 .organizationId(user.getOrganizationId())
-                                                 .metadata(metadata)
-                                                 .roles(List.of())
-                                                 .build();
-        }
-        return DefaultApplicationParticipant.builder()
-                                            .id(user.getId())
-                                            .organizationId(user.getOrganizationId())
-                                            .applicationId(user.getApplicationId())
-                                            .tenantId(user.getTenantId())
-                                            .metadata(metadata)
-                                            .roles(List.of())
-                                            .build();
+        return ret;
     }
 
     /**
@@ -676,36 +689,31 @@ public class DomainUtil {
     }
 
     /**
-     * The participant account {@code account} acts as through {@code membership}: an
-     * {@link OrganizationParticipant} of the membership's organization, or a {@link SystemParticipant} for a
-     * membership of the platform. The participant's id is the account's, so what the person creates is
-     * attributed to them whichever membership they act through.
+     * The participant organization user {@code user} acts as through {@code membership}: an
+     * {@link OrganizationParticipant} of the membership's organization. The participant's id is the user's, so what
+     * the person creates is attributed to them whichever organization they act in.
      */
-    public static Participant createParticipant(UserParticipantIdentity account, Membership membership) {
-        Validate.isTrue(account.isAccount(), "%s is an application's user, which acts as itself", account.getId());
-        Validate.isTrue(account.getId().equals(membership.getIdentityId()), "The membership is not the account's");
-        Map<String, String> metadata = participantMetadata(account);
-        Participant ret;
-        if (membership.getOrganizationId() == null) {
-            ret = DefaultSystemParticipant.builder()
-                                          .id(account.getId())
-                                          .metadata(metadata)
-                                          .roles(List.of())
-                                          .build();
-        } else {
-            ret = DefaultOrganizationParticipant.builder()
-                                                .id(account.getId())
-                                                .organizationId(membership.getOrganizationId())
-                                                .metadata(metadata)
-                                                .roles(List.of())
-                                                .build();
-        }
-        return ret;
+    public static Participant createParticipant(OrganizationParticipantIdentity user, OrganizationMembership membership) {
+        Validate.isTrue(user.getId().equals(membership.getOrganizationUserId()), "The membership is not the user's");
+        return DefaultOrganizationParticipant.builder()
+                                             .id(user.getId())
+                                             .organizationId(membership.getOrganizationId())
+                                             .metadata(participantMetadata(user))
+                                             .roles(List.of())
+                                             .build();
     }
 
     /** The scope a participant acts in: its own for a scoped participant, the platform's (all null) otherwise. */
     public static ParticipantScope scopeOf(Participant participant) {
         return participant instanceof ScopedParticipant scoped ? scoped.getScope() : new ParticipantScope(null, null, null);
+    }
+
+    /**
+     * The scope ids an identity carries: a {@link ScopedParticipantIdentity}'s scope, and none (all {@code null}) for
+     * a system user or an organization user.
+     */
+    public static ParticipantScope scopeOf(ParticipantIdentity identity) {
+        return identity instanceof ScopedParticipantIdentity scoped ? scoped.scope() : new ParticipantScope(null, null, null);
     }
 
     private static Map<String, String> participantMetadata(ParticipantIdentity identity) {
@@ -730,7 +738,7 @@ public class DomainUtil {
 
     private static String participantTypeFor(ParticipantIdentityType type) {
         return switch (type) {
-            case USER -> ParticipantConstants.PARTICIPANT_TYPE_USER;
+            case SYSTEM_USER, ORGANIZATION_USER, APPLICATION_USER -> ParticipantConstants.PARTICIPANT_TYPE_USER;
             case DELEGATE -> ParticipantConstants.PARTICIPANT_TYPE_DELEGATE;
             case MACHINE -> ParticipantConstants.PARTICIPANT_TYPE_MACHINE;
         };

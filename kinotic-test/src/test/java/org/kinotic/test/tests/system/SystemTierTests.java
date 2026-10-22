@@ -23,7 +23,8 @@ import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.OrganizationService;
@@ -146,7 +147,7 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void supportReadsThePlatformAndIsRefusedItsWrites() throws Exception {
-        UserParticipantIdentity support = member(null, "operator");
+        SystemParticipantIdentity support = systemUser("system-user");
         Subject subject = new Subject(SubjectKind.USER, support.getId());
         Grant grant = await(access.grant(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE));
         Organization organization = organization();
@@ -176,7 +177,7 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void anOperatorRunsThePlatformAndIsRefusedANodesReports() throws Exception {
-        UserParticipantIdentity operator = member(null, "operator");
+        SystemParticipantIdentity operator = systemUser("system-user");
         await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
         Participant caller = operator(operator.getId());
 
@@ -193,7 +194,7 @@ public class SystemTierTests extends KinoticTestBase {
     public void aRegistrarRegistersANodeAndReportsForItAlone() throws Exception {
         MachineParticipantIdentity registrar = machine("tier registrar");
         MachineParticipantIdentity other = machine("tier bystander");
-        UserParticipantIdentity operator = member(null, "operator");
+        SystemParticipantIdentity operator = systemUser("system-user");
         await(access.grant(new Subject(SubjectKind.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
         await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
         Participant registrarCaller = machineParticipant(registrar.getId());
@@ -236,8 +237,8 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void aPlatformGrantNamesOnlyThePlatformsStaff() throws Exception {
-        UserParticipantIdentity member = member(TEST_ORG_ID, "member");
-        UserParticipantIdentity operator = member(null, "operator");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "member");
+        SystemParticipantIdentity operator = systemUser("system-user");
 
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> access.grant(new Subject(SubjectKind.USER, member.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE)));
@@ -262,8 +263,8 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void theTelemetryTenantFollowsThePlatformGrant() throws Exception {
-        UserParticipantIdentity newcomer = member(null, "operator");
-        UserParticipantIdentity support = member(null, "operator");
+        SystemParticipantIdentity newcomer = systemUser("system-user");
+        SystemParticipantIdentity support = systemUser("system-user");
         await(access.grant(new Subject(SubjectKind.USER, support.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE));
         ServerLogQuery query = new ServerLogQuery().setTelemetryServiceName("kinotic-test").setStart(0).setEnd(1).setLimit(1);
 

@@ -10,7 +10,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -59,7 +59,7 @@ public class ApplicationIsolationTests extends KinoticTestBase {
         // which reads no definition
         String theirs = DomainUtil.createEntityDefinitionId(new ApplicationKey(TEST_ORG_ID, other.getId()), person.getName());
         String tenantId = "tenant-" + suffix();
-        UserParticipantIdentity bob = endUser(tenantId);
+        ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
@@ -87,8 +87,8 @@ public class ApplicationIsolationTests extends KinoticTestBase {
         await(runAsOrganization(() -> applicationService.deleteById(other.getId())));
     }
 
-    private UserParticipantIdentity endUser(String tenantId) throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
+    private ApplicationParticipantIdentity endUser(String tenantId) throws Exception {
+        ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
         user.setEmail("isolated-user-" + suffix() + "@kinotic.test");
         user.setDisplayName("Isolated User");
         user.setOrganizationId(TEST_ORG_ID);

@@ -60,7 +60,7 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
  * unchecked; a function no contract covers, of a service the directory holds no definition for or one the
  * definition leaves out, is refused. The engine answers for the caller, or for the owner a delegate acts for, from the platform's store for an
  * organization's members and the platform's own staff, and from the application's store for an application's
- * users. A platform operator or one of the platform's machines, whose scope names no organization, is checked
+ * users. A system user or one of the platform's machines, whose scope names no organization, is checked
  * on the platform itself wherever a check names the caller's scope, and an application's user on its tenant,
  * or on the application when it has none. A definition's rows are checked on the definition a request names: a
  * tenant's user on the definition within its tenant, an organization's member on the definition in the
@@ -269,7 +269,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     /**
      * The object a check on the caller's scope is made on: the level the check names, or, for a caller whose
      * scope stops above it, the caller's own level, as an organization member asked for an application's
-     * projects is checked on the organization, and a platform operator asked for either on the platform.
+     * projects is checked on the organization, and a system user asked for either on the platform.
      * Every ancestor carries the permissions of the levels below it, so the check keeps its meaning there. A
      * check on anything but a scope level is kept as declared.
      */

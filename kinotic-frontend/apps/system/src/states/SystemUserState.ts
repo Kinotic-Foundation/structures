@@ -9,7 +9,7 @@ export class SystemUserState extends SessionState implements ISystemUserState {
 
     public override async login(): Promise<void> {
         await super.login()
-        // This client admits platform operators only. A session established by any other
+        // This client admits system users only. A session established by any other
         // login surface is destroyed rather than admitted with narrower scope.
         const participant = this.connectedInfo?.participant
         if (!participant || !isSystemParticipant(participant)) {

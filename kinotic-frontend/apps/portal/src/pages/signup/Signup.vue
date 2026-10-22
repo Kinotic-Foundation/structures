@@ -46,7 +46,7 @@
       </div>
 
       <div class="text-center mt-4 text-sm">
-        Already have an account? <router-link to="/login" class="login-link">Sign in</router-link>
+        Already signed up? <router-link to="/login" class="login-link">Sign in</router-link>
       </div>
     </div>
 

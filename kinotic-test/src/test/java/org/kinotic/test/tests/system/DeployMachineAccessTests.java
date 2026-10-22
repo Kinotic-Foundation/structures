@@ -111,8 +111,8 @@ public class DeployMachineAccessTests extends KinoticTestBase {
         // a machine the deployment recorded but never bound, as one provisioned before its workload needed more is
         MachineParticipantIdentity unbound = new MachineParticipantIdentity();
         unbound.setMachineType(MachineType.PROJECT_SYNC)
-               .setDisplayName(project.getName() + " deploy sync")
-               .setOrganizationId(TEST_ORG_ID);
+               .setOrganizationId(TEST_ORG_ID)
+               .setDisplayName(project.getName() + " deploy sync");
         String recorded = issued(identities.createMachine(unbound)).getId();
         await(projectDeployments.recordSyncMachine(project.getId(), TEST_ORG_ID, recorded));
         assertFalse(admitted(ENTITY_DEFINITION_SERVICE, "create", machine(recorded), List.of(Map.of("applicationId", TEST_APP_ID))));

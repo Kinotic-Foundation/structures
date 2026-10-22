@@ -8,9 +8,9 @@ packages:
 catalog:
   '@kinotic-ai/core': ^5.0.0-beta.26
   '@kinotic-ai/idl': ^5.0.0-beta.1
-  '@kinotic-ai/management-api': ^5.0.0-beta.60
+  '@kinotic-ai/management-api': ^5.0.0-beta.62
   '@kinotic-ai/persistence': ^5.0.0-beta.10
-  '@kinotic-ai/system-api': ^5.0.0-beta.26
+  '@kinotic-ai/system-api': ^5.0.0-beta.29
 
 # Branch-only: resolves the first-party packages to their sources in kinotic-js/workspace, which
 # Gradle builds before the frontend, so this branch needs no npm publish. Never merge into develop.

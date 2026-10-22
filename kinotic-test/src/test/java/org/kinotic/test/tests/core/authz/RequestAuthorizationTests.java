@@ -21,7 +21,7 @@ import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -113,7 +113,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         Application application = application();
         Project a = project(application);
         Project b = project(application);
-        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
+        OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
@@ -144,7 +144,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     public void anEditorOfAnEntityDefinitionPublishesItAndIsRefusedUnPublishingIt() throws Exception {
         Application application = application();
         EntityDefinition definition = definition(application, project(application));
-        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
+        OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.editor",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
@@ -164,7 +164,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     @Test
     public void aDelegateActsWithItsOwnersAuthority() throws Exception {
         Project a = project(application());
-        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
+        OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant delegate = participant("cli-" + suffix(), Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, sally.getId()));
@@ -175,7 +175,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
 
     @Test
     public void theOrganizationsOwnFunctionsAreCheckedOnTheCallersOrganization() throws Exception {
-        UserParticipantIdentity member = member(TEST_ORG_ID, "request");
+        OrganizationParticipantIdentity member = member(TEST_ORG_ID, "request");
         Participant caller = participant(member.getId(), Map.of());
         // every application's members: a null application id, then the page
         List<Object> listing = Arrays.asList(null, Map.of("pageNumber", 0, "pageSize", 10));
