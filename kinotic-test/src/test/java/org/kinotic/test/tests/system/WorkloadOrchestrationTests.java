@@ -173,6 +173,8 @@ public class WorkloadOrchestrationTests extends KinoticTestBase {
 
         settle(() -> orchestration.deployWorkload(newWorkload()));
 
+        Workload stored = await(workloads.findAllForNode(NODE_ID, Pageable.create(0, 10, null))).getContent().getFirst();
+        assertEquals(WorkloadStatus.FAILED, stored.getStatus());
         // a mark from a verification would land on the context after the call returned
         Thread.sleep(1000);
         assertFalse(nodeUnreachable());
@@ -450,7 +452,8 @@ public class WorkloadOrchestrationTests extends KinoticTestBase {
         vmManager.completeRun(WorkloadStatus.STOPPED);
 
         await(run);
-        // the room is released, and the node removes the VM on its own
+        // the record keeps the outcome; the room is released, and the node removes the VM on its own
+        assertEquals(WorkloadStatus.STOPPED, workload(vmManager.lastStarted.getId()).getStatus());
         assertTrue(vmManager.destroyed.isEmpty());
         assertEquals(4, node().getFreeCpus());
         assertEquals(10240, node().getFreeDiskMb());
@@ -508,11 +511,12 @@ public class WorkloadOrchestrationTests extends KinoticTestBase {
     @Test
     public void pinnedDeployLandsOnRequestedNode() throws Exception {
         registered(OTHER_NODE_ID, 4, 4096, 10240);
-        vmManager(OTHER_NODE_ID);
+        StubVmManager other = vmManager(OTHER_NODE_ID);
 
         Workload deployed = call(() -> orchestration.deployWorkload(newWorkload().setNodeId(OTHER_NODE_ID)));
 
         VmNode target = await(nodes.findById(OTHER_NODE_ID));
+        assertNotNull(other.lastStarted);
         assertNull(vmManager.lastStarted);
         assertEquals(4 - deployed.getCpus(), target.getFreeCpus());
         assertEquals(4096 - deployed.getMemoryMb(), target.getFreeMemoryMb());

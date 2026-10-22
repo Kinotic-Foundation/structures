@@ -226,8 +226,10 @@ public class EndpointConnectionHandlerTests {
         handler.send(Event.create(CRI.create(requester), replyMetadata, new byte[0])).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
         handler.shutdown();
 
-        // the reply is the only send; no error follows it
-        verify(eventBusService).send(any());
+        // the forwarded reply is the only send; no error follows it
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).send(sent.capture());
+        Assertions.assertFalse(sent.getValue().metadata().contains(EventConstants.ERROR_HEADER));
     }
 
     @Test

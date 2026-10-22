@@ -122,6 +122,8 @@ class GitHubProjectRepoProvisionerTest {
                          tree.get("versions.txt").content().lines().toList());
         assertTrue(!tree.get("versions.txt").content().contains("^0.0.1"));
 
+        verify(apiClient).createBlob(anyString(), anyString(), any());
+        verify(apiClient).createCommit(anyString(), anyString(), anyString(), anyString());
         verify(apiClient).updateRef(anyString(), anyString(), eq("heads/main"), anyString(), eq(true));
     }
 

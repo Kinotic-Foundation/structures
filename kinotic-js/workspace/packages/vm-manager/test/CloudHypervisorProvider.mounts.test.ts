@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { existsSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type Docker from 'dockerode'
@@ -7,8 +7,9 @@ import { Workload, WorkloadStatus } from '@kinotic-ai/management-api'
 import { CloudHypervisorProvider } from '@/internal/api/providers/CloudHypervisorProvider'
 
 // Mount validation runs before the provider touches Docker, so a stub whose first call
-// throws stops the start there
-const docker = { listImages: () => { throw new Error('reached docker') } } as unknown as Docker
+// records that it was reached and throws both proves validation passed and stops the start there
+let reachedDocker = false
+const docker = { listImages: () => { reachedDocker = true; throw new Error('reached docker') } } as unknown as Docker
 
 describe('CloudHypervisorProvider volume mount preparation', () => {
 
@@ -16,6 +17,7 @@ describe('CloudHypervisorProvider volume mount preparation', () => {
     let provider: CloudHypervisorProvider
 
     beforeEach(() => {
+        reachedDocker = false
         baseDir = join(tmpdir(), `clh-mounts-${crypto.randomUUID()}`)
         provider = new CloudHypervisorProvider(join(baseDir, 'state'), docker, join(baseDir, 'data'))
     })
@@ -63,6 +65,7 @@ describe('CloudHypervisorProvider volume mount preparation', () => {
 
         await provider.start(workload(hostPath)).catch(() => {})
         expect(existsSync(hostPath)).toBe(true)
+        expect(reachedDocker).toBe(true)
     })
 
     // A node provisioned for this provider has project quotas; tmpdir does not, which is the
@@ -73,5 +76,13 @@ describe('CloudHypervisorProvider volume mount preparation', () => {
 
         await expect(provider.start(w)).rejects.toThrow(/not on an XFS filesystem mounted with prjquota/)
         expect(w.status).toBe(WorkloadStatus.FAILED)
+    })
+
+    it('accepts a read-only mount of an existing directory', async () => {
+        const hostPath = join(baseDir, 'data', 'projects', 'p1')
+        mkdirSync(hostPath, { recursive: true })
+
+        await provider.start(workload(hostPath, true)).catch(() => {})
+        expect(reachedDocker).toBe(true)
     })
 })

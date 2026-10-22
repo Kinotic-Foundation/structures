@@ -26,6 +26,13 @@ public class KinoticClusterInfoTests extends KinoticTestBase {
     private Kinotic kinotic;
 
     @Test
+    public void theNodeReportsTheServerItRuns() throws Exception {
+        KinoticClusterInfo clusterInfo = await(clusterInfoService.getClusterInfo());
+
+        Assertions.assertEquals("kinotic-test", localNode(clusterInfo).getServerName());
+    }
+
+    @Test
     public void theNodeReportsTheLabelsOfItsLogs() throws Exception {
         KinoticClusterInfo clusterInfo = await(clusterInfoService.getClusterInfo());
 
