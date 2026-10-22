@@ -102,6 +102,18 @@ open http://localhost:9090
 3. On **Members**, add someone with an invitation: a dialog shows the invitation's link to send them,
    or to open yourself.
 
+To connect Claude Code, install the Kinotic plugin (`/plugin marketplace add kinotic-ai/claude-plugin`,
+then `/plugin install kinotic@kinotic`), whose own MCP server is Kinotic Cloud's, and add this server
+beside it:
+
+```bash
+claude mcp add -s user --transport http kinotic-local http://localhost:58503/mcp
+```
+
+In Claude Code, `/mcp` → `kinotic-local` → authenticate: the browser opens the portal's consent page on
+9090; sign in and approve. Only Claude Code on this machine can reach the server — the Claude desktop
+app's custom connectors need `https`, and claude.ai cannot reach `localhost`.
+
 ### Adding "Continue with Keycloak" (local OIDC, no internet)
 
 To exercise the social sign-in OIDC plumbing without needing a real IdP, layer in

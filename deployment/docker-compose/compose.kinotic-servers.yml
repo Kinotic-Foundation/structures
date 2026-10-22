@@ -79,7 +79,7 @@ services:
     volumes:
       # The developer's tunnel origin and GitHub App (dev-tools/github-app/dev-github-app.ts).
       # Spring loads ./config/application.yml from the working directory, /workspace, above every
-      # packaged file, so it replaces application-demonstration.yml's localhost:9090 origin
+      # packaged file, so it replaces application-demonstration.yml's localhost:58503 API URL
       - ${HOME}/.kinotic/dev-environment/kinotic-server-management:/workspace/config:ro
 
   kinotic-server-system:

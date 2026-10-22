@@ -13,9 +13,10 @@ kinotic:
     github:
       webhookSecret: "-"
       appPrivateKey: "-"
-    # The portal build this server serves on 9090, and the API behind it. A developer's tunnel replaces
-    # both from ./config/application.yml, which outranks every file packaged in the jar
-    apiBaseUrl: http://localhost:9090
+    # This server's API as a browser and Claude Code reach it: the OAuth issuer of /mcp, and the base of the
+    # OIDC callbacks, all on 58503; 9090 serves only the portal's files. A developer's tunnel replaces it from
+    # ./config/application.yml, which outranks every file packaged in the jar
+    apiBaseUrl: http://localhost:58503
   managementServer:
     # The portal's sign-up page offers an email and a password, which needs neither GitHub nor a mail service
     passwordSignUp: true
