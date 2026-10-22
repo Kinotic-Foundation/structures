@@ -202,17 +202,8 @@ export class StompConnectionManager {
             this.rxStomp.configure(stompConfig)
 
             // Handles Websocket Errors
-            activation.own(this.rxStomp.webSocketErrors$.subscribe(async value => {
+            activation.own(this.rxStomp.webSocketErrors$.subscribe(value => {
                 this.lastWebsocketError = value
-                // The attempt that just failed was the last the budget allows — report now
-                // instead of paying the reconnect delay before the next beforeConnect notices.
-                if (!activation.ended && options?.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
-                    this.maxConnectionAttemptsReached = true
-                    await this.failConnection(activation, new Error(
-                        'Max number of reconnection attempts reached',
-                        { cause: value ?? undefined }
-                    ))
-                }
             }))
 
             // Server-issued ERROR frames close the connection and indicate an unrecoverable
@@ -284,7 +275,18 @@ export class StompConnectionManager {
                         // the client reconnects from here, so the end carries no reason
                         this.connectionEndedHandler?.(null)
                     } else if (previousState === RxStompState.CONNECTING) {
-                        this.connectionAttemptFailedSubject.next()
+                        // The attempt that just failed was the last the budget allows — end the connection now
+                        // instead of paying the reconnect delay before the next beforeConnect notices. stompjs
+                        // reads the deactivation this causes before it schedules a reconnect.
+                        if (options.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
+                            this.maxConnectionAttemptsReached = true
+                            void this.failConnection(activation, new Error(
+                                'Max number of reconnection attempts reached',
+                                { cause: this.lastWebsocketError ?? undefined }
+                            ))
+                        } else {
+                            this.connectionAttemptFailedSubject.next()
+                        }
                     }
                 }
                 previousState = state

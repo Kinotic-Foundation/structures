@@ -38,8 +38,6 @@ export function installConnectionHandler(router: Router,
         debug('Ending the session: %O', reason)
         // Cleared so the auth guard stops admitting protected routes on the dead connection.
         sessionState.connectedInfo = null
-        // the server answered, so the toast and the login page are the message rather than the overlay
-        CONNECTION_STATE.reachable = true
         showErrorToast(toast, 'Connection lost', reason)
         const current = router.currentRoute.value
         const { authenticationRequired } = current.meta
@@ -49,13 +47,13 @@ export function installConnectionHandler(router: Router,
     }
 
     Kinotic.eventBus.connectionEnded.subscribe((reason: Error | null) => {
-        if (!sessionState.isAuthenticated()) {
-            return
-        }
         if (Kinotic.eventBus.isConnectionActive()) {
             // the client is reconnecting on its own, and the session cookie outlives the connection
             CONNECTION_STATE.reachable = false
         } else {
+            // The client stopped retrying on the server's answer or on its own request, so the app is not
+            // waiting on the server any more: the toast and the login page are the message rather than the overlay.
+            CONNECTION_STATE.reachable = true
             // The outer error is a generic wrapper ('STOMP connection error'); the server's reason — an
             // ERROR frame's message header, or 'Authentication required' — is the root cause.
             endSession(reason !== null ? rootCause(reason)

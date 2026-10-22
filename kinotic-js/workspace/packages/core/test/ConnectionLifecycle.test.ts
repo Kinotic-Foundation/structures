@@ -243,6 +243,23 @@ describe('connection lifecycle', () => {
         expect(failed.map(reason => reason.message)).toEqual(['Max number of reconnection attempts reached'])
     })
 
+    it('reports an attempt the server closes before answering CONNECT, on the last of the budget, as the end of the connection', async () => {
+        const server = new FakeStompServer()
+        server.silent = true
+        const bus = new EventBus()
+        const failed = failures(bus)
+        let attemptsFailed = 0
+        bus.connectionAttemptFailed.subscribe(() => attemptsFailed++)
+        const connecting = bus.connect(options(server, { maxConnectionAttempts: 1 }))
+        await sleep(50)
+
+        // the socket closes without an error event, so only the close reports the attempt
+        server.current.drop()
+        await expect(connecting).rejects.toThrow('Max number of reconnection attempts reached')
+        expect(attemptsFailed).toBe(0)
+        expect(failed.map(reason => reason.message)).toEqual(['Max number of reconnection attempts reached'])
+    }, 1_000)
+
     it('reports no failure when disconnect() closes a socket that was still connecting on the last attempt of the budget', async () => {
         const server = new FakeStompServer()
         server.openDelayMs = 200

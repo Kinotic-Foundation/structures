@@ -1,7 +1,6 @@
 import { ConnectedInfo, Kinotic } from '@kinotic-ai/core'
 import { createDebug } from '../util/debug'
 import { apiUrl, serverOverrides } from '../util/helpers'
-import { CONNECTION_STATE } from './connectionState'
 
 const debug = createDebug('session-state')
 
@@ -44,8 +43,6 @@ export class SessionState implements ISessionState {
                 this.connectedInfo = await Kinotic.connect({server: serverOverrides()})
             } catch (reason: any) {
                 this.connectedInfo = null
-                // Kinotic.connect keeps retrying a server it cannot reach, so a rejection means the server answered
-                CONNECTION_STATE.reachable = true
                 throw new Error(reason ? String(reason) : 'Session authentication failed')
             }
         })
