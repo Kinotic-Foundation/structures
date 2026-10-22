@@ -93,6 +93,8 @@ Keep comments concise — usually a single line. Spend more words only where the
 
 Comment the code as it is now, not its history. Don't narrate what the code used to do or the edit you're making — no "before", "previously", "used to", "changed from", or "now does X instead" phrasing. The diff and git history record what changed; the comment describes the present state.
 
+Never cite a specification by section number in a comment or doc (`Section 4.1`, `RFC 6749 §5.1`). State the rule the code applies in plain words; the reader should not need the spec open to follow it. Naming the standard a feature implements (the RFC 8628 device grant) is fine.
+
 Use standard programming vocabulary in comments — the terms from GoF, Fowler's Refactoring, and the JDK/framework docs: delegate, factory, guard clause, invariant, idempotent, race condition, callback, dispatch. Never literary metaphors or coined phrases ("prologue", "dance", "journey", "saga"). Reference the actual method and class names involved rather than describing them indirectly. State cause and effect directly.
 
 Never remove or alter an existing authorship comment — `Created by <name> on <date>`, `@author`, or similar attribution. Preserve it verbatim (name, accents, emoji, date, punctuation) when editing or refactoring a file, including when you rewrite the surrounding Javadoc/JSDoc, and carry it with the type if you move that type to another file.

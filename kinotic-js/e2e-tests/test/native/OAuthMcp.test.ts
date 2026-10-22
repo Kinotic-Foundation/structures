@@ -37,9 +37,7 @@ function stompHandshake(url: string, token: string): Promise<number | 'open'> {
  *
  * The authorization-code happy path is not covered here: a client_id must be an https URL whose
  * host does not resolve to a special-use address, which no host reachable from this suite
- * satisfies. Covering it needs a public HTTPS fixture serving a metadata document, or the Client ID
- * Metadata Document Service that draft-ietf-oauth-client-id-metadata-document Section 4.2
- * recommends authorization servers offer for exactly this reason.
+ * satisfies. Covering it needs a public HTTPS fixture serving a metadata document.
  */
 describe('Kinotic JS', () => {
 
