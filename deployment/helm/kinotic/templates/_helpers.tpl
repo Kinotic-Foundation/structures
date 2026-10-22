@@ -38,10 +38,11 @@ Takes (dict "image" <repository and sha> "root" $).
 {{- end -}}
 
 {{/*
-The files a server's platform-secrets volume holds, as a YAML list of the Key Vault secret or
-Secret key each comes from and the file name it is mounted as: the server's own JWT key set, and
+The files a server's platform-secrets volume holds, as a YAML list of the Key Vault secret each
+comes from and the file name it is mounted as: the server's own JWT key set, and
 the properties Spring imports from the directory as a config tree, each file named after the
-property it sets. The GitHub App's secrets go only to a server with githubApp set.
+property it sets. The GitHub App's secrets go only to a server with githubApp set, the Turnstile
+site's secret only to one with turnstile set.
 Takes (dict "name" <server key> "server" <server values> "root" $).
 */}}
 {{- define "kinotic.platformSecretFiles" -}}
@@ -55,6 +56,14 @@ Takes (dict "name" <server key> "server" <server values> "root" $).
   path: kinotic.managementApi.github.appPrivateKey
 - object: {{ $objects.githubWebhookSecret }}
   path: kinotic.managementApi.github.webhookSecret
+{{- end }}
+{{- if .server.cloudflareDns }}
+- object: {{ $objects.cloudflareDnsApiToken }}
+  path: kinotic.domain.publishedSites.cloudflare.apiToken
+{{- end }}
+{{- if .server.turnstile }}
+- object: {{ $objects.turnstileSecretKey }}
+  path: kinotic.managementServer.turnstile.secretKey
 {{- end }}
 {{- end -}}
 
@@ -82,26 +91,16 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 {{- end }}
 
 # ── Public URLs + email ───────────────────────────────────
+KINOTIC_DOMAIN_APPAPIBASEURL: "{{ $root.Values.kinotic.domain.appApiBaseUrl }}"
+KINOTIC_DOMAIN_PORTALBASEURL: "{{ $root.Values.kinotic.domain.portalBaseUrl }}"
 {{- with $server.managementServer }}
-KINOTIC_MANAGEMENTSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
-KINOTIC_MANAGEMENTSERVER_PORTALBASEURL: "{{ .portalBaseUrl }}"
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
+{{- with .turnstile }}
+KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
+{{- end }}
 {{- end }}
 {{- with $server.systemServer }}
 KINOTIC_SYSTEMSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 KINOTIC_SYSTEMSERVER_CONSOLEBASEURL: "{{ .consoleBaseUrl }}"
-{{- end }}
-{{- with $server.deployment }}
-KINOTIC_SYSTEMAPI_DEPLOYMENT_APPAPIBASEURL: "{{ .appApiBaseUrl }}"
-{{- end }}
-{{- if $server.systemServer }}
-{{- with (index $root.Values.servers "kinotic-server-management").managementServer }}
-# invites the member service this server hosts sends are accepted in the portal
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
-{{- end }}
-{{- end }}
-{{- with $server.appServer }}
-KINOTIC_APPSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 {{- end }}
 KINOTIC_DOMAIN_EMAIL_ENABLED: "{{ $root.Values.kinotic.domain.email.enabled }}"
 {{- if $root.Values.kinotic.domain.email.enabled }}
@@ -120,6 +119,7 @@ KINOTIC_DOMAIN_ELASTICCONNECTIONS_{{ $index }}_PORT: "{{ $value.port }}"
 {{- end }}
 
 # ── Loki, Tempo, Mimir (LogService, TelemetryService) ─────
+KINOTIC_MANAGEMENTAPI_APIBASEURL: "{{ $root.Values.kinotic.managementApi.apiBaseUrl }}"
 KINOTIC_MANAGEMENTAPI_LOKIURL: "{{ $root.Values.kinotic.managementApi.lokiUrl }}"
 KINOTIC_MANAGEMENTAPI_TEMPOURL: "{{ $root.Values.kinotic.managementApi.tempoUrl }}"
 KINOTIC_MANAGEMENTAPI_MIMIRURL: "{{ $root.Values.kinotic.managementApi.mimirUrl }}"
@@ -146,11 +146,6 @@ OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING: "{{ range $index, $value := $r
 KINOTIC_APIGATEWAY_SSL_ENABLED: "true"
 KINOTIC_APIGATEWAY_SSL_CERTPATH: "/certs/tls.crt"
 KINOTIC_APIGATEWAY_SSL_KEYPATH: "/certs/tls.key"
-{{- end }}
-{{- if $root.Values.evictionTracking.enabled }}
-
-# ── Eviction tracking ─────────────────────────────────────
-KINOTIC_CACHE_EVICTION_CSV_PATH: "{{ $root.Values.evictionTracking.mountPath | default "/eviction-data" }}/evictions-${POD_NAME}.csv"
 {{- end }}
 
 # ── Extra environment variables ───────────────────────────

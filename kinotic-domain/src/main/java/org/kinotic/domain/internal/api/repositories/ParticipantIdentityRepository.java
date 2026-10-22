@@ -9,10 +9,15 @@ import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdent
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.List;
 
 @Component
 public class ParticipantIdentityRepository extends AbstractRepository<ParticipantIdentity> {
@@ -21,50 +26,90 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
         super("kinotic_participant_identity", ParticipantIdentity.class, crudServiceTemplate);
     }
 
-    public Future<UserParticipantIdentity> findByEmail(String email, String organizationId, String applicationId) {
+    /** The system user with the email, or {@code null}. */
+    public Future<SystemParticipantIdentity> findSystemUserByEmail(String email) {
+        return findUserByEmail(ParticipantIdentityType.SYSTEM_USER, email, null)
+                .map(SystemParticipantIdentity.class::cast);
+    }
+
+    /** The organization user with the email, or {@code null}. */
+    public Future<OrganizationParticipantIdentity> findOrganizationUserByEmail(String email) {
+        return findUserByEmail(ParticipantIdentityType.ORGANIZATION_USER, email, null)
+                .map(OrganizationParticipantIdentity.class::cast);
+    }
+
+    /** The user of application {@code applicationId} of organization {@code organizationId} with the email, or {@code null}. */
+    public Future<ApplicationParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId) {
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        Validate.notBlank(applicationId, "applicationId cannot be blank");
+        return findUserByEmail(ParticipantIdentityType.APPLICATION_USER, email, applicationFilter(organizationId, applicationId))
+                .map(ApplicationParticipantIdentity.class::cast);
+    }
+
+    private Future<ParticipantIdentity> findUserByEmail(ParticipantIdentityType type, String email, Query scope) {
         Validate.notBlank(email, "email cannot be blank");
-        if (applicationId != null) {
-            Validate.notBlank(organizationId,
-                              "organizationId is required when applicationId is supplied");
+        Query typeAndEmail = composeFilter(termFilter("type", type.name()),
+                                           termFilter("email", DomainUtil.normalizeEmail(email)));
+        return findFirst(b -> b.query(scope == null ? typeAndEmail : composeFilter(typeAndEmail, scope)));
+    }
+
+    /** The system users. */
+    public Future<Page<SystemParticipantIdentity>> findSystemUsers(Pageable pageable) {
+        return findUsers(ParticipantIdentityType.SYSTEM_USER, null, pageable)
+                .map(page -> page.map(SystemParticipantIdentity.class::cast));
+    }
+
+    /** The system users whose email or display name matches {@code searchText}; blank text lists them all. */
+    public Future<Page<SystemParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable) {
+        return searchUsers(searchText, ParticipantIdentityType.SYSTEM_USER, null, pageable)
+                .map(page -> page.map(SystemParticipantIdentity.class::cast));
+    }
+
+    /** The users of application {@code applicationId} of organization {@code organizationId}. */
+    public Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable) {
+        return findUsers(ParticipantIdentityType.APPLICATION_USER, applicationFilter(organizationId, applicationId), pageable)
+                .map(page -> page.map(ApplicationParticipantIdentity.class::cast));
+    }
+
+    /** The users of the application whose email or display name matches {@code searchText}; blank text lists them all. */
+    public Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
+                                                                                  String organizationId,
+                                                                                  String applicationId,
+                                                                                  Pageable pageable) {
+        return searchUsers(searchText, ParticipantIdentityType.APPLICATION_USER, applicationFilter(organizationId, applicationId), pageable)
+                .map(page -> page.map(ApplicationParticipantIdentity.class::cast));
+    }
+
+    /** The organization users among {@code ids} whose email or display name matches {@code searchText}. */
+    public Future<Page<OrganizationParticipantIdentity>> searchOrganizationUsersById(String searchText, Collection<String> ids, Pageable pageable) {
+        Validate.notBlank(searchText, "searchText cannot be blank");
+        return searchUsers(searchText, ParticipantIdentityType.ORGANIZATION_USER, Query.of(f -> f.ids(i -> i.values(List.copyOf(ids)))), pageable)
+                .map(page -> page.map(OrganizationParticipantIdentity.class::cast));
+    }
+
+    private Future<Page<ParticipantIdentity>> findUsers(ParticipantIdentityType type, Query scope, Pageable pageable) {
+        Query ofType = termFilter("type", type.name());
+        return findAll(pageable, b -> b.query(scope == null ? ofType : composeFilter(ofType, scope)));
+    }
+
+    private Future<Page<ParticipantIdentity>> searchUsers(String searchText, ParticipantIdentityType type, Query scope, Pageable pageable) {
+        Future<Page<ParticipantIdentity>> ret;
+        if (searchText == null || searchText.isBlank()) {
+            ret = findUsers(type, scope, pageable);
+        } else {
+            Query ofType = termFilter("type", type.name());
+            ret = findAll(pageable, b -> b.query(Query.of(q -> q.bool(bq -> bq
+                    .must(m -> m.queryString(qs -> qs.query(searchText)
+                                                     .fields("email", "displayName")
+                                                     .analyzeWildcard(true)))
+                    .filter(scope == null ? ofType : composeFilter(ofType, scope))))));
         }
-        return findFirst(b -> b.query(composeFilter(
-                termFilter("email", DomainUtil.normalizeEmail(email)),
-                scopeFilter(organizationId, applicationId))))
-                .map(UserParticipantIdentity.class::cast);
+        return ret;
     }
 
-    public Future<UserParticipantIdentity> findFirstOrgUserByEmail(String email) {
-        return findFirst(b -> b.query(composeFilter(
-                termFilter("email", DomainUtil.normalizeEmail(email)),
-                existsFilter("organizationId"),
-                missingFilter("applicationId"))))
-                .map(UserParticipantIdentity.class::cast);
-    }
-
-    /** Users only — delegates share their owner's scope and must not appear in member listings. */
-    public Future<Page<UserParticipantIdentity>> findUsersByScope(String organizationId, String applicationId, Pageable pageable) {
-        return findAll(pageable, b -> b.query(composeFilter(
-                termFilter("type", ParticipantIdentityType.USER.name()),
-                scopeFilter(organizationId, applicationId))))
-                .map(page -> page.map(UserParticipantIdentity.class::cast));
-    }
-
-    /** Users only — delegates share their owner's scope and must not appear in member listings. */
-    public Future<Page<UserParticipantIdentity>> searchUsersByScope(String searchText,
-                                                                    String organizationId,
-                                                                    String applicationId,
-                                                                    Pageable pageable) {
-        if (searchText == null || searchText.isEmpty()) {
-            return findUsersByScope(organizationId, applicationId, pageable);
-        }
-        return findAll(pageable, b -> b.query(Query.of(q -> q.bool(bq -> bq
-                .must(m -> m.queryString(qs -> qs.query(searchText)
-                                                 .fields("email", "displayName")
-                                                 .analyzeWildcard(true)))
-                .filter(composeFilter(
-                        termFilter("type", ParticipantIdentityType.USER.name()),
-                        scopeFilter(organizationId, applicationId)))))))
-                .map(page -> page.map(UserParticipantIdentity.class::cast));
+    private Query applicationFilter(String organizationId, String applicationId) {
+        return composeFilter(termFilter("organizationId", organizationId),
+                             termFilter("applicationId", applicationId));
     }
 
     public Future<Page<MachineParticipantIdentity>> findMachinesByScope(String organizationId, String applicationId, Pageable pageable) {
@@ -74,45 +119,43 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .map(page -> page.map(MachineParticipantIdentity.class::cast));
     }
 
-    public Future<Page<DelegatingParticipantIdentity>> findDelegatesByOwner(String ownerId, Pageable pageable) {
+    /** The delegates owner {@code ownerId} authorized in the scope {@code (organizationId, applicationId)}. */
+    public Future<Page<DelegatingParticipantIdentity>> findDelegatesByOwner(String ownerId,
+                                                                            String organizationId,
+                                                                            String applicationId,
+                                                                            Pageable pageable) {
+        Validate.notBlank(ownerId, "ownerId cannot be blank");
+        return findAll(pageable, b -> b.query(composeFilter(
+                termFilter("ownerId", ownerId),
+                scopeFilter(organizationId, applicationId))))
+                .map(page -> page.map(DelegatingParticipantIdentity.class::cast));
+    }
+
+    /** Every delegate owner {@code ownerId} authorized, in any scope. */
+    public Future<Page<DelegatingParticipantIdentity>> findAllDelegatesByOwner(String ownerId, Pageable pageable) {
         Validate.notBlank(ownerId, "ownerId cannot be blank");
         return findAll(pageable, b -> b.query(termFilter("ownerId", ownerId)))
                 .map(page -> page.map(DelegatingParticipantIdentity.class::cast));
     }
 
-    public Future<DelegatingParticipantIdentity> findByOwnerAndClientKey(String ownerId, String clientKey) {
+    /** The delegate owner {@code ownerId} authorized for client {@code clientKey} in the scope, or {@code null}. */
+    public Future<DelegatingParticipantIdentity> findByOwnerAndClientKey(String ownerId,
+                                                                         String clientKey,
+                                                                         String organizationId,
+                                                                         String applicationId) {
         Validate.notBlank(ownerId, "ownerId cannot be blank");
         Validate.notBlank(clientKey, "clientKey cannot be blank");
         return findFirst(b -> b.query(composeFilter(
                 termFilter("ownerId", ownerId),
-                termFilter("clientKey", clientKey))))
-                .map(DelegatingParticipantIdentity.class::cast);
-    }
-
-    public Future<UserParticipantIdentity> findByOidcIdentity(String oidcSubject,
-                                                              String oidcConfigId,
-                                                              String organizationId,
-                                                              String applicationId) {
-        return findFirst(b -> b.query(composeFilter(
-                termFilter("oidcSubject", oidcSubject),
-                termFilter("oidcConfigId", oidcConfigId),
+                termFilter("clientKey", clientKey),
                 scopeFilter(organizationId, applicationId))))
-                .map(UserParticipantIdentity.class::cast);
-    }
-
-    public Future<UserParticipantIdentity> findOrgUserByOidcIdentity(String oidcSubject, String oidcConfigId) {
-        return findFirst(b -> b.query(composeFilter(
-                termFilter("oidcSubject", oidcSubject),
-                termFilter("oidcConfigId", oidcConfigId),
-                existsFilter("organizationId"),
-                missingFilter("applicationId"))))
-                .map(UserParticipantIdentity.class::cast);
+                .map(DelegatingParticipantIdentity.class::cast);
     }
 
     /**
      * Structural scope filter against the typed scope fields on the document:
      * <ul>
-     *   <li>both null → {@code organizationId} and {@code applicationId} must be missing (SYSTEM).</li>
+     *   <li>both null → {@code organizationId} and {@code applicationId} must be missing (SYSTEM)</li>
      *   <li>only {@code organizationId} set → matches that org AND {@code applicationId} is missing (ORG)</li>
      *   <li>both set → matches both fields (APP)</li>
      * </ul>

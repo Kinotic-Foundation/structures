@@ -1,14 +1,14 @@
 import { ExecutionStatus, WorkloadStatus, type JobRun, type Organization, type Workload } from '@kinotic-ai/management-api'
 import type { KinoticClusterInfo, VmNode } from '@kinotic-ai/system-api'
 import { DatetimeUtil, shortSha, withoutExceptionPrefix } from '@kinotic-ai/frontend-common'
-import { AttentionKind } from './AttentionKind'
+import { AttentionType } from './AttentionType'
 import { NodeHealth, nodeHealth, nodeUnreachable as nodeMark } from './nodes'
 import { scopePath, type Scope } from './scope'
 import { nodeUnreachable } from './workloads'
 
-/** One thing an operator has to look at, and where it is handled. */
+/** One thing a system user has to look at, and where it is handled. */
 export interface AttentionItem {
-    kind: AttentionKind
+    kind: AttentionType
     /** What it is, in a few words: the project, workload or node it concerns. */
     title: string
     /** A short tag beside the title, such as the commit a deploy run was for. */
@@ -29,7 +29,7 @@ const FULL_SHA = /\b[0-9a-f]{40}\b/
 const MAX_PER_KIND = 5
 
 function relative(timestamp: string | null): string {
-    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp).toLowerCase() : ''
+    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp) : ''
 }
 
 /** The short form of the commit sha a run's description names, or null when it names none. */
@@ -50,7 +50,7 @@ function failedRuns(runs: JobRun[], scope: Scope): AttentionItem[] {
     return runs.filter(run => run.status === ExecutionStatus.FAILED)
                .slice(0, MAX_PER_KIND)
                .map(run => ({
-                   kind: AttentionKind.FAILED_RUN,
+                   kind: AttentionType.FAILED_RUN,
                    // the run concerns its project; the commit it deployed rides beside it
                    title: run.projectId ?? (run.description ?? run.name).replace(FULL_SHA, sha => shortSha(sha)),
                    badge: run.projectId ? shortShaIn(run.description) : null,
@@ -66,7 +66,7 @@ function failedWorkloads(workloads: Workload[], scope: Scope): AttentionItem[] {
     return workloads.filter(workload => workload.status === WorkloadStatus.FAILED)
                     .slice(0, MAX_PER_KIND)
                     .map(workload => ({
-                        kind: AttentionKind.FAILED_WORKLOAD,
+                        kind: AttentionType.FAILED_WORKLOAD,
                         title: workload.name,
                         badge: null,
                         owner: ownerOf(workload, scope),
@@ -84,7 +84,7 @@ function unreachableWorkloads(workloads: Workload[], scope: Scope): AttentionIte
                     .filter(({ unreachable }) => unreachable !== undefined)
                     .slice(0, MAX_PER_KIND)
                     .map(({ workload, unreachable }) => ({
-                        kind: AttentionKind.WORKLOAD_ON_SILENT_NODE,
+                        kind: AttentionType.WORKLOAD_ON_SILENT_NODE,
                         title: workload.name,
                         badge: null,
                         owner: ownerOf(workload, scope),
@@ -100,7 +100,7 @@ function unfitNodes(nodes: VmNode[]): AttentionItem[] {
         const health = nodeHealth(node)
         if (health === NodeHealth.UNREACHABLE) {
             ret.push({
-                kind: AttentionKind.UNREACHABLE_NODE,
+                kind: AttentionType.UNREACHABLE_NODE,
                 title: node.name,
                 badge: null,
                 owner: null,
@@ -110,7 +110,7 @@ function unfitNodes(nodes: VmNode[]): AttentionItem[] {
             })
         } else if (health === NodeHealth.DRAINING) {
             ret.push({
-                kind: AttentionKind.DRAINING_NODE,
+                kind: AttentionType.DRAINING_NODE,
                 title: node.name,
                 badge: null,
                 owner: null,
@@ -135,7 +135,7 @@ function versionSkew(cluster: KinoticClusterInfo | null): AttentionItem[] {
         for (const node of cluster.nodes) {
             if (common !== undefined && node.version !== common) {
                 ret.push({
-                    kind: AttentionKind.VERSION_SKEW,
+                    kind: AttentionType.VERSION_SKEW,
                     title: `${node.serverName} node ${node.nodeId}`,
                     badge: null,
                     owner: null,
@@ -149,7 +149,7 @@ function versionSkew(cluster: KinoticClusterInfo | null): AttentionItem[] {
     return ret
 }
 
-/** What needs an operator across the platform, failures first. */
+/** What needs a system user across the platform, failures first. */
 export function platformAttention(cluster: KinoticClusterInfo | null, nodes: VmNode[], workloads: Workload[],
                                   runs: JobRun[]): AttentionItem[] {
     const scope: Scope = {}
@@ -162,7 +162,7 @@ export function platformAttention(cluster: KinoticClusterInfo | null, nodes: VmN
     ]
 }
 
-/** What needs an operator within one organization, failures first. */
+/** What needs a system user within one organization, failures first. */
 export function organizationAttention(organization: Organization, workloads: Workload[], runs: JobRun[]): AttentionItem[] {
     const scope: Scope = { organizationId: organization.id ?? '' }
     return [

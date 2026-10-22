@@ -42,7 +42,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -407,9 +406,5 @@ public class DeployWorkerTests extends KinoticTestBase {
             Thread.sleep(250);
         }
         Assertions.assertNull(await(read.get()), what + " should have been finalized by its worker");
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

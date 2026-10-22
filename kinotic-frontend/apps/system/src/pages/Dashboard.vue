@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Dashboard" description="The platform at a glance, and what needs an operator.">
+    <PageHeader title="Dashboard" description="The platform at a glance, and what needs a system user.">
       <template #actions>
         <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading" @click="load" />
       </template>
@@ -8,7 +8,7 @@
 
     <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
 
-    <!-- The page reads in order of what an operator acts on: what needs me, the platform's vital
+    <!-- The page reads in order of what a system user acts on: what needs me, the platform's vital
          signs, how healthy it has been, then what happened -->
     <div class="flex flex-col gap-4">
       <AttentionList :items="attention" />

@@ -11,7 +11,6 @@ which is what the vite dev proxy and the gateway-served production build both ne
 | `pnpm dev:tunnel` | `.env` + `.env.tunnel` | same origin, through the vite proxy |
 | `pnpm build` | `.env` | `http://localhost:58503` |
 | `pnpm build:dev` | `.env` | `http://localhost:58503` |
-| `pnpm build:kind` | `.env` + `.env.kind` | `https://localhost:58503` |
 
 Only `VITE_`-prefixed vars reach client code, and the dev server must be restarted to pick
 up a change. Precedence is `.env` < `.env.<mode>` < `.env.local`; `.env.local` is gitignored
@@ -21,7 +20,7 @@ for machine-specific overrides.
 
 `pnpm dev:tunnel` serves the SPA and the backend from ONE origin, so external callbacks
 reach a local server through a single tunnel. `.env.tunnel` clears `VITE_KINOTIC_HOST`, and
-`server.proxy` in `vite.config.ts` forwards `/api`, `/v1` (STOMP WebSocket), `/.well-known`,
+`server.proxy` in `vite.config.ts` forwards `/api` (REST and the STOMP WebSocket at `/api/v1`), `/.well-known`,
 and `/mcp` to 58503.
 
 ```bash
@@ -40,7 +39,7 @@ environment" in the contributing guide (`website/content/02.platform/09.contribu
 The tunnel host must be allowed in two places:
 
 - `server.allowedHosts` in `vite.config.ts`, or vite answers `Blocked request`.
-- `kinotic.apiGateway.cors.allowedOriginPattern` in `application-development.yml`, or the
+- `kinotic.domain.cors.allowedOriginPattern` in `application-development.yml`, or the
   gateway answers `CORS Rejected - Invalid origin`. This applies even though the SPA and API
   share the origin, because the social login forms POST and browsers send `Origin` on a POST
   navigation.

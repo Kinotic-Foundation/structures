@@ -4,6 +4,8 @@ package org.kinotic.test.tests.core.application;
 
 import org.junit.jupiter.api.Test;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.ApplicationKey;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +13,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @SpringBootTest
 public class ApplicationTests extends KinoticTestBase {
 
 	@Autowired
 	private ApplicationService applicationService;
+
+	@Autowired
+	private ApplicationRepository applicationRepository;
 
 	@Test
 	public void createAndDeleteApplication() {
@@ -50,6 +60,24 @@ public class ApplicationTests extends KinoticTestBase {
 		StepVerifier.create(Mono.fromCompletionStage(runAsOrganization(() -> applicationService.deleteById("slugs-and-snails")).toCompletionStage()))
 					.expectComplete()
 					.verify();
+	}
+
+	@Test
+	public void theFirstClaimedUiBecomesThePrimaryUiAndALaterClaimLeavesIt() throws Exception {
+		Application created = await(runAsOrganization(() -> applicationService.create(new Application("Primary Claim", "Testing the primary UI claim")
+																							   .setOrganizationId(TEST_ORG_ID))));
+		ApplicationKey key = new ApplicationKey(TEST_ORG_ID, created.getId());
+		try {
+			assertTrue(await(applicationRepository.claimPrimaryUi(key, "web", "https://primary-claim--web.test-org.example.com")));
+			assertFalse(await(applicationRepository.claimPrimaryUi(key, "admin", "https://primary-claim--admin.test-org.example.com")));
+
+			Application claimed = await(applicationRepository.findById(created.getId(), TEST_ORG_ID));
+			assertEquals("web", claimed.getPrimaryUiId());
+			assertEquals("https://primary-claim--web.test-org.example.com", claimed.getPrimaryUiUrl());
+			assertNotNull(claimed.getUpdated());
+		} finally {
+			await(runAsOrganization(() -> applicationService.deleteById(created.getId())));
+		}
 	}
 
 }

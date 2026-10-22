@@ -1,58 +1,79 @@
 package org.kinotic.system.internal.api.services.workload;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.internal.VertxInternal;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteServices;
 import org.apache.ignite.resources.SpringResource;
 import org.apache.ignite.services.Service;
-import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.management.api.model.workload.Workload;
-import org.kinotic.management.api.repositories.WorkloadRepository;
-import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.services.workload.WorkloadOrchestrationService;
+import org.kinotic.core.api.event.ZonePartitioningService;
+import org.kinotic.domain.api.utils.DomainUtil;
 
-import java.time.Duration;
-import java.util.Date;
-import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
- * Deletes the records of runs that ended longer ago than {@code kinotic.systemApi.workload.retentionDays},
- * with their logs, a page at a time through {@link WorkloadOrchestrationService#deleteWorkloads(List)};
- * runs as one HA cluster singleton on the Ignite service grid, once when it starts and hourly after.
+ * Runs the {@link WorkloadRetentionSweeper} as one HA cluster singleton on the Ignite service grid,
+ * once when it starts, hourly after, and whenever {@link #sweep()} is called through its proxy. It
+ * runs one sweep at a time: a sweep requested while one is running joins it.
  */
 @Slf4j
-public class WorkloadCleanupService implements Service {
+public class WorkloadCleanupService implements Service, WorkloadRetentionService {
 
-    static final String SINGLETON_NAME = "workload-cleanup";
+    private static final String SINGLETON_NAME = "workload-cleanup";
 
     private static final long SWEEP_MS = 3_600_000;
-    private static final int PAGE_SIZE = 100;
-    // Pages one sweep takes before leaving the rest to the next: a bound on one sweep's run, not on
-    // what is eventually deleted
-    private static final int MAX_PAGES = 50;
 
     // Injected by Ignite on the node elected to host the singleton
-    @SpringResource(resourceClass = WorkloadOrchestrationService.class)
-    private transient WorkloadOrchestrationService orchestrationService;
-    @SpringResource(resourceClass = WorkloadRepository.class)
-    private transient WorkloadRepository workloadRepository;
-    @SpringResource(resourceClass = KinoticSystemApiProperties.class)
-    private transient KinoticSystemApiProperties properties;
+    @SpringResource(resourceClass = WorkloadRetentionSweeper.class)
+    private transient WorkloadRetentionSweeper sweeper;
     @SpringResource(resourceClass = Vertx.class)
     private transient Vertx vertx;
 
     private transient long timerId;
+    // The context sweeps run on: one of the singleton's own, since a caller of sweep() blocks its thread
+    // until the sweep ends, and a sweep queued on that caller's context would wait behind it forever
+    private transient Context sweepContext;
+    // The sweep in progress, null between sweeps; guarded by this
+    private transient Future<Void> inFlight;
+
+    /**
+     * Deploys the singleton; Ignite elects its host among the nodes hosting system-api, the only ones
+     * whose context holds the beans the sweep is injected with.
+     *
+     * @param ignite the local node
+     */
+    static void deploy(Ignite ignite) {
+        services(ignite).deployClusterSingleton(SINGLETON_NAME, new WorkloadCleanupService());
+    }
+
+    /**
+     * @param ignite the local node
+     * @return a proxy calling the singleton wherever it is hosted
+     */
+    static WorkloadRetentionService proxy(Ignite ignite) {
+        // Ignite proxies a service only through an interface the service implements, here WorkloadRetentionService
+        return services(ignite).serviceProxy(SINGLETON_NAME, WorkloadRetentionService.class, false);
+    }
+
+    private static IgniteServices services(Ignite ignite) {
+        return ignite.services(ignite.cluster().forAttribute(ZonePartitioningService.hostsAttribute(DomainUtil.SYSTEM_API_ZONE), true));
+    }
 
     @Override
     public void init() {
         log.info("Starting workload cleanup singleton");
-        sweep();
-        timerId = vertx.setPeriodic(SWEEP_MS, id -> sweep());
+        sweepContext = ((VertxInternal) vertx).createEventLoopContext();
+        startSweep();
+        timerId = vertx.setPeriodic(SWEEP_MS, id -> startSweep());
     }
 
     @Override
     public void execute() {
-        // passive service: all work is driven by the timer started in init
+        // passive service: all work is driven by the timer started in init and by calls through the proxy
     }
 
     @Override
@@ -61,31 +82,39 @@ public class WorkloadCleanupService implements Service {
         vertx.cancelTimer(timerId);
     }
 
-    private void sweep() {
-        int retentionDays = properties.getSystemApi().getWorkload().getRetentionDays();
-        Date cutoff = new Date(System.currentTimeMillis() - Duration.ofDays(retentionDays).toMillis());
-        sweepPage(cutoff, retentionDays, 1)
-                .onFailure(error -> log.error("Workload cleanup failed; what it left is taken by the next run", error));
+    @Override
+    public void sweep() {
+        // the calling thread blocks until the sweep it started or joined has ended, or until it is
+        // interrupted, which leaves the sweep running
+        try {
+            startSweep().toCompletionStage().toCompletableFuture().get();
+        } catch (ExecutionException e) {
+            // the exception travels back to the calling node, so it carries the cause as text, which always serializes
+            throw new IllegalStateException("Workload cleanup failed: " + e.getCause());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for the workload cleanup to end");
+        }
     }
 
-    // The oldest page is deleted as one batch, and the next page read once it is gone, until a page
-    // comes back short or the sweep has taken its share. A batch that fails ends this sweep: the logs
-    // go before the records, so nothing is half done.
-    private Future<Void> sweepPage(Date cutoff, int retentionDays, int pageNumber) {
-        return workloadRepository.findEndedBefore(cutoff, Pageable.create(0, PAGE_SIZE, null))
-                              .compose(page -> {
-                                  List<String> ids = page.getContent().stream().map(Workload::getId).toList();
-                                  Future<Void> ret;
-                                  if (ids.isEmpty()) {
-                                      ret = Future.succeededFuture();
-                                  } else {
-                                      ret = orchestrationService.deleteWorkloads(ids)
-                                              .onSuccess(deleted -> log.info("Deleted {} workloads whose runs ended more than {} days ago", ids.size(), retentionDays))
-                                              .compose(v -> ids.size() == PAGE_SIZE && pageNumber < MAX_PAGES
-                                                      ? sweepPage(cutoff, retentionDays, pageNumber + 1)
-                                                      : Future.succeededFuture());
-                                  }
-                                  return ret;
-                              });
+    private synchronized Future<Void> startSweep() {
+        if (inFlight == null) {
+            Promise<Void> sweep = Promise.promise();
+            // assigned before the sweep starts, so its completion always finds it to clear
+            inFlight = sweep.future();
+            inFlight.onComplete(result -> sweepEnded(sweep.future()));
+            // Future.future fails the sweep when sweeper.sweep() throws instead of returning a failed future,
+            // so inFlight is always cleared
+            sweepContext.runOnContext(v -> Future.<Void>future(promise -> sweeper.sweep().onComplete(promise))
+                                                 .onFailure(error -> log.error("Workload cleanup failed; what it left is taken by the next run", error))
+                                                 .onComplete(sweep));
+        }
+        return inFlight;
+    }
+
+    private synchronized void sweepEnded(Future<Void> sweep) {
+        if (inFlight == sweep) {
+            inFlight = null;
+        }
     }
 }

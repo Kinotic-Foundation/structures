@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.WatchEvent;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 public class DeploymentHistoryTests extends KinoticTestBase {
 
-    private static final List<WatchEventKind> NOTABLE = List.of(WatchEventKind.OBSERVED_REPORTED, WatchEventKind.CONDITION_SET);
+    private static final List<WatchEventType> NOTABLE = List.of(WatchEventType.OBSERVED_REPORTED, WatchEventType.CONDITION_SET);
 
     // acme is a prefix of acme-corp, so each listing tells the two apart by the separator that ends the
     // organization id in a parent pointer
@@ -62,28 +62,28 @@ public class DeploymentHistoryTests extends KinoticTestBase {
     @Test
     public void listsTheEntriesOfEveryProjectDeploymentInTheOrganizationOfTheKindsAskedFor() throws Exception {
         long now = System.currentTimeMillis();
-        enter(deployed, WatchedType.PROJECT_DEPLOYMENT, ACME, null, WatchEventKind.DESIRED_UPDATED, now - 4000);
-        enter(deployed, WatchedType.PROJECT_DEPLOYMENT, ACME, null, WatchEventKind.OBSERVED_REPORTED, now - 3000);
+        enter(deployed, WatchedType.PROJECT_DEPLOYMENT, ACME, null, WatchEventType.DESIRED_UPDATED, now - 4000);
+        enter(deployed, WatchedType.PROJECT_DEPLOYMENT, ACME, null, WatchEventType.OBSERVED_REPORTED, now - 3000);
         enter(failingMicroservice, WatchedType.MICROSERVICE_DEPLOYMENT, ACME,
-              new WatchedParent(WatchedType.PROJECT_DEPLOYMENT, ACME, failing), WatchEventKind.CONDITION_SET, now - 2000);
-        enter(unparentedRun, WatchedType.JOB_RUN, ACME, null, WatchEventKind.CONDITION_SET, now - 1500);
-        enter(corpProject, WatchedType.PROJECT_DEPLOYMENT, ACME_CORP, null, WatchEventKind.OBSERVED_REPORTED, now - 1000);
+              new WatchedParent(WatchedType.PROJECT_DEPLOYMENT, ACME, failing), WatchEventType.CONDITION_SET, now - 2000);
+        enter(unparentedRun, WatchedType.JOB_RUN, ACME, null, WatchEventType.CONDITION_SET, now - 1500);
+        enter(corpProject, WatchedType.PROJECT_DEPLOYMENT, ACME_CORP, null, WatchEventType.OBSERVED_REPORTED, now - 1000);
         enter(corpMicroservice, WatchedType.MICROSERVICE_DEPLOYMENT, ACME_CORP,
-              new WatchedParent(WatchedType.PROJECT_DEPLOYMENT, ACME_CORP, corpProject), WatchEventKind.CONDITION_SET, now - 500);
+              new WatchedParent(WatchedType.PROJECT_DEPLOYMENT, ACME_CORP, corpProject), WatchEventType.CONDITION_SET, now - 500);
         elasticsearch.indices().refresh(r -> r.index(WatchEventRepository.DATA_STREAM)).get(30, TimeUnit.SECONDS);
 
-        assertEquals(List.of(failingMicroservice + " " + WatchEventKind.CONDITION_SET,
-                             deployed + " " + WatchEventKind.OBSERVED_REPORTED),
+        assertEquals(List.of(failingMicroservice + " " + WatchEventType.CONDITION_SET,
+                             deployed + " " + WatchEventType.OBSERVED_REPORTED),
                      describe(history(member(ACME))));
 
-        assertEquals(List.of(corpMicroservice + " " + WatchEventKind.CONDITION_SET,
-                             corpProject + " " + WatchEventKind.OBSERVED_REPORTED),
+        assertEquals(List.of(corpMicroservice + " " + WatchEventType.CONDITION_SET,
+                             corpProject + " " + WatchEventType.OBSERVED_REPORTED),
                      describe(history(member(ACME_CORP))));
     }
 
-    private void enter(String id, WatchedType type, String scope, WatchedParent parent, WatchEventKind kind, long at) throws Exception {
-        WatchEvent event = new WatchEvent(new Date(at), type, id, scope, parent, kind, "history test", "test-node",
-                                          null, kind + " " + id, null);
+    private void enter(String id, WatchedType type, String scope, WatchedParent parent, WatchEventType eventType, long at) throws Exception {
+        WatchEvent event = new WatchEvent(new Date(at), type, id, scope, parent, eventType, "history test", "test-node",
+                                          null, eventType + " " + id, null);
         await(watchEvents.record(UUID.randomUUID().toString(), event));
     }
 
@@ -96,7 +96,7 @@ public class DeploymentHistoryTests extends KinoticTestBase {
     }
 
     private static List<String> describe(List<WatchEvent> events) {
-        return events.stream().map(event -> event.id() + " " + event.kind()).toList();
+        return events.stream().map(event -> event.id() + " " + event.eventType()).toList();
     }
 
     private static OrganizationParticipant member(String organizationId) {
@@ -105,9 +105,5 @@ public class DeploymentHistoryTests extends KinoticTestBase {
                                                   Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
                                                          ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                   List.of("ADMIN"));
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

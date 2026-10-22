@@ -11,18 +11,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { Clock } from '@lucide/vue'
 import DatetimeUtil from '../util/DatetimeUtil'
 
 /**
- * A timestamp as a soft pill with a clock, reading relatively ("Today", "3 days ago"); the exact
- * date and time show on hover. A missing timestamp renders as a dash.
+ * A timestamp as a soft pill with a clock, reading to the minute ("5 minutes ago", "Today at 2:54 AM",
+ * "Oct 16 at 3:10 PM") and kept current while shown; the exact date and time show on hover. A missing
+ * timestamp renders as a dash.
  */
 const props = defineProps<{
   date: Date | string | number | null | undefined
 }>()
 
-const label = computed(() => props.date ? DatetimeUtil.formatRelativeDate(props.date) : '')
+// keeps the minute-granular label current while the pill stays on screen
+const now = ref(Date.now())
+const ticker = setInterval(() => { now.value = Date.now() }, 30000)
+onUnmounted(() => clearInterval(ticker))
+
+const label = computed(() => {
+  const relative = props.date ? DatetimeUtil.formatRelativeDate(props.date, now.value) : ''
+  return relative.charAt(0).toUpperCase() + relative.slice(1)
+})
 const exact = computed(() => props.date ? new Date(props.date).toLocaleString() : undefined)
 </script>

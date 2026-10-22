@@ -28,9 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public abstract class AbstractGrindTest {
 
-    // Instantiated before the Vertx instance below: SecurityContext registers its
+    // Instantiated before the Vertx instance below, with no Vertx provider since callAs is unused: SecurityContext registers its
     // ContextLocal in a static initializer, which Vert.x requires to happen first
-    protected final SecurityContext securityContext = new SecurityContext();
+    protected final SecurityContext securityContext = new SecurityContext(null);
 
     protected AnnotationConfigApplicationContext appCtx;
     protected Vertx vertx;

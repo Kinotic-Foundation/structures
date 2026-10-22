@@ -120,3 +120,37 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+# ── Cloudflare ────────────────────────────────────────────────────────────────
+
+variable "cloudflare_zone_name" {
+  description = "The customers' zone, where organizations' sites and the application API hosts live, e.g. kinotic.io; the platform zone comes from the global root"
+  type        = string
+}
+
+variable "cloudflare_zone_id" {
+  description = "The zone's id, from the Cloudflare dashboard"
+  type        = string
+}
+
+variable "cloudflare_account_id" {
+  description = "The Cloudflare account the sites Worker is deployed in"
+  type        = string
+}
+
+variable "cloudflare_api_token" {
+  description = "The token terraform applies the zones with: Workers Scripts edit on the account, and DNS, Workers routes, zone settings and SSL and certificates edit on the customers' zone and the platform zone. Set it in local.auto.tfvars or TF_VAR_cloudflare_api_token"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_dns_api_token" {
+  description = "A second token holding DNS edit on the platform zone and the customers' zone and nothing else, which cert-manager answers the DNS-01 challenges for the servers' names with; the same token the global root stores for the servers as kinotic-cloudflare-dns-api-token"
+  type        = string
+  sensitive   = true
+}
+
+variable "turnstile_site_key" {
+  description = "The site key of the Cloudflare Turnstile site the portal's find-my-organizations form presents; public, and the pair of the secret the global root stores as kinotic-turnstile-secret-key"
+  type        = string
+}

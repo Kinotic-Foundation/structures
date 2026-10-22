@@ -43,13 +43,13 @@ class InsertStatementParserTest {
     @Test
     void whenRoutingAndDocumentIdGiven_thenBothCarriedOnTheStatement() {
         InsertStatement statement = parseInsert(
-            "INSERT INTO kinotic_application (id, organizationId) VALUES ('atlas-crm', 'kinotic-test') "
-            + "WITH REFRESH, ROUTING 'kinotic-test', DOCUMENT_ID 'kinotic-test-atlas-crm';");
+            "INSERT INTO kinotic_application (id, organizationId) VALUES ('atlas-crm', 'test-org') "
+            + "WITH REFRESH, ROUTING 'test-org', DOCUMENT_ID 'test-org-atlas-crm';");
 
         assertTrue(statement.refresh());
-        assertEquals("kinotic-test", statement.routing());
-        assertEquals("kinotic-test-atlas-crm", statement.documentId());
-        assertEquals(List.of("atlas-crm", "kinotic-test"), statement.values(),
+        assertEquals("test-org", statement.routing());
+        assertEquals("test-org-atlas-crm", statement.documentId());
+        assertEquals(List.of("atlas-crm", "test-org"), statement.values(),
                      "the id column keeps the entity id; only the document _id is composite");
     }
 

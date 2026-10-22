@@ -12,9 +12,8 @@
 #                                             GitHub module, also the GitHub App's private key and
 #                                             webhook secret
 #   kinotic-<org|system|app>-server/platform-secrets/jwt-signing-keys
-#                                             the server's own JWT key set, in the shape
-#                                             deployment/kind/terraform/platform-secrets.tf
-#                                             produces, so a key can be added at migration
+#                                             the server's own JWT key set: an activeKeyId and
+#                                             a keys list, so a key can be added at migration
 #   kinotic-<org|system|app>-server/certs/    certbot's fullchain.pem and privkey.pem for the
 #                                             server's names, which certbot places on the host itself
 #   grafana.env                               GF_SECURITY_ADMIN_PASSWORD
@@ -63,6 +62,7 @@ done
 cat > "$OUT/kinotic-servers.env" <<ENV
 # terraform output -raw secrets_env, in deployment/terraform/azure/dev-server
 AZURE_CLIENT_SECRET=
+KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=
 ENV
 
 cat > "$OUT/grafana.env" <<ENV
@@ -70,5 +70,5 @@ GF_SECURITY_ADMIN_PASSWORD=$(password)
 ENV
 
 chmod -R go-rwx "$OUT"
-echo "Written to $OUT. Fill in AZURE_CLIENT_SECRET, and the GitHub App values in both"
+echo "Written to $OUT. Fill in kinotic-servers.env from the dev-server root's secrets_env output, and the GitHub App values in both"
 echo "kinotic-server-management/secrets.yml and kinotic-server-system/secrets.yml, then: ./sync-secrets.sh $OUT"

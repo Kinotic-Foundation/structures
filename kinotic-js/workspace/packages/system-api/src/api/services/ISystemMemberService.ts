@@ -1,11 +1,11 @@
 import { SYSTEM_API_ZONE,
          type MachineParticipantIdentity,
          type MachineProvisionResult,
-         type UserParticipantIdentity } from '@kinotic-ai/management-api'
+         type SystemParticipantIdentity } from '@kinotic-ai/management-api'
 import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 
 /**
- * The platform's own members: the operators who sign in to the system console, and the
+ * The platform's own members: the system users who sign in to the system console, and the
  * SYSTEM-scope machines that connect as platform daemons, such as a worker node's vm-manager.
  * Published in the system zone, which only SYSTEM participants may address; every method works
  * on SYSTEM scope alone, so an organization's users and machines stay that organization's to
@@ -13,9 +13,9 @@ import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
  */
 export interface ISystemMemberService {
 
-    findUsers(pageable: Pageable): Promise<Page<UserParticipantIdentity>>
+    findUsers(pageable: Pageable): Promise<Page<SystemParticipantIdentity>>
 
-    searchUsers(searchText: string, pageable: Pageable): Promise<Page<UserParticipantIdentity>>
+    searchUsers(searchText: string, pageable: Pageable): Promise<Page<SystemParticipantIdentity>>
 
     /** Lists the platform's machines, disabled ones included. */
     findMachines(pageable: Pageable): Promise<Page<MachineParticipantIdentity>>
@@ -55,11 +55,11 @@ export class SystemMemberService implements ISystemMemberService {
         this.serviceProxy = kinotic.serviceProxy(`${SYSTEM_API_ZONE}~org.kinotic.system.api.services.SystemMemberService`)
     }
 
-    public findUsers(pageable: Pageable): Promise<Page<UserParticipantIdentity>> {
+    public findUsers(pageable: Pageable): Promise<Page<SystemParticipantIdentity>> {
         return this.serviceProxy.invoke('findUsers', [pageable])
     }
 
-    public searchUsers(searchText: string, pageable: Pageable): Promise<Page<UserParticipantIdentity>> {
+    public searchUsers(searchText: string, pageable: Pageable): Promise<Page<SystemParticipantIdentity>> {
         return this.serviceProxy.invoke('searchUsers', [searchText, pageable])
     }
 

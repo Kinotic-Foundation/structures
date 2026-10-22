@@ -16,7 +16,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,9 +76,5 @@ public class WatchEventServiceTests extends KinoticTestBase {
     private boolean namesBoth(List<WatchEvent> entries) {
         Set<String> ids = entries.stream().map(WatchEvent::id).collect(Collectors.toSet());
         return ids.contains(firstNode) && ids.contains(secondNode);
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

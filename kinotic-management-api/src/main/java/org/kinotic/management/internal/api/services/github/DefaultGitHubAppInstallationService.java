@@ -6,8 +6,9 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
-import org.kinotic.domain.api.services.security.OrgSignupOidcConfigurationService;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.model.security.OidcProviderType;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
 import org.kinotic.management.api.config.GithubProperties;
 import org.kinotic.management.api.model.github.GitHubAppInstallation;
@@ -18,6 +19,8 @@ import org.kinotic.management.internal.api.services.github.client.GitHubApiClien
 import org.kinotic.management.internal.api.services.github.client.InstallationDetails;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.List;
 
@@ -37,27 +40,36 @@ public class DefaultGitHubAppInstallationService
     private final GithubProperties githubProperties;
     private final GitHubInstallStateService stateService;
     private final GitHubApiClient apiClient;
-    private final OrgSignupOidcConfigurationService orgSignupOidcConfigurationService;
+    private final OidcConfigurationService oidcConfigurationService;
     private final SecretReferenceResolver secretReferenceResolver;
+    private final KinoticDomainProperties domainProperties;
 
     public DefaultGitHubAppInstallationService(GitHubAppInstallationRepository repository,
                                                SecurityContext securityContext,
                                                GithubProperties githubProperties,
                                                GitHubInstallStateService stateService,
                                                GitHubApiClient apiClient,
-                                               OrgSignupOidcConfigurationService orgSignupOidcConfigurationService,
-                                               SecretReferenceResolver secretReferenceResolver) {
+                                               OidcConfigurationService oidcConfigurationService,
+                                               SecretReferenceResolver secretReferenceResolver,
+                                               KinoticDomainProperties domainProperties) {
         super(repository, securityContext);
         this.installationRepository = repository;
         this.githubProperties = githubProperties;
         this.stateService = stateService;
         this.apiClient = apiClient;
-        this.orgSignupOidcConfigurationService = orgSignupOidcConfigurationService;
+        this.oidcConfigurationService = oidcConfigurationService;
         this.secretReferenceResolver = secretReferenceResolver;
+        this.domainProperties = domainProperties;
     }
 
     @Override
     public Future<String> startInstall(String returnTo) {
+        // GitHubInstallCallbackHandler forwards the install's code to an absolute returnTo, and the portal navigates
+        // to a path, so it may only lead to the portal itself or to a UI the CORS allowlist admits
+        if (returnTo != null && !isAllowedReturnTo(returnTo)) {
+            return Future.failedFuture(new IllegalArgumentException(
+                    "returnTo must be a path, or a URL on an origin kinotic.domain.cors.allowedOriginPattern allows"));
+        }
         String orgId = requireOrganizationId();
         StagedInstall staged = new StagedInstall()
                 .setOrganizationId(orgId)
@@ -66,6 +78,34 @@ public class DefaultGitHubAppInstallationService
         return Future.succeededFuture(
                 "https://github.com/apps/" + githubProperties.getAppSlug()
                         + "/installations/new?state=" + state);
+    }
+
+    private boolean isAllowedReturnTo(String returnTo) {
+        boolean ret;
+        if (returnTo.startsWith("/")) {
+            // "//host" and "/\host" are network-path references a browser resolves to another origin
+            ret = !returnTo.startsWith("//") && !returnTo.startsWith("/\\");
+        } else {
+            ret = domainProperties.getDomain().getCors().trustsOrigin(originOf(returnTo));
+        }
+        return ret;
+    }
+
+    private static String originOf(String url) {
+        String ret;
+        try {
+            URI uri = new URI(url);
+            boolean http = "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
+            if (http && uri.getHost() != null && uri.getRawUserInfo() == null) {
+                ret = uri.getScheme().toLowerCase() + "://" + uri.getHost().toLowerCase()
+                        + (uri.getPort() == -1 ? "" : ":" + uri.getPort());
+            } else {
+                ret = null;
+            }
+        } catch (URISyntaxException e) {
+            ret = null;
+        }
+        return ret;
     }
 
     @Override
@@ -110,7 +150,7 @@ public class DefaultGitHubAppInstallationService
     private Future<String> userAccessToken(String code) {
         // Must exchange with the App's own OAuth credential (the github-platform sign-in
         // row): /user/installations only reports installations of the app that minted the token.
-        return orgSignupOidcConfigurationService.findEnabledByProvider(OidcProviderKind.GITHUB)
+        return oidcConfigurationService.findEnabledOrgSignupByProvider(OidcProviderType.GITHUB)
                 .compose(config -> {
                     if (config == null) {
                         return Future.failedFuture(new IllegalStateException(

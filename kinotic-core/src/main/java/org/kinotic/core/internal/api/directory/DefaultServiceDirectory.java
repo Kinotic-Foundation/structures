@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ignite.Ignite;
 import org.kinotic.core.api.annotations.Publish;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.CursorPageable;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
@@ -18,13 +19,15 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.event.CRI;
 import org.kinotic.core.api.event.EventBusService;
 import org.kinotic.core.api.event.EventConstants;
+import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.idl.api.annotations.McpTool;
 import org.kinotic.idl.api.converter.IdlConverterFactory;
 import org.kinotic.idl.api.converter.jsonschema.McpJsonSchemaGenerator;
 import org.kinotic.idl.api.directory.ServiceDeclaration;
-import org.kinotic.idl.api.directory.SchemaFactory;
+import org.kinotic.idl.api.directory.SchemaService;
+import org.kinotic.idl.api.directory.SchemaServiceFactory;
 import org.kinotic.idl.api.utils.IdlUtil;
 import org.kinotic.idl.api.schema.AsyncC3Type;
 import org.kinotic.idl.api.schema.C3Type;
@@ -32,9 +35,11 @@ import org.kinotic.idl.api.schema.ComplexC3Type;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.NamespaceDefinition;
 import org.kinotic.idl.api.schema.ObjectC3Type;
+import org.kinotic.core.api.utils.ZoneUtil;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.StreamC3Type;
 import org.kinotic.idl.api.schema.decorators.McpToolC3Decorator;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -54,79 +59,104 @@ import java.util.Set;
 
 /**
  * The {@link ServiceDirectory}: publishes the contracts of services that opt in with
- * {@code @Publish(advertise = true)} or expose an {@code @McpTool} function, keeps liveness verified against
- * cluster registrations, serves the directory queries, and deploys the {@link ServiceLivenessUpdater} as one HA
- * cluster singleton on startup. Storage is supplied by a {@link ServiceDirectoryStrategy}; the directory bean
- * exists only when a strategy bean does, so a deployment without one has no directory at all.
+ * {@code @Publish(advertise = true)} or expose an {@code @McpTool} function, and the services an application's
+ * runtimes register, keeps liveness verified against cluster registrations, serves the directory queries, and deploys the
+ * {@link ServiceLivenessUpdater} as one HA cluster singleton on startup. Services registered while the
+ * context starts are converted in one session once every singleton exists, so a service whose contract cannot
+ * be created fails the refresh, and their entries are stored on {@link ApplicationReadyEvent}. Storage is
+ * supplied by a {@link ServiceDirectoryStrategy}; the directory bean exists only when a strategy bean does, so
+ * a deployment without one has no directory at all.
  */
 @Slf4j
 @Component
 // Evaluated at scan time: a module contributing a strategy must register its definitions before core's
 // scan runs — KinoticDomainAutoConfiguration declares before = KinoticCoreAutoConfiguration for this
 @ConditionalOnBean(ServiceDirectoryStrategy.class)
-public class DefaultServiceDirectory implements ServiceDirectory {
+public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializingSingleton {
 
     private static final String LIVENESS_SINGLETON_NAME = "kinotic-service-liveness-updater";
 
     // A strategy pattern is used, to favor composition over inheritance
     private final ServiceDirectoryStrategy strategy;
     private final EventBusService eventBusService;
-    private final SchemaFactory schemaFactory;
+    private final SchemaService schemaService;
     private final McpJsonSchemaGenerator schemaGenerator;
     private final Ignite ignite;
 
-    // Registrations arriving during startup are held here and published in ONE conversion session on
-    // ApplicationReadyEvent, so model types shared between services are converted once per node
-    private final Map<ServiceIdentifier, ServiceDeclaration> pendingRegistrations = new HashMap<>();
+    // Registrations arriving while singletons are created are held here and converted in ONE conversion
+    // session once all of them exist, so model types shared between services are converted once per node
+    private final Map<ServiceIdentifier, ServiceDeclaration> pendingRegistrations = new HashMap<>(); // guarded by registrationLock
+    // The entries of that session, held until ApplicationReadyEvent so one liveness reconcile from a single
+    // cluster snapshot covers them all
+    private final Map<ServiceIdentifier, ServiceDirectoryEntry> pendingEntries = new HashMap<>(); // guarded by registrationLock
     // Identifiers this node has published or queued, so unregister(ServiceIdentifier) knows whether
     // liveness needs a refresh without the caller re-supplying the registration classes
     private final Set<ServiceIdentifier> registered = new HashSet<>(); // guarded by registrationLock
     private final Object registrationLock = new Object();
     private boolean startupComplete; // guarded by registrationLock
 
-    // Collapses repeated NO_HANDLERS reports for the same CRI into one verification (seconds).
+    // Collapses repeated NO_HANDLERS reports for the same service into one verification (seconds).
     private final Cache<String, Boolean> reportDebounce = Caffeine.newBuilder()
                                                                   .expireAfterWrite(Duration.ofSeconds(5))
                                                                   .build();
 
     public DefaultServiceDirectory(ServiceDirectoryStrategy strategy,
                                    EventBusService eventBusService,
-                                   SchemaFactory schemaFactory,
+                                   SchemaServiceFactory schemaServiceFactory,
                                    IdlConverterFactory idlConverterFactory,
                                    Ignite ignite) {
         this.strategy = strategy;
         this.eventBusService = eventBusService;
-        this.schemaFactory = schemaFactory;
+        // a Participant is bound from the security context, never from the request, the rule
+        // AbstractJacksonSupport and NamedJsonArgumentResolver bind by, so no contract advertises one
+        this.schemaService = schemaServiceFactory.create(Set.of(Participant.class));
         this.schemaGenerator = new McpJsonSchemaGenerator(idlConverterFactory);
         this.ignite = ignite;
     }
 
+    @Override
+    public void afterSingletonsInstantiated() {
+        // held from the snapshot to the entries, so an unregister cannot find a registration in neither map;
+        // a service whose contract cannot be created throws here and fails the refresh, so the server never
+        // comes up serving a function the directory does not describe
+        synchronized (registrationLock) {
+            startupComplete = true;
+            pendingEntries.putAll(buildEntries(pendingRegistrations));
+            pendingRegistrations.clear();
+        }
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        drainStartupRegistrations();
+        storeStartupEntries();
         deployLivenessSingleton();
     }
 
     @Override
     public void register(ServiceIdentifier serviceIdentifier, Class<?> serviceInterface, Class<?> serviceImplementation) {
         // the user class, so an AOP proxy never becomes the naming source
-        ServiceDeclaration registration = new ServiceDeclaration(serviceInterface, ClassUtils.getUserClass(serviceImplementation));
-        if (!shouldPublishToDirectory(registration)) {
+        ServiceDeclaration declaration = new ServiceDeclaration(serviceInterface, ClassUtils.getUserClass(serviceImplementation));
+        if (!shouldPublishToDirectory(declaration)) {
             return;
         }
         boolean queued;
         synchronized (registrationLock) {
-            registered.add(serviceIdentifier);
             queued = !startupComplete;
             if (queued) {
-                pendingRegistrations.put(serviceIdentifier, registration);
+                registered.add(serviceIdentifier);
+                pendingRegistrations.put(serviceIdentifier, declaration);
             }
         }
         if (!queued) {
-            // a late registration (lazily created bean) cannot join a batch, publish it immediately.
+            // a late registration (lazily created bean) cannot join the startup session, so it converts on its
+            // own, throwing to the caller when its contract cannot be created, and is stored immediately.
             // The entry starts with online unset and its ACTIVE registration event may have fired before the
             // entry existed, so refresh from the verified cluster state after the upsert
-            publishAllToDirectory(Map.of(serviceIdentifier, registration))
+            ServiceDirectoryEntry entry = buildEntries(Map.of(serviceIdentifier, declaration)).get(serviceIdentifier);
+            synchronized (registrationLock) {
+                registered.add(serviceIdentifier);
+            }
+            strategy.upsertEntry(entry)
                     .compose(v -> refreshOnline(serviceIdentifier))
                     .onFailure(throwable -> log.error("Failed to register service {} in the directory", serviceIdentifier, throwable));
         }
@@ -137,7 +167,9 @@ public class DefaultServiceDirectory implements ServiceDirectory {
         boolean published;
         synchronized (registrationLock) {
             // a registration still pending never reached the directory, removing it from the batch is enough
-            published = registered.remove(serviceIdentifier) && pendingRegistrations.remove(serviceIdentifier) == null;
+            published = registered.remove(serviceIdentifier)
+                    && pendingRegistrations.remove(serviceIdentifier) == null
+                    && pendingEntries.remove(serviceIdentifier) == null;
         }
         if (published) {
             // this node leaving says nothing about other instances of the service — verify, never
@@ -147,19 +179,29 @@ public class DefaultServiceDirectory implements ServiceDirectory {
         }
     }
 
-    private void drainStartupRegistrations() {
-        Map<ServiceIdentifier, ServiceDeclaration> batch;
+    private void storeStartupEntries() {
+        Map<ServiceIdentifier, ServiceDirectoryEntry> batch;
         synchronized (registrationLock) {
-            startupComplete = true;
-            batch = new HashMap<>(pendingRegistrations);
-            pendingRegistrations.clear();
+            batch = new HashMap<>(pendingEntries);
+            pendingEntries.clear();
         }
         if (!batch.isEmpty()) {
             try {
-                // one reconcile corrects the liveness of every entry from a single cluster snapshot,
-                // instead of one registration query per service
-                publishAllToDirectory(batch).compose(v -> reconcileLiveness())
-                                            .onFailure(throwable -> log.error("Startup directory publish failed", throwable));
+                // one cluster snapshot answers the liveness of every entry this node published, instead of one
+                // registration query per service, and only this node's entries are written. The stamp is taken
+                // before the snapshot, so an observation that starts later always lands after this one
+                Instant observed = Instant.now();
+                strategy.upsertEntries(batch.values())
+                        .compose(v -> eventBusService.activeServiceAddresses())
+                        .compose(addresses -> {
+                            Set<String> services = servicesOf(addresses);
+                            Map<String, Boolean> onlineByEntryId = new HashMap<>();
+                            for (ServiceDirectoryEntry entry : batch.values()) {
+                                onlineByEntryId.put(entry.getId(), services.contains(entry.getServiceAddress()));
+                            }
+                            return strategy.setOnline(onlineByEntryId, observed);
+                        })
+                        .onFailure(throwable -> log.error("Startup directory publish failed", throwable));
             } catch (Exception e) {
                 log.error("Startup directory publish failed", e);
             }
@@ -173,39 +215,29 @@ public class DefaultServiceDirectory implements ServiceDirectory {
     }
 
     /**
-     * Converts and upserts entries for all given registrations in one conversion session, so model types shared
-     * between services are converted once.
+     * Converts the given registrations in one conversion session, so model types shared between services are
+     * converted once, and builds the entry of each.
+     *
+     * @throws IllegalStateException when a service's contract cannot be created, or a function's tool
+     *                               declaration is one MCP cannot serve
      */
-    private Future<Void> publishAllToDirectory(Map<ServiceIdentifier, ServiceDeclaration> registrations) {
-        NamespaceDefinition namespace = schemaFactory.createForServices(registrations.values());
+    private Map<ServiceIdentifier, ServiceDirectoryEntry> buildEntries(Map<ServiceIdentifier, ServiceDeclaration> registrations) {
+        NamespaceDefinition namespace = schemaService.createForServices(registrations.values());
         Map<String, ObjectC3Type> referenceResolver = referenceResolver(namespace.getComplexC3Types());
         Map<String, ServiceDefinition> definitionsByQualifiedName = new HashMap<>();
         for (ServiceDefinition definition : namespace.getServices()) {
             definitionsByQualifiedName.put(definition.getQualifiedName(), definition);
         }
-
-        List<Future<Void>> writes = new ArrayList<>();
+        Map<ServiceIdentifier, ServiceDirectoryEntry> ret = new HashMap<>();
         for (Map.Entry<ServiceIdentifier, ServiceDeclaration> registration : registrations.entrySet()) {
-            try {
-                // the definition's qualified name is package + '.' + simpleName per the SchemaFactory
-                // contract — never Class.getName(), which uses '$' for nested types
-                Class<?> serviceInterface = registration.getValue().serviceInterface();
-                ServiceDefinition definition = definitionsByQualifiedName.get(
-                        serviceInterface.getPackageName() + "." + serviceInterface.getSimpleName());
-                if (definition == null) {
-                    // conversion failed, SchemaFactory omitted the service and logged the cause
-                    continue;
-                }
-                writes.add(strategy.upsertEntry(buildEntry(registration.getKey(),
-                                                           serviceInterface,
-                                                           definition,
-                                                           referenceResolver)));
-            } catch (Exception e) {
-                // one bad service (e.g. an invalid @McpTool name) must not block the rest of the directory
-                log.error("Failed to publish service {} to the directory", registration.getKey(), e);
-            }
+            // the definition's qualified name is package + '.' + simpleName per the SchemaService contract,
+            // never Class.getName(), which uses '$' for nested types
+            Class<?> serviceInterface = registration.getValue().serviceInterface();
+            ServiceDefinition definition = definitionsByQualifiedName.get(
+                    serviceInterface.getPackageName() + "." + serviceInterface.getSimpleName());
+            ret.put(registration.getKey(), buildEntry(registration.getKey(), serviceInterface, definition, referenceResolver));
         }
-        return Future.all(writes).mapEmpty();
+        return ret;
     }
 
     @Override
@@ -213,6 +245,46 @@ public class DefaultServiceDirectory implements ServiceDirectory {
                                                                    String applicationId,
                                                                    Pageable pageable) {
         return strategy.findEntriesScopedTo(organizationId, applicationId, pageable);
+    }
+
+    @Override
+    public Future<Void> register(ServiceDirectoryEntry entry) {
+        Validate.notNull(entry, "entry cannot be null");
+        Validate.notBlank(entry.getOrganizationId(), "The entry names no organization");
+        Validate.notBlank(entry.getApplicationId(), "The entry names no application");
+        Validate.notBlank(entry.getZone(), "The entry names no zone");
+        Validate.notNull(entry.getServiceDefinition(), "The entry carries no service definition");
+        ServiceDefinition definition = entry.getServiceDefinition();
+        Validate.notBlank(definition.getName(), "The service definition names no name");
+        // a runtime serves a service published in no namespace at <zone>~<Name>, so the zone is its namespace,
+        // which keeps its qualified name apart from every other application's
+        boolean inZoneNamespace = definition.getNamespace() == null || definition.getNamespace().isBlank();
+        if (inZoneNamespace) {
+            definition.setNamespace(entry.getZone());
+        }
+        // addressed as the runtime registers it: the zone and the qualified name, no scope, whatever its version,
+        // with the zone written once for a service in the zone's namespace
+        String entryId = entry.getZone() + ZoneUtil.ZONE_DELIMITER + (inZoneNamespace ? definition.getName() : definition.getQualifiedName());
+        String serviceAddress = CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME, null, entryId, null, null).baseResource();
+        // the runtime declares its types inline, so no reference resolves
+        List<McpToolDefinition> tools = toolsOf(entryId, null, definition, Map.of());
+        ServiceDirectoryEntry stored = new ServiceDirectoryEntry()
+                .setId(entryId)
+                .setServiceAddress(serviceAddress)
+                .setOrganizationId(entry.getOrganizationId())
+                .setApplicationId(entry.getApplicationId())
+                .setProjectId(entry.getProjectId())
+                .setNamespace(definition.getNamespace())
+                .setName(definition.getName())
+                .setVersion(entry.getVersion())
+                .setZone(entry.getZone())
+                .setDescription(entry.getDescription())
+                .setServiceDefinition(definition)
+                .setAdvertised(entry.isAdvertised())
+                .setMcpExposed(!tools.isEmpty())
+                .setMcpTools(tools.isEmpty() ? null : tools);
+        return strategy.upsertEntry(stored)
+                       .compose(v -> refreshOnline(entryId, serviceAddress));
     }
 
     @Override
@@ -231,47 +303,116 @@ public class DefaultServiceDirectory implements ServiceDirectory {
 
     @Override
     public Future<Void> reportUnreachable(String cri) {
+        String service = serviceOf(cri);
         Future<Void> ret;
-        if (reportDebounce.getIfPresent(cri) != null) {
+        if (reportDebounce.getIfPresent(service) != null) {
             ret = Future.succeededFuture();
         } else {
-            reportDebounce.put(cri, Boolean.TRUE);
+            reportDebounce.put(service, Boolean.TRUE);
             // a report is an invalidation trigger, not a value — verifyLiveness writes the verified state
-            ret = verifyLiveness(CRI.create(cri).baseResource());
+            ret = verifyLiveness(service);
         }
         return ret;
     }
 
     @Override
     public Future<Void> verifyLiveness(String serviceAddress) {
-        return eventBusService.isAnybodyListening(CRI.create(serviceAddress))
-                              .compose(online -> strategy.setOnlineByAddress(serviceAddress, online, Instant.now()));
+        String service = serviceOf(serviceAddress);
+        // every observation is stamped with the time it starts, here and in refreshOnline, reconcileLiveness and
+        // the startup publish: the fence on the entry declines a stamp earlier than the one it holds, so an
+        // observation that started earlier never overwrites one that started later, however long its read took
+        Instant observed = Instant.now();
+        return anyInstanceListening(service)
+                .compose(online -> strategy.setOnlineByAddress(service, online, observed));
     }
 
     @Override
     public Future<Void> reconcileLiveness() {
+        Instant observed = Instant.now();
         return eventBusService.activeServiceAddresses()
-                              .compose(addresses -> strategy.reconcileLiveness(addresses, Instant.now()));
+                              .compose(addresses -> strategy.reconcileLiveness(servicesOf(addresses), observed));
     }
 
     /**
      * Sets the entry's liveness to the verified cluster-wide registration state.
      */
     private Future<Void> refreshOnline(ServiceIdentifier serviceIdentifier) {
-        return eventBusService.isAnybodyListening(serviceIdentifier.cri())
-                              .compose(online -> strategy.setOnline(serviceIdentifier.qualifiedName(),
-                                                                    online,
-                                                                    Instant.now()));
+        return refreshOnline(serviceIdentifier.qualifiedName(), serviceIdentifier.unscopedCri().baseResource());
     }
 
+    private Future<Void> refreshOnline(String entryId, String serviceAddress) {
+        Instant observed = Instant.now();
+        return anyInstanceListening(serviceAddress).compose(online -> strategy.setOnline(entryId, online, observed));
+    }
+
+    // A service is reachable while any instance of it listens, on its shared address or under a scope, so
+    // liveness is observed on the service address, the address with the scope removed
+    private Future<Boolean> anyInstanceListening(String serviceAddress) {
+        return eventBusService.activeServiceAddresses()
+                              .map(addresses -> servicesOf(addresses).contains(serviceAddress));
+    }
+
+    private static Set<String> servicesOf(Set<String> addresses) {
+        Set<String> ret = new HashSet<>();
+        for (String address : addresses) {
+            ret.add(serviceOf(address));
+        }
+        return ret;
+    }
+
+    // The service address of any address of a service: its base resource with the scope removed
+    private static String serviceOf(String address) {
+        CRI cri = CRI.create(address);
+        String ret;
+        if (cri.hasScope()) {
+            String qualifiedName = cri.hasZone() ? cri.zone() + "~" + cri.resourceName() : cri.resourceName();
+            ret = CRI.create(cri.scheme(), null, qualifiedName).baseResource();
+        } else {
+            ret = cri.baseResource();
+        }
+        return ret;
+    }
+
+    /**
+     * Builds the entry of a converted service, with every tool its contract exposes.
+     *
+     * @throws IllegalStateException when a function's tool declaration is one MCP cannot serve
+     */
     private ServiceDirectoryEntry buildEntry(ServiceIdentifier serviceIdentifier,
                                              Class<?> serviceInterface,
                                              ServiceDefinition serviceDefinition,
                                              Map<String, ObjectC3Type> referenceResolver) {
+        List<McpToolDefinition> tools = toolsOf(serviceIdentifier.qualifiedName(),
+                                                serviceIdentifier.scope(),
+                                                serviceDefinition,
+                                                referenceResolver);
+        return new ServiceDirectoryEntry()
+                .setId(serviceIdentifier.qualifiedName())
+                .setServiceAddress(serviceIdentifier.unscopedCri().baseResource())
+                .setNamespace(serviceIdentifier.namespace())
+                .setName(serviceIdentifier.name())
+                .setVersion(serviceIdentifier.version())
+                .setZone(serviceIdentifier.zone())
+                .setServiceDefinition(serviceDefinition)
+                .setAdvertised(isAdvertised(serviceInterface))
+                .setMcpExposed(!tools.isEmpty())
+                .setMcpTools(tools.isEmpty() ? null : tools);
+    }
+
+    /**
+     * The MCP tools of a service's functions, one per function carrying the tool decorator, named and
+     * addressed under the service's qualified name.
+     *
+     * @throws IllegalStateException when a tool's function streams its result, or two tools share a name
+     */
+    private List<McpToolDefinition> toolsOf(String qualifiedName,
+                                            String scope,
+                                            ServiceDefinition serviceDefinition,
+                                            Map<String, ObjectC3Type> referenceResolver) {
         List<McpToolDefinition> tools = new ArrayList<>();
         Set<String> toolNames = new HashSet<>();
 
-        // tool-ness is carried by the C3 contract: SchemaFactory attached the decorator during conversion
+        // tool-ness is carried by the C3 contract: SchemaService attached the decorator during conversion
         for (FunctionDefinition function : serviceDefinition.getFunctions()) {
 
             McpToolC3Decorator decorator = function.findDecorator(McpToolC3Decorator.class);
@@ -284,28 +425,35 @@ public class DefaultServiceDirectory implements ServiceDirectory {
                     returnType = asyncC3Type.getValueType();
                 }
                 if (returnType instanceof StreamC3Type) {
-                    throw new IllegalStateException("@McpTool function '" + function.getName() + "' on service " + serviceIdentifier
+                    throw new IllegalStateException("@McpTool function '" + function.getName() + "' on service " + qualifiedName
                                                             + " has a streaming return type, which MCP tools do not support");
                 }
 
-                String toolName = KinoticUtil.mcpToolName(serviceIdentifier.qualifiedName(), function.getName());
+                String toolName = KinoticUtil.mcpToolName(qualifiedName, function.getName());
                 if (!toolNames.add(toolName)) {
                     // the name is a hash, so it names nothing on its own — the function it was minted from
                     // is what a reader needs to act on this
                     throw new IllegalStateException("Duplicate MCP tool name '" + toolName + "' for function '"
-                                                            + function.getName() + "' on service " + serviceIdentifier);
+                                                            + function.getName() + "' on service " + qualifiedName);
                 }
+
+                // MCP hosts commonly show the model only the name and description, and the name is a hash,
+                // so the title leads the description to tell apart functions inherited from a generic base
+                // (CrudService.count on every service) that share one Javadoc
+                String description = decorator.getTitle() != null
+                        ? decorator.getTitle() + ": " + decorator.getDescription()
+                        : decorator.getDescription();
 
                 tools.add(new McpToolDefinition()
                                   .setName(toolName)
                                   .setTitle(decorator.getTitle())
-                                  .setDescription(decorator.getDescription())
+                                  .setDescription(description)
                                   .setInputSchema(schemaGenerator.generateInputSchema(function, referenceResolver))
                                   // the full invocation CRI, so dispatching a call needs no reconstruction;
                                   // no version: the invoker does not support version-specific routing
                                   .setCri(CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME,
-                                                     serviceIdentifier.scope(),
-                                                     serviceIdentifier.qualifiedName(),
+                                                     scope,
+                                                     qualifiedName,
                                                      "/" + function.getName(),
                                                      null).raw())
                                   .setAnnotations(new McpToolAnnotations()
@@ -315,18 +463,7 @@ public class DefaultServiceDirectory implements ServiceDirectory {
                                                           .setOpenWorldHint(decorator.isOpenWorldHint())));
             }
         }
-
-        return new ServiceDirectoryEntry()
-                .setId(serviceIdentifier.qualifiedName())
-                .setServiceAddress(serviceIdentifier.cri().baseResource())
-                .setNamespace(serviceIdentifier.namespace())
-                .setName(serviceIdentifier.name())
-                .setVersion(serviceIdentifier.version())
-                .setZone(serviceIdentifier.zone())
-                .setServiceDefinition(serviceDefinition)
-                .setAdvertised(isAdvertised(serviceInterface))
-                .setMcpExposed(!tools.isEmpty())
-                .setMcpTools(tools.isEmpty() ? null : tools);
+        return tools;
     }
 
     // Directory inclusion is opt-in via @Publish(advertise = true); an @McpTool function is already
@@ -346,7 +483,7 @@ public class DefaultServiceDirectory implements ServiceDirectory {
         if (!ret) {
             for (Method method : IdlUtil.serviceFunctions(registration.serviceInterface()).values()) {
                 // findAnnotation on the most specific method honors @McpTool declared on the interface method
-                // or only on the implementation's override, matching DefaultSchemaFactory's discovery
+                // or only on the implementation's override, matching DefaultSchemaService's discovery
                 Method specificMethod = ClassUtils.getMostSpecificMethod(method, registration.serviceImplementation());
                 if (AnnotationUtils.findAnnotation(specificMethod, McpTool.class) != null) {
                     ret = true;

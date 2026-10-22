@@ -3,6 +3,9 @@ package org.kinotic.domain.api.model.security;
 import org.junit.jupiter.api.Test;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -20,21 +23,32 @@ class ParticipantIdentitySerializationTest {
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Test
-    void userRoundTripsThroughBaseClassWithTypeDiscriminator() {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("jane@example.com")
-            .setDisplayName("Jane")
-            .setAuthType(AuthType.LOCAL)
-            .setOrganizationId("acme")
-            .setId("user-1");
+    void eachKindOfUserRoundTripsThroughBaseClassWithItsOwnTypeDiscriminator() {
+        SystemParticipantIdentity systemUser = new SystemParticipantIdentity();
+        systemUser.setEmail("jane@example.com").setId("system-user-1");
+        OrganizationParticipantIdentity organizationUser = new OrganizationParticipantIdentity();
+        organizationUser.setEmail("jane@example.com").setId("organization-user-1");
+        ApplicationParticipantIdentity applicationUser = new ApplicationParticipantIdentity();
+        applicationUser.setOrganizationId("acme")
+                       .setApplicationId("orders")
+                       .setEmail("jane@example.com")
+                       .setId("application-user-1");
 
+        assertRoundTrips(systemUser, "SYSTEM_USER", SystemParticipantIdentity.class);
+        assertRoundTrips(organizationUser, "ORGANIZATION_USER", OrganizationParticipantIdentity.class);
+        ApplicationParticipantIdentity read = assertRoundTrips(applicationUser, "APPLICATION_USER", ApplicationParticipantIdentity.class);
+        assertEquals("acme", read.getOrganizationId());
+        assertEquals("orders", read.getApplicationId());
+    }
+
+    private <T extends UserParticipantIdentity> T assertRoundTrips(T user, String type, Class<T> kind) {
         String json = jsonMapper.writeValueAsString(user);
-        assertTrue(json.contains("\"type\":\"USER\""), "document must carry the discriminator: " + json);
+        assertTrue(json.contains("\"type\":\"" + type + "\""), "document must carry the discriminator: " + json);
 
-        ParticipantIdentity read = jsonMapper.readValue(json, ParticipantIdentity.class);
-        UserParticipantIdentity readUser = assertInstanceOf(UserParticipantIdentity.class, read);
-        assertEquals("jane@example.com", readUser.getEmail());
-        assertEquals("acme", readUser.getOrganizationId());
+        T read = assertInstanceOf(kind, jsonMapper.readValue(json, ParticipantIdentity.class));
+        assertEquals("jane@example.com", read.getEmail());
+        assertEquals(user.getId(), read.getId());
+        return read;
     }
 
     @Test
@@ -42,10 +56,9 @@ class ParticipantIdentitySerializationTest {
         DelegatingParticipantIdentity delegate = new DelegatingParticipantIdentity();
         delegate.setOwnerId("user-1")
                 .setClientKey("https://claude.ai/oauth/claude-code-client-metadata")
-                .setDelegateKind(DelegateKind.MCP_CLIENT)
-                .setDisplayName("Claude Code")
-                .setAuthType(AuthType.DELEGATED)
+                .setDelegateType(DelegateType.MCP_CLIENT)
                 .setOrganizationId("acme")
+                .setDisplayName("Claude Code")
                 .setId("delegate-1");
 
         String json = jsonMapper.writeValueAsString(delegate);
@@ -54,6 +67,6 @@ class ParticipantIdentitySerializationTest {
         ParticipantIdentity read = jsonMapper.readValue(json, ParticipantIdentity.class);
         DelegatingParticipantIdentity readDelegate = assertInstanceOf(DelegatingParticipantIdentity.class, read);
         assertEquals("user-1", readDelegate.getOwnerId());
-        assertEquals(DelegateKind.MCP_CLIENT, readDelegate.getDelegateKind());
+        assertEquals(DelegateType.MCP_CLIENT, readDelegate.getDelegateType());
     }
 }

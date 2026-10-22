@@ -7,7 +7,9 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.management.api.model.Project;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.OrganizationMember;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -24,6 +26,7 @@ public class DefaultSystemOrganizationService implements SystemOrganizationServi
     private final ApplicationRepository applicationRepository;
     private final ProjectRepository projectRepository;
     private final ParticipantIdentityService identityService;
+    private final OrganizationMembershipService membershipService;
     private final InviteService inviteService;
     private final OrganizationService organizationService;
 
@@ -58,18 +61,28 @@ public class DefaultSystemOrganizationService implements SystemOrganizationServi
     }
 
     @Override
-    public Future<Page<UserParticipantIdentity>> findMembers(String organizationId,
-                                                             String applicationId,
-                                                             Pageable pageable) {
-        return identityService.findUsersByScope(organizationId, applicationId, pageable);
+    public Future<Page<OrganizationMember>> findMembers(String organizationId, Pageable pageable) {
+        return membershipService.findMembers(organizationId, pageable);
     }
 
     @Override
-    public Future<Page<UserParticipantIdentity>> searchMembers(String searchText,
-                                                               String organizationId,
-                                                               String applicationId,
-                                                               Pageable pageable) {
-        return identityService.searchUsersByScope(searchText, organizationId, applicationId, pageable);
+    public Future<Page<OrganizationMember>> searchMembers(String searchText, String organizationId, Pageable pageable) {
+        return membershipService.searchMembers(searchText, organizationId, pageable);
+    }
+
+    @Override
+    public Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId,
+                                                                             String applicationId,
+                                                                             Pageable pageable) {
+        return identityService.findApplicationUsers(organizationId, applicationId, pageable);
+    }
+
+    @Override
+    public Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
+                                                                               String organizationId,
+                                                                               String applicationId,
+                                                                               Pageable pageable) {
+        return identityService.searchApplicationUsers(searchText, organizationId, applicationId, pageable);
     }
 
     @Override

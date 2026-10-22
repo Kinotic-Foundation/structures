@@ -26,7 +26,7 @@
       </template>
 
       <template #item.created="{ item }">
-        {{ formatDate(item.created) }}
+        <TimePill :date="item.created" />
       </template>
     </CrudTable>
 
@@ -38,7 +38,7 @@
           <div class="flex flex-col gap-1">
             <span class="font-medium">{{ session.label || 'Unnamed session' }}</span>
             <span class="text-sm text-muted-color">
-              Last active {{ formatDateTime(session.lastRefreshedAt) }} · expires {{ formatDate(session.expiresAt) }}
+              Last active {{ formatRelativeDate(session.lastRefreshedAt) }} · expires {{ formatDate(session.expiresAt) }}
             </span>
           </div>
           <Button label="End session" severity="danger" outlined size="small"
@@ -60,7 +60,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 
 import { Kinotic } from '@kinotic-ai/core'
-import { DelegateKind } from '@kinotic-ai/management-api'
+import { DelegateType } from '@kinotic-ai/management-api'
 import type { DelegateSession, DelegatingParticipantIdentity } from '@kinotic-ai/management-api'
 
 import CrudTable from './CrudTable.vue'
@@ -69,6 +69,7 @@ import { filteredPageLoader, statusSeverity, useCrudTablePage } from './useCrudT
 import type { CrudHeader } from '../types/CrudHeader'
 import type { DescriptiveIdentifiable } from '../types/DescriptiveIdentifiable'
 import DatetimeUtil from '../util/DatetimeUtil'
+import TimePill from './TimePill.vue'
 import { showErrorToast } from '../util/helpers'
 import EmptyChartCharacter from './EmptyChartCharacter.vue'
 
@@ -108,23 +109,23 @@ const { tableSearch, dataSource, refreshTable, removeRow } = useCrudTablePage(
 )
 
 const formatDate = DatetimeUtil.formatLocaleDate
-const formatDateTime = DatetimeUtil.formatDateTime
+const formatRelativeDate = DatetimeUtil.formatRelativeDate
 
 function toRow(delegate: DelegatingParticipantIdentity): DelegateRow {
   return {
     id: delegate.id ?? '',
     displayName: delegate.displayName,
-    kind: kindLabel(delegate.delegateKind),
+    kind: kindLabel(delegate.delegateType),
     status: delegate.enabled ? 'Active' : 'Revoked',
     created: delegate.created,
     enabled: delegate.enabled
   }
 }
 
-function kindLabel(kind: DelegateKind | null): string {
+function kindLabel(kind: DelegateType | null): string {
   switch (kind) {
-    case DelegateKind.CLI:        return 'Kinotic CLI'
-    case DelegateKind.MCP_CLIENT: return 'MCP client'
+    case DelegateType.CLI:        return 'Kinotic CLI'
+    case DelegateType.MCP_CLIENT: return 'MCP client'
     default:                      return '—'
   }
 }

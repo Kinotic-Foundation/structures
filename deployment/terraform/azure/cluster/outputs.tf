@@ -40,6 +40,6 @@ output "firecracker_ssh_commands" {
 # ── DNS (from global) ────────────────────────────────────────────────────────
 
 output "dns_nameservers" {
-  description = "Azure DNS nameservers — set these at your domain registrar"
+  description = "Cloudflare's nameservers for the platform zone, which the registrar points the domain at"
   value       = local.global.dns_nameservers
 }

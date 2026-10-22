@@ -1,10 +1,10 @@
 import * as allure from 'allure-js-commons'
 import {beforeAll, describe, expect, it} from 'vitest'
-import {managementServer, restBase, systemServer} from '../TestHelpers.js'
+import {E2E_ORGANIZATION_ID, managementServer, restBase, systemServer} from '../TestHelpers.js'
 
 /**
  * Exercises the browser login REST surface: POST /api/auth/system/login must admit only
- * SYSTEM-scope IamUsers (V3 seeds admin@kinotic.local), establish a session cookie that
+ * system users (V2 seeds admin@kinotic.local), establish a session cookie that
  * /api/auth/me accepts, and reject cross-scope or bad credentials with a generic 401.
  */
 describe('System login route', () => {
@@ -53,12 +53,12 @@ describe('System login route', () => {
     })
 
     it('leaves the org login route working for the org user', async () => {
-        const res = await login('/api/auth/org/login', 'kinotic@kinotic.local', 'kinotic', restBase(managementServer()))
+        const res = await login(`/api/auth/org/login/${E2E_ORGANIZATION_ID}`, 'kinotic@kinotic.local', 'kinotic', restBase(managementServer()))
         expect(res.status).toBe(204)
     })
 
     it('refuses the system admin at the management server\'s login', async () => {
-        const res = await login('/api/auth/org/login', 'admin@kinotic.local', 'kinotic', restBase(managementServer()))
+        const res = await login(`/api/auth/org/login/${E2E_ORGANIZATION_ID}`, 'admin@kinotic.local', 'kinotic', restBase(managementServer()))
         expect(res.status).toBe(401)
     })
 

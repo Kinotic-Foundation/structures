@@ -10,6 +10,14 @@ kinotic:
       appPrivateKey: "-"
       webhookSecret: "-"
       repoTemplate: "-"
+    # the bases of the callback URLs OwnedOidcConfigurationService gives and of the URL a UI build is
+    # handed (appApiBaseUrl below); no test signs in through one or deploys a UI
+    apiBaseUrl: http://localhost:9090
+  domain:
+    appApiBaseUrl: http://localhost:58505
+    # the domain a UI's site is named under; no test deploys a UI
+    publishedSites:
+      domain: apps.localhost
   maxNumberOfCoresToUse: 4
   systemApi:
     # no sites account in tests: the site provisioner is the mock
@@ -20,10 +28,8 @@ kinotic:
         host: localhost
       appServer:
         host: localhost
-      appApiBaseUrl: http://localhost:58505
     # placeholder site config, validated at boot; no test deploys a UI
     uiDeployment:
-      sitesDomain: apps.localhost
       sitesStorageEndpoint: "-"
 
 logging:

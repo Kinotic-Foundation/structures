@@ -20,7 +20,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Exercises node placement against a real Elasticsearch index: capacity and liveness are
@@ -188,9 +187,5 @@ public class VmNodePlacementTests extends KinoticTestBase {
     /** Individual saves skip the refresh; one index sync afterwards makes the whole fixture searchable. */
     private void indexNodes() throws Exception {
         await(vmNodeService.syncIndex());
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

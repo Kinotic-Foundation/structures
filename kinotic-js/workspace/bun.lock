@@ -12,8 +12,9 @@
     },
     "packages/core": {
       "name": "@kinotic-ai/core",
-      "version": "5.0.0-beta.17",
+      "version": "5.0.0-beta.25",
       "dependencies": {
+        "@kinotic-ai/idl": "workspace:^",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/semantic-conventions": "^1.40.0",
         "@stomp/rx-stomp": "^2.4.0",
@@ -49,7 +50,7 @@
     },
     "packages/idl": {
       "name": "@kinotic-ai/idl",
-      "version": "5.0.0-beta.1",
+      "version": "5.0.0-beta.5",
       "devDependencies": {
         "@types/node": "^25.3.2",
         "@types/ws": "^8.18.1",
@@ -59,7 +60,7 @@
     },
     "packages/management-api": {
       "name": "@kinotic-ai/management-api",
-      "version": "5.0.0-beta.45",
+      "version": "5.0.0-beta.61",
       "dependencies": {
         "@kinotic-ai/idl": "workspace:*",
         "@kinotic-ai/persistence": "workspace:*",
@@ -108,7 +109,7 @@
     },
     "packages/system-api": {
       "name": "@kinotic-ai/system-api",
-      "version": "5.0.0-beta.23",
+      "version": "5.0.0-beta.28",
       "devDependencies": {
         "@kinotic-ai/core": "workspace:*",
         "@kinotic-ai/management-api": "workspace:*",

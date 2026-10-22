@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="arch-diagram-wrap">
-    <svg class="arch-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 768" role="img" aria-label="Kinotic three-server network architecture: every caller, person or workload, reaches one of three public HTTPS hosts, each answered by its own server with its own gateway, SecurityService and session cookie: the app server for application users and runtime workloads, the management server for organization members, GitHub webhooks and sync workloads, the system server for operators and vm-managers. The three servers form one Ignite cluster in which each hosts only its own zones, and reach the shared Elasticsearch and Loki stores only through participant-scoped access.">
+    <svg class="arch-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 768" role="img" aria-label="Kinotic three-server network architecture: every caller, person or workload, reaches one of three public HTTPS hosts, each answered by its own server with its own gateway, SecurityService and session cookie: the app server for application users and runtime workloads, the management server for organization members, GitHub webhooks and sync workloads, the system server for system users and vm-managers. The three servers form one Ignite cluster in which each hosts only its own zones, and reach the shared Elasticsearch and Loki stores only through participant-scoped access.">
 
       <defs>
         <marker id="ma-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -38,7 +38,7 @@
 
       <!-- system plane callers -->
       <rect class="chip" x="846" y="44" width="136" height="46" rx="8"></rect>
-      <text class="t-chip" x="914" y="63" text-anchor="middle">Operators</text>
+      <text class="t-chip" x="914" y="63" text-anchor="middle">System users</text>
       <text class="t-sub"  x="914" y="79" text-anchor="middle">system console</text>
 
       <rect class="chip-w" x="990" y="44" width="136" height="46" rx="8"></rect>
@@ -70,7 +70,7 @@
 
       <rect class="gw gw-app" x="52" y="250" width="268" height="140" rx="8"></rect>
       <text class="t-name" x="186" y="273" text-anchor="middle">kinotic-server-app</text>
-      <text class="t-sub"  x="186" y="289" text-anchor="middle">apps-api.kinotic.ai and *.apps-api</text>
+      <text class="t-sub"  x="186" y="289" text-anchor="middle">apps-api.kinotic.io and *.apps-api</text>
       <line class="sep" x1="70" y1="298" x2="302" y2="298"></line>
       <text class="t-mono" x="186" y="315" text-anchor="middle">ApplicationSecurityService</text>
       <text class="t-mono" x="186" y="330" text-anchor="middle">app users · clients · machines</text>
@@ -101,7 +101,7 @@
       <text class="t-sub"  x="986" y="289" text-anchor="middle">system-api.kinotic.ai</text>
       <line class="sep" x1="870" y1="298" x2="1102" y2="298"></line>
       <text class="t-mono" x="986" y="315" text-anchor="middle">SystemSecurityService</text>
-      <text class="t-mono" x="986" y="330" text-anchor="middle">operators · clients · vm-managers</text>
+      <text class="t-mono" x="986" y="330" text-anchor="middle">system users · clients · vm-managers</text>
       <text class="t-mono" x="986" y="345" text-anchor="middle">login · OAuth · MCP</text>
       <text class="t-mono" x="986" y="360" text-anchor="middle">deployments · cluster singletons</text>
       <text class="t-mono" x="986" y="375" text-anchor="middle">__Host-kinotic-system-session</text>

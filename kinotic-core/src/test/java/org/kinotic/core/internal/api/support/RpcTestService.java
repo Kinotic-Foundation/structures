@@ -5,6 +5,8 @@ package org.kinotic.core.internal.api.support;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import org.kinotic.core.api.annotations.Publish;
+import org.kinotic.core.api.crud.CursorPage;
+import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.internal.api.RpcTests;
 import reactor.core.publisher.Flux;
@@ -64,6 +66,10 @@ public interface RpcTestService {
     Flux<Integer> getLimitedFlux();
 
     List<String> getListOfStrings();
+
+    CursorPage<SimpleObject> getCursorPageOfSimpleObjects();
+
+    Page<SimpleObject> getPageOfSimpleObjects();
 
     Mono<byte[]> getMonoByteArray();
 

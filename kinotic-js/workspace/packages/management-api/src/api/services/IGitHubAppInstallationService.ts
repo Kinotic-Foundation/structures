@@ -19,7 +19,10 @@ export interface IGitHubAppInstallationService {
      *
      * returnTo is echoed back from {@link completeInstall} and may carry query
      * params (e.g. {@code /projects?openNewProject=1}) so the destination page
-     * can pick up where the user was.
+     * can pick up where the user was. An absolute http(s) URL, on an origin the
+     * management server's CORS allowlist admits, names a page in another UI, such as
+     * one built on Kinotic: GitHub's installation_id, state and code are forwarded to
+     * that page, which completes the install itself.
      */
     startInstall(returnTo: string | null): Promise<string>
 

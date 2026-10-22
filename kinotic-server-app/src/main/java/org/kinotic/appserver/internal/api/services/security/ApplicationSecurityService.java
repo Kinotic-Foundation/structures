@@ -4,12 +4,12 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.net.HostAndPort;
 import lombok.RequiredArgsConstructor;
-import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityService;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
@@ -31,25 +31,25 @@ import java.util.Map;
 public class ApplicationSecurityService implements SecurityService {
 
     private final CredentialAuthenticationService credentialAuthenticationService;
-    private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public Future<Participant> authenticate(Map<String, String> authenticationInfo) {
         ApplicationKey applicationKey = requestApplicationKey(authenticationInfo);
-        return credentialAuthenticationService.authenticate(authenticationInfo, identity -> admits(identity, applicationKey));
+        return credentialAuthenticationService.authenticate(authenticationInfo, (identity, participant) -> admits(identity, participant, applicationKey));
     }
 
-    private static boolean admits(ParticipantIdentity identity, ApplicationKey applicationKey) {
+    private static boolean admits(ParticipantIdentity identity, Participant participant, ApplicationKey applicationKey) {
         boolean ret;
-        if (identity.getOrganizationId() == null) {
-            ret = false;
-        } else if (identity.getApplicationId() != null) {
-            ret = applicationKey == null || applicationKey.equals(new ApplicationKey(identity.getOrganizationId(), identity.getApplicationId()));
-        } else {
+        if (participant instanceof ApplicationParticipant user) {
+            ret = applicationKey == null || applicationKey.equals(new ApplicationKey(user.getOrganizationId(), user.getApplicationId()));
+        } else if (participant instanceof OrganizationParticipant runtime) {
             // an organization's identity reaches the app server only as the runtime of one of its applications
             ret = identity instanceof MachineParticipantIdentity machine
-                    && machine.getMachineKind() == MachineKind.APP_RUNTIME
-                    && (applicationKey == null || applicationKey.organizationId().equals(machine.getOrganizationId()));
+                    && machine.getMachineType() == MachineType.APP_RUNTIME
+                    && (applicationKey == null || applicationKey.organizationId().equals(runtime.getOrganizationId()));
+        } else {
+            ret = false;
         }
         return ret;
     }
@@ -62,6 +62,6 @@ public class ApplicationSecurityService implements SecurityService {
                                         .findFirst()
                                         .orElse(null);
         HostAndPort authority = host != null ? HostAndPort.parseAuthority(host, -1) : null;
-        return authority != null ? HostLabelUtil.fromHost(authority.host(), properties.getApiBaseUrl()) : null;
+        return authority != null ? HostLabelUtil.fromHost(authority.host(), domainProperties.getDomain().getAppApiBaseUrl()) : null;
     }
 }

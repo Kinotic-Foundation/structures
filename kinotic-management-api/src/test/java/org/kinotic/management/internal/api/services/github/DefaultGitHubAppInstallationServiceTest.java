@@ -16,10 +16,11 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
-import org.kinotic.domain.api.services.security.OrgSignupOidcConfigurationService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.management.api.config.GithubProperties;
 import org.kinotic.management.api.model.github.GitHubAppInstallation;
 import org.kinotic.management.api.model.github.GitHubInstallCompletion;
@@ -99,14 +100,17 @@ class DefaultGitHubAppInstallationServiceTest {
 
         GithubProperties githubProperties = new GithubProperties().setAppId(APP_ID);
 
+        KinoticDomainProperties domainProperties = new KinoticDomainProperties();
+        domainProperties.getDomain().getCors().setAllowedOriginPattern("https:\\/\\/(portal|builder)\\.example\\.com");
+
         // Real state store so staging + single-use consumption are exercised
         stateService = new GitHubInstallStateService(ignite);
 
         OrgSignupOidcConfiguration credential = new OrgSignupOidcConfiguration();
         credential.setClientId("client-id");
         credential.setSecretNameRef("github-platform");
-        OrgSignupOidcConfigurationService oidcConfigurationService = mock(OrgSignupOidcConfigurationService.class);
-        when(oidcConfigurationService.findEnabledByProvider(OidcProviderKind.GITHUB))
+        OidcConfigurationService oidcConfigurationService = mock(OidcConfigurationService.class);
+        when(oidcConfigurationService.findEnabledOrgSignupByProvider(OidcProviderType.GITHUB))
                 .thenReturn(Future.succeededFuture(credential));
 
         SecretReferenceResolver secretReferenceResolver = mock(SecretReferenceResolver.class);
@@ -123,7 +127,28 @@ class DefaultGitHubAppInstallationServiceTest {
                                                           stateService,
                                                           apiClient,
                                                           oidcConfigurationService,
-                                                          secretReferenceResolver);
+                                                          secretReferenceResolver,
+                                                          domainProperties);
+    }
+
+    @Test
+    void startsAnInstallReturningToAPathOrAnAllowedOrigin() {
+        service.startInstall("/projects?openNewProject=1").await();
+        service.startInstall("https://builder.example.com/").await();
+        service.startInstall(null).await();
+    }
+
+    @Test
+    void refusesAReturnToOutsideTheAllowedOrigins() {
+        for (String returnTo : List.of("https://evil.example.com/",
+                                       "https://builder.example.com.evil.com/",
+                                       "https://user@builder.example.com/",
+                                       "//evil.example.com/",
+                                       "/\\evil.example.com/",
+                                       "javascript:alert(1)",
+                                       "projects")) {
+            assertThrows(IllegalArgumentException.class, () -> service.startInstall(returnTo).await(), returnTo);
+        }
     }
 
     @Test

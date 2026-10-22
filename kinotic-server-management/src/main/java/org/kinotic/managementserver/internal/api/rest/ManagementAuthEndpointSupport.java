@@ -2,33 +2,33 @@ package org.kinotic.managementserver.internal.api.rest;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.services.security.KinoticJwtIssuer;
-import org.kinotic.domain.api.services.security.OrgSignupOidcConfigurationService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RefreshTokenService;
-import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
 
 /** The management server's {@link AuthEndpointSupport}: its browser flows send the user to the portal. */
 @Component
 public class ManagementAuthEndpointSupport extends AuthEndpointSupport {
 
-    private final ManagementServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
-    public ManagementAuthEndpointSupport(ManagementServerProperties properties,
+    public ManagementAuthEndpointSupport(KinoticDomainProperties domainProperties,
                                   KinoticJwtIssuer jwtIssuer,
-                                  OrgSignupOidcConfigurationService orgSignupOidcConfigurationService,
+                                  OidcConfigurationService oidcConfigurationService,
                                   OidcFlowOrchestrator oidcFlowOrchestrator,
                                   ParticipantIdentityService identityService,
                                   RefreshTokenService refreshTokenService) {
-        super(jwtIssuer, orgSignupOidcConfigurationService, oidcFlowOrchestrator, identityService, refreshTokenService);
-        this.properties = properties;
+        super(jwtIssuer, oidcConfigurationService, oidcFlowOrchestrator, identityService, refreshTokenService);
+        this.domainProperties = domainProperties;
     }
 
     @Override
     public Future<String> uiUrl(RoutingContext ctx, String path) {
-        return Future.succeededFuture(properties.getPortalBaseUrl() + path);
+        return Future.succeededFuture(domainProperties.getDomain().getPortalBaseUrl() + path);
     }
 }

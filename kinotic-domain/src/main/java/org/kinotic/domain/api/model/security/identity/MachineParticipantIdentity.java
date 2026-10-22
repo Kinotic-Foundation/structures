@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 
 /**
  * A non-human principal that authenticates with its own credential rather than on a person's
@@ -19,12 +20,23 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class MachineParticipantIdentity extends ParticipantIdentity {
+public final class MachineParticipantIdentity extends ParticipantIdentity implements ScopedParticipantIdentity {
+
+    /** The organization of the machine's scope, or {@code null} for SYSTEM. */
+    private String organizationId;
+
+    /** The application of the machine's scope, or {@code null} unless APPLICATION. */
+    private String applicationId;
 
     /**
      * What the machine is for; set when it is provisioned.
      */
-    private MachineKind machineKind;
+    private MachineType machineType;
+
+    @Override
+    public ParticipantScope scope() {
+        return new ParticipantScope(organizationId, applicationId, null);
+    }
 
     @Override
     public ParticipantIdentityType getType() {

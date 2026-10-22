@@ -17,7 +17,7 @@ public final class ProjectWorkloadSizes {
      * Memory of the sync VM in megabytes. It compiles the project's entity sources during
      * {@code kinotic sync}, which needs more headroom than serving does.
      */
-    public static final int SYNC_MEMORY_MB = 2048;
+    public static final int SYNC_MEMORY_MB = 1024;
 
     /**
      * Size of the sync VM's root filesystem in megabytes, enforced by the node's filesystem
@@ -40,7 +40,7 @@ public final class ProjectWorkloadSizes {
     /**
      * Memory of each runtime VM in megabytes.
      */
-    public static final int RUNTIME_MEMORY_MB = 1024;
+    public static final int RUNTIME_MEMORY_MB = 512;
 
     /**
      * Size of each runtime VM's root filesystem in megabytes, enforced by the node's filesystem

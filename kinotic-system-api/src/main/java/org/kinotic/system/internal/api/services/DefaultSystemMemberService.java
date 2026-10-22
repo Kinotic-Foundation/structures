@@ -5,10 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.system.api.services.SystemMemberService;
@@ -21,13 +21,13 @@ public class DefaultSystemMemberService implements SystemMemberService {
     private final ParticipantIdentityService identityService;
 
     @Override
-    public Future<Page<UserParticipantIdentity>> findUsers(Pageable pageable) {
-        return identityService.findUsersByScope(null, null, pageable);
+    public Future<Page<SystemParticipantIdentity>> findUsers(Pageable pageable) {
+        return identityService.findSystemUsers(pageable);
     }
 
     @Override
-    public Future<Page<UserParticipantIdentity>> searchUsers(String searchText, Pageable pageable) {
-        return identityService.searchUsersByScope(searchText, null, null, pageable);
+    public Future<Page<SystemParticipantIdentity>> searchUsers(String searchText, Pageable pageable) {
+        return identityService.searchSystemUsers(searchText, pageable);
     }
 
     @Override
@@ -40,7 +40,7 @@ public class DefaultSystemMemberService implements SystemMemberService {
         Validate.notBlank(displayName, "displayName is required");
         // leaving organizationId and applicationId unset is what makes the identity SYSTEM scope
         MachineParticipantIdentity machine = new MachineParticipantIdentity();
-        machine.setMachineKind(MachineKind.CLIENT)
+        machine.setMachineType(MachineType.CLIENT)
                .setDisplayName(displayName);
         return identityService.createMachine(machine);
     }

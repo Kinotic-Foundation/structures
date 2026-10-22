@@ -14,7 +14,7 @@ so humans and AI can build enterprise software at internet scale.
 
 [![Build](https://img.shields.io/endpoint?url=https%3A%2F%2Fkinotic.ai%2Ftest-results%2Fbuild-badge.json&cacheSeconds=300)](https://github.com/kinotic-ai/kinotic/actions/workflows/gradle-build.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-171717)](buildSrc/src/main/groovy/org.kinotic.java-common-conventions.gradle)
-[![License Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-28FEB4)](LICENSE.txt)
+[![License Elastic 2.0 + Enterprise](https://img.shields.io/badge/license-Elastic%202.0%20%2B%20Enterprise-28FEB4)](LICENSE.md)
 [![Documentation](https://img.shields.io/badge/docs-kinotic.ai-171717)](https://kinotic.ai/docs/)
 
 [Website](https://kinotic.ai) · [Documentation](https://kinotic.ai/docs/) · [Get Started](https://kinotic.ai/get-started/) · [Test Reports](https://kinotic.ai/test-results)
@@ -354,7 +354,7 @@ The repository contains the major components required to build and operate Kinot
 |---|---|
 | [`kinotic-js`](kinotic-js) | TypeScript workspace: client SDKs, the `kinotic` CLI, the VM manager, the workload runner, and end-to-end tests |
 | [`kinotic-frontend`](kinotic-frontend) | Vue applications: the organization portal, the system console, and their shared components |
-| [`deployment`](deployment) | Helm charts, docker-compose stacks, Terraform, KinD, and VM node provisioning |
+| [`deployment`](deployment) | Helm charts, docker-compose stacks, Terraform, and VM node provisioning |
 | [`website`](website) | The documentation site published at [kinotic.ai/docs](https://kinotic.ai/docs/) |
 
 The platform is primarily built around Java 25, Spring Boot, Vert.x, TypeScript, Vue, Bun, Kubernetes, Firecracker, Elasticsearch, Grafana Loki, and OpenTelemetry.
@@ -375,7 +375,11 @@ Applications should remain inspectable, understandable, and deployable.
 
 Kinotic provides the higher-level abstractions while allowing developers and organizations to retain visibility into the systems they are building.
 
-See [LICENSE.txt](LICENSE.txt) for the terms governing the project.
+The project is licensed under the Elastic License 2.0 with the Kinotic Additional Limitations,
+except the Enterprise Features in [`kinotic-ee/`](kinotic-ee), which are licensed under the
+Kinotic Enterprise License and need an agreement with Minds Ignited for production use. See
+[LICENSE.md](LICENSE.md) for the terms governing the project, and [CLA.md](CLA.md) for the
+agreement contributors accept.
 
 ---
 

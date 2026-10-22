@@ -22,7 +22,6 @@ kinotic:
     # guide, "Publishing UIs against Azure")
     disableAzureStorage: true
     uiDeployment:
-      sitesDomain: apps.localhost
       # validated at boot; nothing reads it while Azure storage is disabled
       sitesStorageEndpoint: "-"
     deployment:
@@ -37,9 +36,6 @@ kinotic:
         host: 192.168.127.254
       appServer:
         host: 192.168.127.254
-      # What a UI build is handed: the app server as a browser reaches it, not the address the
-      # workload dials above
-      appApiBaseUrl: http://localhost:58505
       # The sync workload fetches the project from GitHub and runs bun install
       syncAllowedHosts:
         - github.com
@@ -49,23 +45,27 @@ kinotic:
     # The system console's vite dev server (pnpm dev:system), which system logins return to
     consoleBaseUrl: http://localhost:5174
   domain:
-    email:
-      # Invites the member service this server hosts sends are accepted in the portal
-      linkBaseUrl: http://localhost:5173
+    cors:
+      # The system console's vite dev server
+      allowedOriginPattern: "http:\\/\\/localhost:5174"
+      allowCredentials: true
+    # What a UI build is handed: the app server as a browser reaches it, not the address a workload
+    # dials above
+    appApiBaseUrl: http://localhost:58505
+    # Invites the member service this server hosts sends are accepted in the portal
+    portalBaseUrl: http://localhost:5173
+    # The domain a published UI's site is named under
+    publishedSites:
+      domain: apps.localhost
     elastic-connections:
       - scheme: "http"
         host: "localhost"
         port: "9200"
     secretStorage:
-      backend: ~
+      backend: IN_MEMORY
       # The management server's dev key: SecretNameDeriver must derive the same storage names on every
       # server. Dev-only value — production supplies this via Azure Key Vault.
       masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
-  apiGateway:
-    cors:
-      # The system console's vite dev server
-      allowedOriginPattern: "http:\\/\\/localhost:5174"
-      allowCredentials: true
   maxNumberOfCoresToUse: 4
   ignite:
     discoveryType: SHAREDFS

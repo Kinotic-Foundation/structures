@@ -40,7 +40,7 @@
     <div v-else class="login-form">
       <h2 class="signup-title">Name your organization</h2>
       <p class="login-form__subtitle">
-        Welcome! Pick a name for your new organization to finish creating your account.
+        Welcome! Pick a name for your new organization to finish signing up.
       </p>
 
       <div class="login-form__step">
@@ -88,7 +88,7 @@ import type { CompleteOrgRequest } from '@kinotic-ai/management-api'
 import loginArt from '@/assets/login-background.svg'
 
 /**
- * Lands here after `/api/auth/org/signup/social/callback/:configId` redirects with `?token=<verificationToken>`
+ * Lands here after the GitHub registration's callback, `/api/auth/org/login/social/callback/:configId`, redirects with `?token=<verificationToken>`
  * (a {@code PendingRegistration}). The user supplies an org name; we POST to
  * `/api/auth/org/signup/social/complete`, the backend creates the Organization + admin ParticipantIdentity and
  * establishes the browser session, which we then use to open the realtime connection. A
@@ -166,7 +166,7 @@ async function handleSubmit() {
 }
 
 /**
- * Sends the tab to the GitHub App install page with the applications page as the
+ * Sends the tab to the GitHub App install page with the landing page as the
  * return destination, so the new org can create projects immediately.
  */
 async function continueToGithub(): Promise<void> {
@@ -175,12 +175,12 @@ async function continueToGithub(): Promise<void> {
     // Full-tab redirect — a popup can't work here: after the round-trip through
     // github.com, COOP severs window.opener (see NewProjectSidebar.linkGitHub).
     // startInstall requires the org-scoped session userState.login() just opened.
-    const url = await Kinotic.githubAppInstallations.startInstall('/applications')
+    const url = await Kinotic.githubAppInstallations.startInstall('/')
     window.location.href = url
   } catch (err) {
     // Signup must never dead-end here; the user can link GitHub later from Organization Settings.
     displayError(err instanceof Error ? err.message : 'Could not start the GitHub install')
-    await KINOTIC_UI.navigate('/applications')
+    await KINOTIC_UI.navigate('/')
   }
 }
 

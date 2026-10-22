@@ -66,7 +66,7 @@ import { TIME_RANGE_PRESETS, rangeEndingNow } from './telemetryApi'
  * The traces and metrics of an organization's workloads over a chosen time range, narrowed to
  * one application when one is given. The organization is the one whose tenant the signed-in
  * user may read: an organization user's own, or the one the system console is drilled into;
- * null reads the system tenant, the platform's own telemetry, which only a platform operator
+ * null reads the system tenant, the platform's own telemetry, which only a system user
  * may. A trace picked from the search opens in a drawer over the results; {@code traceRoute}, when
  * given, links from there to the trace's own page.
  */
@@ -77,26 +77,11 @@ const props = defineProps<{
 }>()
 
 const formatDateFromEpoch = DatetimeUtil.formatDateFromEpoch
+const dayLabel = DatetimeUtil.formatDayLabel
 
 /** An instant's hour and minute on the 24-hour clock: "09:59". */
 function formatTime(epochMillis: number): string {
   return new Date(epochMillis).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-/** The calendar day of an instant, in words for today and yesterday: "Today", "Yesterday", "Sep 30". */
-function dayLabel(epochMillis: number): string {
-  const day = new Date(epochMillis)
-  const today = new Date()
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
-  let ret: string
-  if (day.toDateString() === today.toDateString()) {
-    ret = 'Today'
-  } else if (day.toDateString() === yesterday.toDateString()) {
-    ret = 'Yesterday'
-  } else {
-    ret = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  }
-  return ret
 }
 
 const traceSearch = ref<InstanceType<typeof TraceSearch> | null>(null)

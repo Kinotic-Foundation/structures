@@ -16,24 +16,15 @@
         <TabPanel value="integrations">
           <GitHubLinkStatus return-to="/organization-settings" />
         </TabPanel>
+        <TabPanel value="authentication">
+          <OidcConfigurationsPanel :application-id="null" />
+        </TabPanel>
         <TabPanel v-for="tab in upcomingTabs" :key="tab.id" :value="tab.id">
           <FeatureEmptyState badge="coming-soon" :icon="tab.icon" :tint="tab.upcoming.tint" :title="tab.upcoming.title"
                            :description="tab.upcoming.description" :points="tab.upcoming.points"
                            :meanwhile="tab.upcoming.meanwhile">
             <template #preview>
-              <div v-if="tab.id === 'authentication'" :class="PREVIEW_CARD">
-                <div class="mb-3 text-xs font-semibold text-surface-950 dark:text-surface-0">Sign-in methods</div>
-                <div v-for="provider in PROVIDERS" :key="provider.name"
-                     class="flex items-center gap-3 border-t border-surface-100 py-2.5 dark:border-surface-800">
-                  <img :src="provider.logo" alt="" class="h-5 w-5" />
-                  <span class="flex-1 text-xs text-surface-800 dark:text-surface-100">{{ provider.name }}</span>
-                  <span :class="['flex h-4 w-7 items-center rounded-full p-0.5', provider.on ? 'justify-end bg-surface-950 dark:bg-surface-0' : 'bg-surface-200 dark:bg-surface-700']">
-                    <span class="h-3 w-3 rounded-full bg-surface-0 dark:bg-surface-900" />
-                  </span>
-                </div>
-              </div>
-
-              <div v-else-if="tab.id === 'identity-mapping'" :class="[PREVIEW_CARD, 'grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2.5']">
+              <div v-if="tab.id === 'identity-mapping'" :class="[PREVIEW_CARD, 'grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2.5']">
                 <div class="text-[10px] font-semibold uppercase tracking-wider text-surface-400">Provider group</div>
                 <span />
                 <div class="text-[10px] font-semibold uppercase tracking-wider text-surface-400">Kinotic role</div>
@@ -101,13 +92,9 @@ import Tag from 'primevue/tag'
 import { PageHeader, TINTS } from '@kinotic-ai/frontend-common'
 import FeatureEmptyState from '@/components/FeatureEmptyState.vue'
 import GitHubLinkStatus from '@/components/GitHubLinkStatus.vue'
+import OidcConfigurationsPanel from '@/components/OidcConfigurationsPanel.vue'
 import { useQueryTab } from '@/composables/useQueryTab'
 import { DOCUMENTATION_URL } from '@/util/externalLinks'
-import githubLogo from '@/assets/github-icon.svg'
-import googleLogo from '@/assets/google-icon.svg'
-import keycloakLogo from '@/assets/keycloak-icon.svg'
-import microsoftLogo from '@/assets/microsoft_online-icon.svg'
-import oktaLogo from '@/assets/okta-icon.svg'
 
 /** What the empty state of a tab that is not built yet says about it. */
 interface UpcomingFeature {
@@ -129,20 +116,7 @@ interface SettingsTab {
 
 const TABS: SettingsTab[] = [
   { id: 'integrations', label: 'Integrations', icon: markRaw(Plug) },
-  {
-    id: 'authentication', label: 'Authentication providers', icon: markRaw(KeyRound),
-    upcoming: {
-      tint: TINTS.blue,
-      title: 'Bring your own sign-in',
-      description: 'Configure the identity providers your members sign in with, so access follows the accounts your organization already manages.',
-      points: [
-        'Connect an OpenID Connect provider such as Okta, Microsoft Entra ID, Google or Keycloak',
-        'Choose which sign-in methods your members see',
-        'Keep GitHub and email sign-in alongside your own provider'
-      ],
-      meanwhile: { label: 'link GitHub in Integrations', to: { query: {} } }
-    }
-  },
+  { id: 'authentication', label: 'Authentication providers', icon: markRaw(KeyRound) },
   {
     id: 'identity-mapping', label: 'Identity mapping', icon: markRaw(IdCard),
     upcoming: {
@@ -189,13 +163,6 @@ const TABS: SettingsTab[] = [
 
 // The previews are illustrations of the screens to come, drawn from these placeholders
 const PREVIEW_CARD = 'rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900'
-const PROVIDERS = [
-  { name: 'Okta', logo: oktaLogo, on: true },
-  { name: 'Microsoft Entra ID', logo: microsoftLogo, on: true },
-  { name: 'Google', logo: googleLogo, on: false },
-  { name: 'Keycloak', logo: keycloakLogo, on: false },
-  { name: 'GitHub', logo: githubLogo, on: true }
-]
 const MAPPINGS = [
   { group: 'engineering', role: 'Developer', tint: TINTS.blue },
   { group: 'platform-admins', role: 'Admin', tint: TINTS.purple },

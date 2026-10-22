@@ -5,9 +5,8 @@ export interface MemberSummary extends DescriptiveIdentifiable {
     id: string
     email: string
     displayName: string | null
-    status: 'Invited' | 'Active' | 'Disabled'
-    /** How the person signs in, OIDC or LOCAL; null for an invitation. */
-    authType: string | null
+    status: 'Invited' | 'Pending' | 'Active' | 'Disabled'
+    /** When the person joined the scope, or when the invitation was sent. */
     created: string | null
     invite?: boolean
 }

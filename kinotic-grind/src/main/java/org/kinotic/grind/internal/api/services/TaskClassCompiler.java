@@ -1,6 +1,8 @@
 package org.kinotic.grind.internal.api.services;
 
+import org.kinotic.grind.internal.api.model.DefaultJobContext;
 import org.kinotic.grind.internal.api.model.DefaultJobDefinition;
+import org.kinotic.grind.internal.api.model.DefaultTask;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.grind.api.model.JobContext;
@@ -10,14 +12,18 @@ import org.kinotic.grind.api.model.JobScope;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
 import org.kinotic.grind.api.model.Task;
+import org.kinotic.grind.api.model.TaskReporter;
 
 import java.beans.Introspector;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,22 +46,40 @@ public class TaskClassCompiler {
      * @param taskClass the class to compile
      * @return the definition
      * @throws IllegalArgumentException if the class declares no tasks, duplicate orders, a
-     *         task consuming a type only a later task produces, or durable state on a task
-     *         that produces no value
+     *         task consuming a type only a later task produces, durable state on a task
+     *         that produces no value, or a {@link TaskReporter} field or constructor parameter
      */
     public static JobDefinition compile(Class<?> taskClass) {
         List<Method> methods = taskMethodsInOrder(taskClass);
         validateWiring(taskClass, methods);
+        validateReporterInjection(taskClass);
 
         DefaultJobDefinition ret = new DefaultJobDefinition(taskClass.getSimpleName(), JobScope.CHILD, false);
         for (Method method : methods) {
             org.kinotic.grind.api.annotations.Task meta = method.getAnnotation(org.kinotic.grind.api.annotations.Task.class);
             String description = meta.value().isEmpty() ? method.getName() : meta.value();
             Class<?> produced = producedType(method);
-            Task<Object> task = methodTask(taskClass, method, description);
-            ret.task(task, effectiveStore(taskClass, method, meta, produced));
+            Task<Object> task = methodTask(taskClass, method, description).store(effectiveStore(taskClass, method, meta, produced));
+            ret.task(meta.icon().isEmpty() ? task : task.icon(meta.icon()));
         }
         return ret;
+    }
+
+    // One instance serves every task of the class while each task is given a reporter of its own, so
+    // a reporter the instance holds would report for the first of its tasks only
+    private static void validateReporterInjection(Class<?> taskClass) {
+        for (Class<?> type = taskClass; type != null && type != Object.class; type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                Validate.isTrue(field.getType() != TaskReporter.class,
+                                "%s holds a TaskReporter in field %s; a tasks class takes it as a @Task method parameter",
+                                taskClass.getName(), field.getName());
+            }
+        }
+        for (Constructor<?> constructor : taskClass.getDeclaredConstructors()) {
+            Validate.isTrue(!Arrays.asList(constructor.getParameterTypes()).contains(TaskReporter.class),
+                            "%s takes a TaskReporter in its constructor; a tasks class takes it as a @Task method parameter",
+                            taskClass.getName());
+        }
     }
 
     private static List<Method> taskMethodsInOrder(Class<?> taskClass) {
@@ -156,35 +180,30 @@ public class TaskClassCompiler {
 
     private static Task<Object> methodTask(Class<?> taskClass, Method method, String description) {
         method.trySetAccessible();
-        return new Task<>() {
-            @Override
-            public String getDescription() {
-                return description;
+        return DefaultTask.of(description, context -> {
+            Object instance = tasksInstance(context, taskClass);
+            Object[] arguments = resolveArguments(context, method, description);
+            try {
+                return method.invoke(instance, arguments);
+            } catch (InvocationTargetException e) {
+                throw e.getCause() instanceof Exception cause ? cause : e;
             }
-
-            @Override
-            public Object execute(JobContext context) throws Exception {
-                Object instance = tasksInstance(context, taskClass);
-                Object[] arguments = resolveArguments(context, method, description);
-                try {
-                    return method.invoke(instance, arguments);
-                } catch (InvocationTargetException e) {
-                    throw e.getCause() instanceof Exception cause ? cause : e;
-                }
-            }
-        };
+        });
     }
 
     /**
      * The tasks class is instantiated once per run: the first task to need it constructs it
-     * through the scope, with constructor arguments resolved against the application context,
-     * and stores it for the later tasks.
+     * through the scope its tasks share, with constructor arguments resolved against the
+     * application context, and stores it for the later tasks.
      */
     private static Object tasksInstance(JobContext context, Class<?> taskClass) {
-        Object ret = context.getBeanOrNull(taskClass);
+        // built in the shared scope rather than the first task's own, so nothing injected into the
+        // instance, a JobContext included, resolves to that task's TaskReporter
+        DefaultJobContext shared = ((DefaultJobContext) context).sharedScope();
+        Object ret = shared.getBeanOrNull(taskClass);
         if (ret == null) {
-            ret = context.instantiate(taskClass);
-            context.storeBean(taskClass.getName(), ret);
+            ret = shared.instantiate(taskClass);
+            shared.storeBean(taskClass.getName(), ret);
         }
         return ret;
     }

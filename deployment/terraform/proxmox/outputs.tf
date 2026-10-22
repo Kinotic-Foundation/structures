@@ -9,12 +9,12 @@ output "server_hostnames" {
 }
 
 output "portal_hostname" {
-  description = "The portal, served by Front Door"
+  description = "The portal, served by the sites Worker"
   value       = local.azure.portal_hostname
 }
 
 output "console_hostname" {
-  description = "The system console, served by Front Door"
+  description = "The system console, served by the sites Worker"
   value       = local.azure.console_hostname
 }
 

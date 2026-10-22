@@ -22,7 +22,7 @@ import org.springframework.validation.annotation.Validated;
 public class KinoticAppServerProperties extends KinoticProperties {
 
     /**
-     * The URLs the app server is reached at.
+     * The UIs the app server admits beyond an application's published sites.
      */
     @Valid
     private AppServerProperties appServer = new AppServerProperties();

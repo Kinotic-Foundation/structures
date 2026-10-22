@@ -34,9 +34,9 @@ import java.util.List;
 public class TestDataService {
 
     /**
-     * The organization id all sample data belongs to
+     * The organization all sample data belongs to: the one the test stack's migrations seed
      */
-    public static final String SAMPLE_ORG_ID = "kinotic";
+    public static final String SAMPLE_ORG_ID = "test-org";
 
     /**
      * The id of the Application the sample {@link EntityDefinition}s are created under

@@ -1,4 +1,4 @@
-import type { ExecutionStatus } from '@kinotic-ai/management-api'
+import type { ExecutionStatus, TaskView } from '@kinotic-ai/management-api'
 import type { JobTaskProgress } from './JobTaskProgress'
 
 /**
@@ -11,6 +11,8 @@ export interface JobTaskNode {
   /** The node's position within its parent: the last taskPath segment, 0 for the run's root. */
   sequence: number
   description: string
+  /** The name of the Lucide icon the task shows, such as `folder-git-2`, or null for the default. */
+  icon: string | null
   status: ExecutionStatus
   /** True once the task revealed dynamically generated child tasks. */
   dynamicTasks: boolean
@@ -23,11 +25,7 @@ export interface JobTaskNode {
   progress: JobTaskProgress | null
   /** The job scope name the task's value is stored under, once known. */
   storedName: string | null
-  /**
-   * The task's stored value as published to watchers while the run executes, or as
-   * recorded on the task once it completed; null until then, or when the value is neither
-   * published nor recorded.
-   */
-  storedValue: unknown
+  /** The latest view the task showed, live while the run is watched and as recorded afterwards; null when it showed none. */
+  view: TaskView | null
   children: JobTaskNode[]
 }

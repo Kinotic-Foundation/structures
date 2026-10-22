@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * The system server's {@link SecurityService}: admits platform operators, the clients they have authorized,
+ * The system server's {@link SecurityService}: admits system users, the clients they have authorized,
  * and the platform's own machines such as the vm-manager, each as a {@link SystemParticipant}. The credentials
  * of any other identity fail as invalid.
  */
@@ -27,7 +27,7 @@ public class SystemSecurityService implements SecurityService {
         return credentialAuthenticationService.authenticate(authenticationInfo, SystemSecurityService::admits);
     }
 
-    private static boolean admits(ParticipantIdentity identity) {
-        return identity.getOrganizationId() == null && identity.getApplicationId() == null;
+    private static boolean admits(ParticipantIdentity identity, Participant participant) {
+        return participant instanceof SystemParticipant;
     }
 }

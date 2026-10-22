@@ -3,19 +3,24 @@ output "resource_group_name" {
   value       = azurerm_resource_group.main.name
 }
 
+output "sites_storage_account_id" {
+  description = "The sites storage account, for the role the operator uploads the platform's UIs with"
+  value       = module.sites.storage_account_id
+}
+
 output "sites_domain" {
-  description = "The domain every published UI is a label under"
-  value       = module.sites.sites_domain
+  description = "The domain every organization's sites are under: <app>--<ui>.<org>.<sites domain>"
+  value       = module.cloudflare_sites.sites_domain
+}
+
+output "apps_api_domain" {
+  description = "The domain every application's API host is a label under"
+  value       = module.cloudflare_sites.apps_api_domain
 }
 
 output "sites_storage_blob_endpoint" {
   description = "The blob endpoint the system server publishes sites into"
   value       = module.sites.storage_blob_endpoint
-}
-
-output "sites_endpoint_host_name" {
-  description = "The Front Door endpoint the wildcard record points at"
-  value       = module.sites.endpoint_host_name
 }
 
 output "server_client_id" {
@@ -44,22 +49,3 @@ output "server_client_secret_key_id" {
   value       = azuread_application_password.server.key_id
 }
 
-output "ui_hostnames" {
-  description = "The platform UIs' hostnames served from the sites account, by key"
-  value       = module.sites.hostnames
-}
-
-output "sites_storage_account_id" {
-  description = "The sites storage account, for roles a root adds"
-  value       = module.sites.storage_account_id
-}
-
-output "sites_frontdoor_profile_name" {
-  description = "The Front Door profile serving the sites account"
-  value       = module.sites.frontdoor_profile_name
-}
-
-output "sites_frontdoor_endpoint_name" {
-  description = "Its endpoint"
-  value       = module.sites.frontdoor_endpoint_name
-}

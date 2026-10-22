@@ -1,36 +1,35 @@
 #!/opt/certbot/bin/python3
 """Keeps the host's public hostnames on the router's current public address. The ISP hands
 out the address by DHCP, so kinotic-dyndns.timer runs this every few minutes: it asks an echo
-service for the address and writes it into the A record of every name the host's certificate
-carries, in the zone certbot's dns-azure configuration names, as the same principal.
+service for the address and writes it into the A record of every name the host's certificates
+carry in the platform zone, through the Cloudflare API with the DNS token in certbot's dns-cloudflare
+credentials file, which sync-secrets.sh writes from kinotic-servers.env.
 
-A record already at the address is left alone; nothing else in the zone is touched.
+A record already at the address is left alone. The app server's names are in the customers'
+zone, proxied records the dev-server terraform root owns, so they are not touched.
 """
 import configparser
 import glob
+import json
 import sys
+import urllib.parse
 import urllib.request
 
-from azure.identity import ClientSecretCredential
-from azure.mgmt.dns import DnsManagementClient
 from cryptography import x509
 
-CERTBOT_INI = "/etc/kinotic/certbot-azure.ini"
+CERTBOT_INI = "/etc/kinotic/certbot-cloudflare.ini"
 LINEAGES = "/etc/letsencrypt/live/*/cert.pem"
 ECHO = "https://api.ipify.org"
+API = "https://api.cloudflare.com/client/v4"
+# the platform zone, where the management and system servers' names are (global/ domain_name)
+PLATFORM_ZONE = "kinotic.ai"
 
 
-def settings():
+def token():
     parser = configparser.ConfigParser()
     with open(CERTBOT_INI) as f:
         parser.read_string("[certbot]\n" + f.read())
-    ini = parser["certbot"]
-    zone, _, scope = ini["dns_azure_zone1"].partition(":")
-    subscription = scope.split("/")[2]
-    group = scope.rsplit("/", 1)[1]
-    credential = ClientSecretCredential(ini["dns_azure_tenant_id"], ini["dns_azure_sp_client_id"],
-                                        ini["dns_azure_sp_client_secret"])
-    return zone.strip(), subscription, group, credential
+    return parser["certbot"]["dns_cloudflare_api_token"]
 
 
 def hostnames():
@@ -47,20 +46,32 @@ def public_address():
         return response.read().decode().strip()
 
 
+def cloudflare(bearer, method, path, body=None, **query):
+    url = API + path + ("?" + urllib.parse.urlencode(query) if query else "")
+    data = json.dumps(body).encode() if body is not None else None
+    request = urllib.request.Request(url, data=data, method=method,
+                                     headers={"Authorization": "Bearer " + bearer, "Content-Type": "application/json"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        answer = json.load(response)
+    if not answer.get("success"):
+        sys.exit(f"Cloudflare {method} {path}: {answer.get('errors')}")
+    return answer["result"]
+
+
 if __name__ == "__main__":
-    zone, subscription, group, credential = settings()
-    names = [n for n in hostnames() if n.endswith("." + zone)]
+    names = [n for n in hostnames() if n.endswith("." + PLATFORM_ZONE)]
     if not names:
-        sys.exit("no certificate for a name in " + zone)
+        sys.exit("no certificate for a name in " + PLATFORM_ZONE)
+    bearer = token()
+    zones = cloudflare(bearer, "GET", "/zones", name=PLATFORM_ZONE)
+    if not zones:
+        sys.exit("the token sees no zone named " + PLATFORM_ZONE)
+    zone_id = zones[0]["id"]
     address = public_address()
-    dns = DnsManagementClient(credential, subscription)
     for name in names:
-        label = name[: -len(zone) - 1]
-        try:
-            current = [r.ipv4_address for r in dns.record_sets.get(group, zone, label, "A").a_records]
-        except Exception:
-            current = []
-        if current == [address]:
-            continue
-        dns.record_sets.create_or_update(group, zone, label, "A", {"ttl": 300, "a_records": [{"ipv4_address": address}]})
-        print(f"{name}: {current or 'unset'} -> {address}")
+        records = cloudflare(bearer, "GET", f"/zones/{zone_id}/dns_records", type="A", name=name)
+        for record in records:
+            if record["content"] == address:
+                continue
+            cloudflare(bearer, "PATCH", f"/zones/{zone_id}/dns_records/{record['id']}", {"content": address})
+            print(f"{name}: {record['content']} -> {address}")
