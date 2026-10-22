@@ -96,7 +96,7 @@ migration:
     repository: kinoticai/kinotic-migration
     sha: ""
 
-# JVM / Buildpack, for every server
+# JVM / Buildpack, for every server; the migration runs with the same Spring profiles
 properties:
   springActiveProfiles: "production,debug"
   enableJmx: true

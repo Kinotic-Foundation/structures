@@ -36,3 +36,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.kinotic.elastic.secretName }}
                   key: {{ .Values.kinotic.elastic.secretKey }}
+            # the migration applies the seeds of the environments its profiles name, the servers' own
+            - name: SPRING_PROFILES_ACTIVE
+              value: "{{ .Values.properties.springActiveProfiles }}"
