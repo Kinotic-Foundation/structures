@@ -40,8 +40,8 @@ kinotic:
     jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
   domain:
     cors:
-      # The portal alone
-      allowedOriginPattern: "https:\\/\\/${DEV_SERVER_PORTAL_HOSTNAME}"
+      # The portal and the trusted UIs (trusted_ui_hostnames in the dev-server terraform root)
+      allowedOriginPattern: "https:\\/\\/(${DEV_SERVER_MANAGEMENT_UI_HOSTNAMES})"
       allowCredentials: true
     secretStorage:
       # The in-memory default loses every stored secret on restart; the Key Vault the
