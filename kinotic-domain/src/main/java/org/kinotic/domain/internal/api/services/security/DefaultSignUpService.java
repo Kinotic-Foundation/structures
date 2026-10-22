@@ -44,6 +44,7 @@ public class DefaultSignUpService implements SignUpService {
     public Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate) {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
+        emailService.validateTemplate(emailTemplate);
 
         String token = UUID.randomUUID().toString();
         Date now = new Date();

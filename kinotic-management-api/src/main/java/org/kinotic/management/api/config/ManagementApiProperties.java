@@ -54,8 +54,7 @@ public class ManagementApiProperties {
 
     /**
      * Leaves out the MCP server on {@code POST /mcp}, for a server that runs management-api's services without an
-     * API gateway, and so without the {@code SecurityService} and {@code OAuthServerHandler} the MCP server
-     * authenticates its callers with.
+     * API gateway.
      */
     private boolean disableMcpServer = false;
 

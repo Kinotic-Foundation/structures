@@ -216,6 +216,32 @@ public class EmailService {
     }
 
     /**
+     * Checks an {@link EmailTemplate} a caller passes, so a broken one fails the call before it saves anything.
+     *
+     * @param template the template, or {@code null} for Kinotic's own, which needs no check
+     * @throws IllegalArgumentException when {@code uiBaseUrl} is blank or ends with {@code /}, or a source is missing
+     *                                  or does not compile
+     */
+    public void validateTemplate(EmailTemplate template) {
+        if (template != null) {
+            Validate.notBlank(template.getUiBaseUrl(), "The email template's uiBaseUrl is required");
+            Validate.isTrue(!template.getUiBaseUrl().endsWith("/"), "The email template's uiBaseUrl must not end with /");
+            compileSource(TEXT_TEMPLATES, "subject", template.getSubject());
+            compileSource(HTML_TEMPLATES, "htmlBody", template.getHtmlBody());
+            compileSource(TEXT_TEMPLATES, "textBody", template.getTextBody());
+        }
+    }
+
+    private static void compileSource(Handlebars engine, String name, String source) {
+        Validate.notNull(source, "The email template's " + name + " is required");
+        try {
+            engine.compileInline(source);
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalArgumentException("The email template's " + name + " does not compile: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Parses and test-renders invitation template sources, so a broken template fails at
      * save time rather than when the next invitation is sent.
      *

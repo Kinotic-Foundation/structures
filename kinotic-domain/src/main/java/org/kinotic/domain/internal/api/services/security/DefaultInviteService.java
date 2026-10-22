@@ -49,6 +49,7 @@ public class DefaultInviteService implements InviteService {
         Validate.notBlank(invite.getEmail(), "email is required");
         Validate.notBlank(invite.getOrganizationId(), "organizationId is required");
         Validate.notBlank(invite.getInvitedByName(), "invitedByName is required");
+        emailService.validateTemplate(emailTemplate);
         invite.setEmail(DomainUtil.normalizeEmail(invite.getEmail()));
 
         return organizationService.findById(invite.getOrganizationId())
@@ -294,6 +295,7 @@ public class DefaultInviteService implements InviteService {
     public Future<Void> resendInvite(String inviteId, String organizationId, EmailTemplate emailTemplate) {
         Validate.notBlank(inviteId, "inviteId is required");
         Validate.notBlank(organizationId, "organizationId is required");
+        emailService.validateTemplate(emailTemplate);
         return pendingInviteRepository.findById(inviteId)
                 .compose(invite -> {
                     // same message for missing and foreign, as cancelInvite answers

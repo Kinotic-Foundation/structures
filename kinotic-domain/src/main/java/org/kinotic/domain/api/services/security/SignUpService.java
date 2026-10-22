@@ -25,6 +25,8 @@ public interface SignUpService {
      * @param displayName     the founder's display name
      * @param emailTemplate   the verification email to send in place of Kinotic's, whose UI's {@code /signup/verify}
      *                        page the link opens, or {@code null} for Kinotic's, which opens the portal's
+     * @throws IllegalArgumentException when {@code emailTemplate} has a blank {@code uiBaseUrl} or one ending with
+     *                                  {@code /}, or a source that is missing or does not compile
      */
     Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);
 

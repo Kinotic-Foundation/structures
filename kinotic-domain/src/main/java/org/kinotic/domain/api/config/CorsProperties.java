@@ -20,8 +20,9 @@ public class CorsProperties {
      * If you want to allow all origins use "*"
      * Internally uses Java Regex Patterns to match
      * <p>
-     * Security: the origins this pattern names, other than through "*", are also the sites trusted with the server's
-     * GitHub App install codes (see {@link #trustsOrigin(String)}), so name only origins you control. The local
+     * Security: the origins this pattern names are also the pages the server's browser flows return to, with a social
+     * sign-up's pending token among what they receive, and those it names other than through "*" are trusted with the
+     * server's GitHub App install codes (see {@link #trustsOrigin(String)}), so name only origins you control. The local
      * development profile's ngrok wildcard is the one exception: it admits anyone's ngrok tunnel, which is acceptable
      * only on a developer's machine.
      * @see java.util.regex.Pattern
