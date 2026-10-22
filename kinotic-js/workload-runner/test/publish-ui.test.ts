@@ -3,17 +3,17 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { azuriteUp, CONTAINER, containerSas, ENDPOINT, readBlob, sharedKeyHeaders } from './azurite.ts'
+import { directorySas, ENDPOINT, gatewayUp, putBlob, readBlob, siteUrl } from './sites-gateway.ts'
 
 const PUBLISH = join(import.meta.dir, '..', 'src', 'publish-ui.ts')
 
-const azurite = await azuriteUp()
+const gateway = await gatewayUp()
 
-describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
+describe.skipIf(!gateway)('publish-ui entrypoint (against Azurite through the local edge\'s storage gateway)', () => {
 
     let workspaceDir: string
 
-    beforeEach(async () => {
+    beforeEach(() => {
         workspaceDir = join(tmpdir(), `workload-runner-publish-${crypto.randomUUID()}`)
         const write = (path: string, content: string) => {
             mkdirSync(dirname(join(workspaceDir, path)), { recursive: true })
@@ -25,9 +25,6 @@ describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
         write('packages/ui/admin/dist/assets/app.js', 'console.log("admin")')
         write('packages/ui/admin/dist/assets/deep/style.css', 'body{}')
         write('packages/ui/admin/dist/favicon.ico', 'icon')
-        const containerUrl = `${ENDPOINT}/${CONTAINER}?restype=container`
-        const created = await fetch(containerUrl, { method: 'PUT', headers: sharedKeyHeaders('PUT', containerUrl) })
-        expect([201, 409]).toContain(created.status)
     })
 
     afterEach(() => {
@@ -37,12 +34,10 @@ describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
     it('uploads dist as it is into the site\'s directory, stamped with the commit, then version.json, then index.html, with their cache policies', async () => {
         const sha = 'a'.repeat(40)
         // one upload URL per UI, each naming the site's directory
-        const uploadUrls = JSON.stringify({ admin: `${ENDPOINT}/${CONTAINER}/admin.apps.kinotic.test?${containerSas()}` })
+        const uploadUrls = JSON.stringify({ admin: siteUrl('admin.apps.kinotic.test') })
 
         // a file an earlier publish left behind, stamped with its commit
-        const staleUrl = `${ENDPOINT}/${CONTAINER}/admin.apps.kinotic.test/assets/old.js`
-        const stale = await fetch(staleUrl, { method: 'PUT', body: '// stale',
-            headers: sharedKeyHeaders('PUT', staleUrl, 8, { 'x-ms-blob-type': 'BlockBlob', 'x-ms-meta-commit': 'b'.repeat(40) }) })
+        const stale = await putBlob('admin.apps.kinotic.test/assets/old.js', '// stale', { 'x-ms-meta-commit': 'b'.repeat(40) })
         expect(stale.status).toBe(201)
 
         const result = spawnSync('bun', [PUBLISH], {
@@ -81,12 +76,30 @@ describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
         rmSync(join(workspaceDir, 'packages', 'ui', 'admin', 'dist'), { recursive: true })
 
         const result = spawnSync('bun', [PUBLISH], {
-            env: { ...process.env, KINOTIC_UI_UPLOAD_URLS: JSON.stringify({ admin: `${ENDPOINT}/${CONTAINER}/admin.apps.kinotic.test?${containerSas()}` }),
+            env: { ...process.env, KINOTIC_UI_UPLOAD_URLS: JSON.stringify({ admin: siteUrl('admin.apps.kinotic.test') }),
                    KINOTIC_UI_COMMIT: 'b'.repeat(40), KINOTIC_WORKSPACE_DIR: workspaceDir },
             encoding: 'utf-8',
         })
 
         expect(result.status).not.toBe(0)
         expect(result.stderr).toContain('packages/ui/admin')
+    }, 60_000)
+
+    it('writes into no directory but the one its upload URL was signed for', async () => {
+        const own = `own-${crypto.randomUUID()}.apps.kinotic.test`
+        const other = `other-${crypto.randomUUID()}.apps.kinotic.test`
+        expect((await putBlob(`${other}/index.html`, '<html>other</html>')).status).toBe(201)
+
+        // the URL names the other site's directory, but its SAS is signed for its own
+        const result = spawnSync('bun', [PUBLISH], {
+            env: { ...process.env, KINOTIC_UI_UPLOAD_URLS: JSON.stringify({ admin: `${ENDPOINT}/sites/${other}?${directorySas(own, 'cwdl')}` }),
+                   KINOTIC_UI_COMMIT: 'c'.repeat(40), KINOTIC_WORKSPACE_DIR: workspaceDir },
+            encoding: 'utf-8',
+        })
+
+        expect(result.status).not.toBe(0)
+        expect(result.stderr).toContain('403')
+        expect(await (await readBlob(`${other}/index.html`)).text()).toBe('<html>other</html>')
+        expect((await readBlob(`${other}/assets/app.js`)).status).toBe(404)
     }, 60_000)
 })

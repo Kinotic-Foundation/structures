@@ -73,6 +73,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, type Ref } from 'vue'
+import { useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
@@ -84,6 +85,7 @@ import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import loginArt from '@/assets/login-background.svg'
 
 const toast = useToast()
+const router = useRouter()
 
 const request = ref<SignUpRequest>({
   email: '',
@@ -97,6 +99,16 @@ const displayName = ref<InstanceType<typeof InputText>>()
 const email = ref<InstanceType<typeof InputText>>()
 
 onMounted(async () => {
+  // a server that does not offer signing up with an email and a password refuses the form, so GitHub's sign-up is shown
+  try {
+    const res = await fetch(apiUrl('/api/auth/org/signup/methods'), { credentials: 'same-origin' })
+    if (res.ok && (await res.json()).password !== true) {
+      await router.replace('/signup')
+      return
+    }
+  } catch {
+    // the form stays, and its submit reports a refusal
+  }
   try {
     const res = await fetch(apiUrl('/api/auth/org/login/providers'), { credentials: 'same-origin' })
     if (res.ok) {

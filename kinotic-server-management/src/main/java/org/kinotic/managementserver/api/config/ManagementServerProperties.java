@@ -26,8 +26,8 @@ public class ManagementServerProperties {
     private TurnstileProperties turnstile = new TurnstileProperties();
 
     /**
-     * Whether the portal's sign-up page offers signing up with an email and a password, in place of GitHub alone, as a
-     * demonstration server does.
+     * Whether signing up with an email and a password is offered, as a demonstration server does: the portal's sign-up
+     * page offers it in place of GitHub alone, and {@code POST /api/auth/org/signup} accepts it.
      */
     private boolean passwordSignUp = false;
 

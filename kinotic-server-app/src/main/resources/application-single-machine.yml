@@ -1,0 +1,28 @@
+# What the development and demonstration profiles share, both running the whole platform on one machine.
+# application.yml activates it with either of them (spring.profiles.group).
+kinotic:
+  domain:
+    cors:
+      # An application UI's vite dev server on any local port, and the sites the local edge serves
+      # under sites.localhost
+      allowedOriginPattern: "http:\\/\\/localhost:\\d+|http:\\/\\/[a-z0-9-]+\\.[a-z0-9-]+\\.sites\\.localhost:8088"
+      allowCredentials: true
+    publishedSites:
+      # The domain the local edge serves the sites under, so a published UI signs its users in
+      domain: sites.localhost
+    secretStorage:
+      backend: IN_MEMORY
+      # The management server's key: SecretNameDeriver must derive the same storage names on every server
+      masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
+    appApiBaseUrl: http://localhost:58505
+  appServer:
+    # An application UI's vite dev server on any local port signs its users in to the application
+    # whose API host its proxy addresses
+    localUiOriginPattern: "http:\\/\\/localhost:\\d+"
+  maxNumberOfCoresToUse: 4
+  platformSecrets:
+    # Seeded on first boot by DevPlatformSecretsGenerator, or by whichever server boots first: every
+    # server on the machine reads the same file. Production uses Azure Key Vault via the Secrets
+    # Store CSI driver — same file layout, different origin.
+    generateMissing: true
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys

@@ -12,7 +12,6 @@ dependencies {
     implementation 'io.projectreactor:reactor-core'
 
     implementation 'com.azure:azure-identity'
-    implementation 'com.azure:azure-storage-blob'
     implementation 'com.azure:azure-storage-file-datalake'
 
     implementation 'io.vertx:vertx-core'

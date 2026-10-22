@@ -410,9 +410,15 @@ async function sendInvitationTo(item: MemberRow) {
   }
 }
 
-// A server that sends no email hands back the invitation's link; shows it and resolves true when it did
+// A server that hands links back in place of email returns the invitation's link; shows it and resolves true when it
+// did. The invitation is made by then, so a failed lookup resolves false rather than reporting the invitation failed
 async function showInvitationLink(email: string): Promise<boolean> {
-  const url = await Kinotic.members.findInvitationLink(email, props.applicationId)
+  let url: string | null = null
+  try {
+    url = await Kinotic.members.findInvitationLink(email, props.applicationId)
+  } catch {
+    // the invitation stands; its link is found again by sending the invitation again
+  }
   if (url) {
     invitationLink.value = { email, url }
   }

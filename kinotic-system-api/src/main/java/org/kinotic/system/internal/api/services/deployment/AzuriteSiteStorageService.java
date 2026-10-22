@@ -1,10 +1,10 @@
 package org.kinotic.system.internal.api.services.deployment;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
-import com.azure.storage.blob.sas.BlobContainerSasPermission;
-import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.StorageSharedKeyCredential;
+import com.azure.storage.file.datalake.DataLakeServiceClient;
+import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
+import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
+import com.azure.storage.file.datalake.sas.PathSasPermission;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
@@ -19,9 +19,11 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 /**
- * {@link SiteStorageService} of the Azurite emulator a machine runs as its sites storage account. Each URL
- * names the site's directory, but its SAS allows its operations on the whole sites container, which holds
- * every organization's sites: a workload holding one can write or delete any site's files.
+ * {@link SiteStorageService} of the Azurite emulator a machine runs as its sites storage account, reached through
+ * the storage gateway of the local edge ({@code deployment/docker-compose/sites-edge.ts}) at
+ * {@code kinotic.systemApi.uiDeployment.sitesStorageEndpoint}. Each URL carries a SAS for the site's directory
+ * alone, signed with Azurite's well-known development key, which the gateway checks before passing the request
+ * on to the emulator.
  */
 @Component
 @RequiredArgsConstructor
@@ -37,29 +39,31 @@ public class AzuriteSiteStorageService implements SiteStorageService {
 
     @Override
     public Future<String> issueUploadUrl(String hostname, Duration ttl) {
-        // list and delete let the workload clear the files of other commits
-        return issue(hostname, ttl, new BlobContainerSasPermission().setCreatePermission(true)
-                                                                    .setWritePermission(true)
-                                                                    .setListPermission(true)
-                                                                    .setDeletePermission(true));
+        // list and delete within the directory let the workload clear the files of other commits
+        return issue(hostname, ttl, new PathSasPermission().setCreatePermission(true)
+                                                           .setWritePermission(true)
+                                                           .setListPermission(true)
+                                                           .setDeletePermission(true));
     }
 
     @Override
     public Future<String> issueRemovalUrl(String hostname, Duration ttl) {
-        return issue(hostname, ttl, new BlobContainerSasPermission().setListPermission(true).setDeletePermission(true));
+        return issue(hostname, ttl, new PathSasPermission().setListPermission(true).setDeletePermission(true));
     }
 
-    // Azurite signs no directory SAS, so the narrowest scope it honors is the container
-    private Future<String> issue(String hostname, Duration ttl, BlobContainerSasPermission permission) {
+    private Future<String> issue(String hostname, Duration ttl, PathSasPermission permission) {
         Validate.notBlank(hostname, "hostname cannot be blank");
         Validate.notNull(ttl, "ttl is required");
         UiDeploymentProperties properties = kinoticProperties.getSystemApi().getUiDeployment();
-        BlobContainerClient container = new BlobContainerClientBuilder()
+        // signing is local, so the client never connects
+        DataLakeServiceClient account = new DataLakeServiceClientBuilder()
                 .endpoint(properties.getSitesStorageEndpoint())
-                .containerName(UiDeploymentProperties.SITES_CONTAINER)
                 .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
                 .buildClient();
-        String token = container.generateSas(new BlobServiceSasSignatureValues(OffsetDateTime.now(ZoneOffset.UTC).plus(ttl), permission));
+        String token = account.getFileSystemClient(UiDeploymentProperties.SITES_CONTAINER)
+                              .getDirectoryClient(hostname)
+                              .generateSas(new DataLakeServiceSasSignatureValues(OffsetDateTime.now(ZoneOffset.UTC).plus(ttl),
+                                                                                 permission));
         return Future.succeededFuture(properties.resolveSiteDirectoryUrl(hostname) + "?" + token);
     }
 
