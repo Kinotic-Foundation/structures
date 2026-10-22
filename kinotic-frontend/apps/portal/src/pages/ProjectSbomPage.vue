@@ -12,19 +12,11 @@
 
     <div v-if="loading" class="p-6 text-sm text-muted-color">Loading SBOM…</div>
 
-    <template v-else-if="!dependencies">
-      <EmptyChartCharacter class="mb-4 rounded-xl border border-dashed border-surface-300 py-14 dark:border-surface-700"
+    <template v-else>
+      <EmptyChartCharacter v-if="!dependencies" class="mb-4 rounded-xl border border-dashed border-surface-300 py-14 dark:border-surface-700"
                            title="No SBOM yet" hint="The last step of a deployment reads it from the project's bun.lock whenever the dependencies change." />
 
-      <!-- a project whose dependencies changed keeps the alerts of its earlier SBOM until the next one is read -->
-      <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
-                        description="Advisories from OSV that affect the packages of the project's earlier SBOM, the most severe first. They are checked again once the new SBOM is read.">
-        <VulnerabilityFindingsTable :items="alerts" data-key="id" />
-      </DashboardSection>
-    </template>
-
-    <template v-else>
-      <div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div v-else class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard :icon="GitCommitHorizontal" :tint="TINTS.purple" label="Commit" detail="the last synced commit">
           <span class="font-mono text-2xl font-semibold tracking-tight text-surface-950 dark:text-surface-0"
                 v-tooltip.top="commitSha || undefined">{{ commitSha ? shortSha(commitSha) : '—' }}</span>
@@ -42,12 +34,11 @@
       </div>
 
       <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
-                        description="Advisories from OSV that affect the packages above, the most severe first. They are checked whenever the SBOM is read and whenever an advisory is published or changes."
-                        class="mb-4">
+                        :description="alertsDescription" class="mb-4">
         <VulnerabilityFindingsTable :items="alerts" data-key="id" />
       </DashboardSection>
 
-      <DashboardSection :icon="ListTree" :tint="TINTS.purple" title="Packages" :count="visibleRows.length"
+      <DashboardSection v-if="dependencies" :icon="ListTree" :tint="TINTS.purple" title="Packages" :count="visibleRows.length"
                         description="Search by name, or filter by how the project reaches each package. Download saves the SBOM as a CycloneDX 1.6 document, the dependency graph included.">
         <div class="flex flex-wrap items-center gap-3 border-b border-surface-200 px-5 py-3 dark:border-surface-700">
           <IconField class="w-full sm:w-80">
@@ -175,6 +166,11 @@ const rows = computed<PackageRow[]>(() => {
   }
   return ret
 })
+
+// a project whose dependencies changed keeps the alerts of its earlier SBOM until the next one is read
+const alertsDescription = computed(() => dependencies.value
+  ? 'Advisories from OSV that affect the packages below, the most severe first. They are checked whenever the SBOM is read and whenever an advisory is published or changes.'
+  : "Advisories from OSV that affect the packages of the project's earlier SBOM, the most severe first. They are checked again once the new SBOM is read.")
 
 /** How many advisories affect each package version, by package URL. */
 const advisoriesByPurl = computed(() => {
