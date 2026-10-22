@@ -613,11 +613,11 @@ MCP hosts identify themselves with an [OAuth Client ID Metadata Document](https:
 
 The security property is that the client had to control that host to serve the document there, so the consent page displays the `client_id` host alongside the claimed name — a client cannot present itself as `claude.ai` without owning `claude.ai`. The page also names the account the approval would bind to: the login the browser session holds for the consent page's own origin. A system-scoped session carries no organization, so a delegate approved under it reaches every organization's MCP tools; the page warns about that before the system user approves. Under the dynamic registration this replaces, `client_name` was self-asserted by whoever called the registration endpoint.
 
-Validation, per the draft: the URL must be `https` with a path component and no fragment, userinfo, or dot segments (§3); the host must not resolve to a special-use address (§6.5); the fetch must answer `200` with no redirects followed (§4) and stay under `clientMetadataMaxBytes` (§6.6); and the document must name its own URL as `client_id` and carry no client secret (§4.1). Failures abort the authorization request and are never cached (§4.3, §4.4).
+Validation, per the draft: the URL must be `https` with a path component and no fragment, userinfo, or dot segments (§3); the host must not resolve to a special-use address (§6.5); the fetch must answer `200` with no redirects followed (§4) and stay under `clientMetadataMaxBytes` (§6.6); and the document must name its own URL as `client_id`, carry no client secret, and support the `none` token endpoint authentication method, as its `token_endpoint_auth_method` or among its `token_endpoint_auth_methods_supported` (§4.1). Failures abort the authorization request and are never cached (§4.3, §4.4).
 
 `kinotic.domain.oauth.allowedClientIds` lists the document URLs that may start a flow, and is required — a deployment names the clients it accepts or fails to start. A `client_id` that is not listed is rejected, so clients are onboarded explicitly, the deployment pattern of §6.10. A host that validates against the rules above still needs its document URL added before it can connect.
 
-Each Anthropic surface presents its own document URL, and the servers ship both:
+The servers ship these client metadata document URLs. The OpenAI and xAI clients are admitted only by the management server, where organization users build applications:
 
 <table>
 <thead>
@@ -631,10 +631,78 @@ Each Anthropic surface presents its own document URL, and the servers ship both:
         client_id
       </code>
     </th>
+    
+    <th>
+      Servers
+    </th>
   </tr>
 </thead>
 
 <tbody>
+  <tr>
+    <td>
+      ChatGPT custom MCP servers and plugins
+    </td>
+    
+    <td>
+      <code>
+        https://chatgpt.com/oauth/client.json
+      </code>
+    </td>
+    
+    <td>
+      management
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Codex
+    </td>
+    
+    <td>
+      <code>
+        https://chatgpt.com/oauth/codex/client.json
+      </code>
+    </td>
+    
+    <td>
+      management
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Grok connectors and Grok Bot
+    </td>
+    
+    <td>
+      <code>
+        https://cursor.com/oauth/mcp-client.json
+      </code>
+    </td>
+    
+    <td>
+      management
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Grok Build
+    </td>
+    
+    <td>
+      <code>
+        https://kinotic.ai/oauth/grok-build-client.json
+      </code>
+    </td>
+    
+    <td>
+      management
+    </td>
+  </tr>
+  
   <tr>
     <td>
       Claude Code
@@ -644,6 +712,10 @@ Each Anthropic surface presents its own document URL, and the servers ship both:
       <code>
         https://claude.ai/oauth/claude-code-client-metadata
       </code>
+    </td>
+    
+    <td>
+      management, system, app
     </td>
   </tr>
   
@@ -657,9 +729,30 @@ Each Anthropic surface presents its own document URL, and the servers ship both:
         https://claude.ai/oauth/mcp-oauth-client-metadata
       </code>
     </td>
+    
+    <td>
+      management, system, app
+    </td>
   </tr>
 </tbody>
 </table>
+
+The authorization server advertises `authorization_response_iss_parameter_supported: true`
+and returns its issuer as `iss` on both approval and denial callbacks (RFC 9207).
+Codex and ChatGPT can therefore use their shared metadata documents and callbacks across
+Kinotic environments. The registered loopback redirect host and path must match;
+the port may vary under RFC 8252. Client metadata validation, PKCE, and explicit
+consent apply to every client.
+
+Grok connectors and Grok Bot sign in with Cursor's client, whose document registers the
+Grok connector callback `https://grok.com/connectors-oauth-exchange-code/` and the Grok Bot
+callback. Grok Build has no client metadata document of its own and, without a configured
+client ID, registers a client dynamically, which Kinotic does not offer. Kinotic therefore
+publishes a document for it at `https://kinotic.ai/oauth/grok-build-client.json`, registering
+Grok Build's loopback callback, and the Kinotic plugin and a manually added server configure
+that URL as the server's OAuth client ID. A document under `kinotic.ai` may register only
+loopback redirect URIs, and one that registers any other is rejected, so a change to the
+website cannot send authorization codes off the user's machine.
 
 ## Bootstrap
 
