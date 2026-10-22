@@ -15,7 +15,7 @@ Status and next steps for the Azure deployment. Items are ordered by priority wi
 - [x] Terraform split: global (permanent) / cluster (disposable)
 - [x] ES plain HTTP internally (cluster-internal only)
 - [x] Pinned image version — `kinotic_version` variable
-- [x] CORS restricted per server: portal.kinotic.ai for the management server, console.kinotic.ai for the system server, the sites domain for the app server
+- [x] CORS restricted per server: portal.kinotic.ai and summit42.kinotic.ai for the management server, console.kinotic.ai for the system server, the sites domain for the app server
 - [x] ES credential sync across namespaces — `es-secret-sync` Helm chart with RBAC and retry
 - [x] NetworkPolicy on ES — allows traffic from kinotic + elastic-system only
 - [x] `beta_mode` toggle — single command to scale from beta to production topology

@@ -79,7 +79,8 @@ output "tenant_id" {
 output "dev_server_env" {
   description = "The non-secret half of the servers' environment"
   value = {
-    DEV_SERVER_PORTAL_HOSTNAME                          = local.portal_hostname
+    # the portal and the trusted UIs as regex alternatives, the management server's CORS pattern
+    DEV_SERVER_MANAGEMENT_UI_HOSTNAMES                  = join("|", [for hostname in concat([local.portal_hostname], var.trusted_ui_hostnames) : replace(hostname, ".", "\\.")])
     DEV_SERVER_CONSOLE_HOSTNAME                         = local.console_hostname
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
     KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain

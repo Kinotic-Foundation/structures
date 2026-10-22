@@ -52,6 +52,7 @@ export class StompConnectionManager {
     private connectionAttempts: number = 0
     private debugLogger = debug('kinotic:stomp')
     private readonly connectionEstablishedSubject: Subject<ConnectedInfo> = new Subject<ConnectedInfo>()
+    private readonly connectionAttemptFailedSubject: Subject<void> = new Subject<void>()
     private initialConnectionSuccessful: boolean = false
     private rxStompHasConnected: boolean = false
 
@@ -87,6 +88,15 @@ export class StompConnectionManager {
      */
     public get connectionEstablished(): Observable<ConnectedInfo> {
         return this.connectionEstablishedSubject.asObservable()
+    }
+
+    /**
+     * Emits each time an attempt to connect fails before the server accepts the connection and the client
+     * will try again: the server could not be reached, or it closed the socket before answering CONNECT. An
+     * attempt that ends the connection for good is reported to {@link connectionEndedHandler} instead.
+     */
+    public get connectionAttemptFailed(): Observable<void> {
+        return this.connectionAttemptFailedSubject.asObservable()
     }
 
     public async activate(options: ConnectOptions): Promise<ConnectedInfo> {
@@ -192,17 +202,8 @@ export class StompConnectionManager {
             this.rxStomp.configure(stompConfig)
 
             // Handles Websocket Errors
-            activation.own(this.rxStomp.webSocketErrors$.subscribe(async value => {
+            activation.own(this.rxStomp.webSocketErrors$.subscribe(value => {
                 this.lastWebsocketError = value
-                // The attempt that just failed was the last the budget allows — report now
-                // instead of paying the reconnect delay before the next beforeConnect notices.
-                if (!activation.ended && options?.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
-                    this.maxConnectionAttemptsReached = true
-                    await this.failConnection(activation, new Error(
-                        'Max number of reconnection attempts reached',
-                        { cause: value ?? undefined }
-                    ))
-                }
             }))
 
             // Server-issued ERROR frames close the connection and indicate an unrecoverable
@@ -265,13 +266,28 @@ export class StompConnectionManager {
             }))
 
             // An open socket dropping: the socket and everything the server held behind it are gone. A failed
-            // reconnect attempt also ends in CLOSED, but from CONNECTING, and loses nothing new. A close that
-            // deactivate() itself causes is reported by deactivate().
+            // attempt also ends in CLOSED, but from CONNECTING, and loses nothing new. A close that
+            // deactivate() itself causes passes through CLOSING and is reported by deactivate().
             let previousState: RxStompState = this.rxStomp.connectionState$.getValue()
             activation.own(this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
-                if (state === RxStompState.CLOSED && previousState === RxStompState.OPEN && this.activation === activation) {
-                    // the client reconnects from here, so the end carries no reason
-                    this.connectionEndedHandler?.(null)
+                if (state === RxStompState.CLOSED && this.activation === activation) {
+                    if (previousState === RxStompState.OPEN) {
+                        // the client reconnects from here, so the end carries no reason
+                        this.connectionEndedHandler?.(null)
+                    } else if (previousState === RxStompState.CONNECTING) {
+                        // The attempt that just failed was the last the budget allows — end the connection now
+                        // instead of paying the reconnect delay before the next beforeConnect notices. stompjs
+                        // reads the deactivation this causes before it schedules a reconnect.
+                        if (options.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
+                            this.maxConnectionAttemptsReached = true
+                            void this.failConnection(activation, new Error(
+                                'Max number of reconnection attempts reached',
+                                { cause: this.lastWebsocketError ?? undefined }
+                            ))
+                        } else {
+                            this.connectionAttemptFailedSubject.next()
+                        }
+                    }
                 }
                 previousState = state
             }))
@@ -317,24 +333,11 @@ export class StompConnectionManager {
             }
         }
 
-        // If max connections are set, then make sure we have not exceeded that threshold
+        // counted here; the close of the attempt that reaches maxConnectionAttempts ends the connection
         if(options?.maxConnectionAttempts){
             this.connectionAttempts++
-
-            if(this.connectionAttempts > options.maxConnectionAttempts){
-                this.maxConnectionAttemptsReached = true
-                // failConnection rejects a still-pending activate() with this reason
-                await this.failConnection(activation, new Error(
-                    'Max number of reconnection attempts reached',
-                    { cause: this.lastWebsocketError ?? undefined }
-                ))
-                return
-            }else{
-                await this.connectionJitterDelay(activation);
-            }
-        }else{
-            await this.connectionJitterDelay(activation);
         }
+        await this.connectionJitterDelay(activation)
         // a deactivate() during the delay ends the attempt before it produces anything
         if (activation.ended) {
             return

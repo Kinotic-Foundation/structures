@@ -1,7 +1,7 @@
 # The development server's management server: kinotic-server-management as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox),
 # with the sites storage account, email, and a Key Vault in Azure and the sites Worker on
-# Cloudflare (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
+# Cloudflare (deployment/terraform/azure/dev-server). Activated as `dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and
 # the credentials through the file imported below.
@@ -40,8 +40,8 @@ kinotic:
     jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
   domain:
     cors:
-      # The portal alone
-      allowedOriginPattern: "https:\\/\\/${DEV_SERVER_PORTAL_HOSTNAME}"
+      # The portal and the trusted UIs (trusted_ui_hostnames in the dev-server terraform root)
+      allowedOriginPattern: "https:\\/\\/(${DEV_SERVER_MANAGEMENT_UI_HOSTNAMES})"
       allowCredentials: true
     secretStorage:
       # The in-memory default loses every stored secret on restart; the Key Vault the

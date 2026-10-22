@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 
 /**
@@ -20,14 +21,13 @@ public interface SignUpService {
      * {@link ExistingUserException} when the email has an organization user someone signs in as, and with
      * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet.
      *
-     * @param email       the email to verify
-     * @param displayName the founder's display name
-     * @param origin      the origin of the UI the sign-up started from, whose {@code /signup/verify} page the
-     *                    link opens when {@code kinotic.domain.cors.allowedOriginPattern} names it other than
-     *                    through {@code *}; the link
-     *                    opens the portal's page for any other origin or {@code null}
+     * @param email           the email to verify
+     * @param displayName     the founder's display name
+     * @param emailTemplate   the verification email to send in place of Kinotic's, whose UI's {@code /signup/verify}
+     *                        page the link opens, or {@code null} for Kinotic's, which opens the portal's
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
-    Future<Void> initiateLocalSignUp(String email, String displayName, String origin);
+    Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);
 
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it

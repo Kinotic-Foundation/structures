@@ -228,7 +228,7 @@ locals {
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_HOST"   = ip
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_PORT"   = "9200"
     }]...), {
-    SPRING_PROFILES_ACTIVE       = "production,dev-server"
+    SPRING_PROFILES_ACTIVE       = "dev-server"
     BPL_JVM_HEAD_ROOM            = "10"
     JAVA_TOOL_OPTIONS            = "-XX:MaxDirectMemorySize=512m -javaagent:/workspace/BOOT-INF/classes/opentelemetry-javaagent.jar --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
     KINOTIC_MAX_OFF_HEAP_MEMORY  = "419430400"
@@ -255,6 +255,8 @@ locals {
     OTEL_EXPORTER_OTLP_HEADERS          = "X-Scope-OrgID=kinotic-system"
     # jvm.buffer.* and jvm.system.cpu.*, which the agent gates behind this flag
     OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_EMIT_EXPERIMENTAL_TELEMETRY = "true"
+    # Bridges Micrometer's global registry, where Vert.x registers its HTTP, WebSocket, event bus and pool meters
+    OTEL_INSTRUMENTATION_MICROMETER_ENABLED = "true"
     # Names the bare transport spans under each Elasticsearch call and each Loki, Tempo and Mimir query
     OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING = join(",", concat(
       [for ip in local.es_ips : "${ip}:9200=elasticsearch"],
@@ -424,9 +426,9 @@ locals {
       mounts        = []
       entrypoint    = local.images.cnb.entrypoint
       image_env     = local.images.cnb.env
-      # The production profile applies no fixture migration: no test users, no console samples
+      # No fixture migration applies: no test users, no console samples
       env = {
-        SPRING_PROFILES_ACTIVE           = "production"
+        SPRING_PROFILES_ACTIVE           = "dev-server"
         KINOTIC_MIGRATION_ELASTIC_SCHEME = "http"
         KINOTIC_MIGRATION_ELASTIC_HOST   = local.es_ips[0]
         KINOTIC_MIGRATION_ELASTIC_PORT   = "9200"

@@ -40,6 +40,12 @@ variable "console_label" {
   default     = "dev-console"
 }
 
+variable "trusted_ui_hostnames" {
+  description = "Hostnames of the UIs built on Kinotic beside the portal, such as dev-summit42.kinotic.ai, that the management server accepts CORS requests from and returns its sign-in, sign-up and invitation flows to"
+  type        = list(string)
+  default     = []
+}
+
 variable "public_ip" {
   description = "The public IPv4 address the router forwards 443 from, as the first value of every server's record; kinotic-dyndns.timer on the host keeps the records current afterwards"
   type        = string
