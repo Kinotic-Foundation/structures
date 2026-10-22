@@ -1,0 +1,32 @@
+# The demonstration server: the whole platform on one machine from deployment/docker-compose
+# (compose.yml), to try Kinotic with no Azure and no mail service. compose.kinotic-servers.yml runs
+# every server with this profile alone, and supplies the container addresses: Elasticsearch, the
+# Ignite cluster and the observability stack.
+kinotic:
+  domain:
+    cors:
+      # An application UI's vite dev server on any local port, and the sites the local edge serves
+      # under sites.localhost
+      allowedOriginPattern: "http:\\/\\/localhost:\\d+|http:\\/\\/[a-z0-9-]+\\.[a-z0-9-]+\\.sites\\.localhost:8088"
+      allowCredentials: true
+    # The domain the local edge serves the sites under, so a published UI signs its users in
+    publishedSites:
+      domain: sites.localhost
+    appApiBaseUrl: http://localhost:58505
+    email:
+      # No mail service: a sign-up continues at its verification link at once
+      enabled: false
+      handOffLinks: true
+    secretStorage:
+      backend: IN_MEMORY
+      # SecretNameDeriver must derive the same storage names on every server; a demonstration-only value
+      masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
+  appServer:
+    # An application UI's vite dev server on any local port signs its users in to the application
+    # whose API host its proxy addresses
+    localUiOriginPattern: "http:\\/\\/localhost:\\d+"
+  maxNumberOfCoresToUse: 4
+  platformSecrets:
+    # Seeded on first boot by DevPlatformSecretsGenerator
+    generateMissing: true
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys

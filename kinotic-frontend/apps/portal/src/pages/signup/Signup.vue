@@ -149,6 +149,12 @@ async function handleSubmit() {
       return
     }
 
+    // a server that sends no email returns the verification link, and the sign-up continues there at once
+    if (data.verificationUrl) {
+      window.location.assign(data.verificationUrl)
+      return
+    }
+
     submitted.value = true
   } catch (error: unknown) {
     displayAlert(error instanceof Error ? error.message : 'Sign-up failed')

@@ -292,6 +292,20 @@ public class DefaultInviteService implements InviteService {
     }
 
     @Override
+    public Future<String> findAcceptUrl(String email, String organizationId, String applicationId) {
+        Validate.notBlank(email, "email is required");
+        Validate.notBlank(organizationId, "organizationId is required");
+        Future<String> ret;
+        if (emailService.handsOffLinks()) {
+            ret = pendingInviteRepository.findByEmailAndScope(email, organizationId, applicationId)
+                                         .map(invite -> invite == null ? null : emailService.inviteAcceptUrl(invite));
+        } else {
+            ret = Future.succeededFuture();
+        }
+        return ret;
+    }
+
+    @Override
     public Future<Void> resendInvite(String inviteId, String organizationId, EmailTemplate emailTemplate) {
         Validate.notBlank(inviteId, "inviteId is required");
         Validate.notBlank(organizationId, "organizationId is required");

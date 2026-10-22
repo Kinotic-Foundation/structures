@@ -1,0 +1,68 @@
+# The demonstration server: the whole platform on one machine from deployment/docker-compose
+# (compose.yml), to try Kinotic with no Azure and no mail service. compose.kinotic-servers.yml runs
+# every server with this profile alone, and supplies the container addresses: Elasticsearch, the
+# Ignite cluster and the observability stack.
+kinotic:
+  managementApi:
+    entityDefinition:
+      # A single-node cluster cannot assign replicas, and every published EntityDefinition costs
+      # numberOfShards * (1 + numberOfReplicas) against the 1000-shard default
+      numberOfShards: 1
+      numberOfReplicas: 0
+    # A developer's GitHub App replaces both from ./config/application.yml, which compose mounts
+    github:
+      webhookSecret: "-"
+      appPrivateKey: "-"
+  systemApi:
+    uiDeployment:
+      # Published UIs go to the Azurite emulator compose.sites.yml runs, and its local edge serves them at
+      # http://<app>--<ui>.<org>.sites.localhost:8088
+      siteStorage: AZURITE
+      # Where the publish and removal workloads reach Azurite: the host alias of a BOXLITE guest, completed
+      # over this machine's loopback, where compose publishes Azurite's port
+      sitesStorageEndpoint: http://192.168.127.254:10000/devstoreaccount1
+    deployment:
+      # A workload runs in a BOXLITE micro VM on this machine, whose guests reach the host on the
+      # gvisor-tap-vsock host alias; boxlite's proxy completes the last hop over this machine's loopback,
+      # where compose publishes the servers' ports
+      managementServer:
+        host: 192.168.127.254
+      appServer:
+        host: 192.168.127.254
+      # The sync workload fetches the project from GitHub and runs bun install
+      syncAllowedHosts:
+        - github.com
+        - registry.npmjs.org
+  systemServer:
+    apiBaseUrl: http://localhost:58504
+    # The system console's vite dev server (pnpm dev:system), which system logins return to
+    consoleBaseUrl: http://localhost:5174
+  domain:
+    cors:
+      # The system console's vite dev server
+      allowedOriginPattern: "http:\\/\\/localhost:5174"
+      allowCredentials: true
+    # What a UI build is handed: the app server as a browser reaches it, not the address a workload dials
+    appApiBaseUrl: http://localhost:58505
+    # The portal the management server serves on 9090, where invitations are accepted
+    portalBaseUrl: http://localhost:9090
+    # The local edge serves each published UI's site under this domain, over plain HTTP on its port; with
+    # no Cloudflare zone, each organization's record is logged rather than created, and *.localhost
+    # resolves to this machine in the browser
+    publishedSites:
+      domain: sites.localhost
+      useSsl: false
+      port: 8088
+    email:
+      # No mail service: an inviter is shown the invitation's link to send on
+      enabled: false
+      handOffLinks: true
+    secretStorage:
+      backend: IN_MEMORY
+      # SecretNameDeriver must derive the same storage names on every server; a demonstration-only value
+      masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
+  maxNumberOfCoresToUse: 4
+  platformSecrets:
+    # Seeded on first boot by DevPlatformSecretsGenerator
+    generateMissing: true
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys

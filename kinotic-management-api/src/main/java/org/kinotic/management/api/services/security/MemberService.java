@@ -102,4 +102,18 @@ public interface MemberService {
 
     /** Cancels a pending invitation belonging to the caller's organization. */
     Future<Void> cancelInvite(String inviteId);
+
+    /**
+     * The accept link of the live invitation of {@code email} into the caller's organization or one of its
+     * applications, for the inviter to send on when the platform hands links back in place of email
+     * ({@code kinotic.domain.email.handOffLinks}), as a demonstration server does. Anyone holding the link can accept
+     * the invitation as the invited address.
+     *
+     * @param email         the invited address
+     * @param applicationId the application invited into, one of the caller's organization's, or {@code null} for an
+     *                      invitation into the organization
+     * @return the link, or {@code null} when the platform does not hand links back or no invitation into the scope is
+     *         pending for the address
+     */
+    Future<String> findInvitationLink(String email, String applicationId);
 }

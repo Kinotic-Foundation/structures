@@ -1,9 +1,6 @@
-# Profile activated alongside `development` when running inside docker-compose
-# (SPRING_PROFILES_ACTIVE=development,compose). Holds overrides that diverge from
-# IDE-based dev.
-# The portal build the server serves on 9090, and the API behind it. A developer's tunnel replaces
-# both from ./config/application.yml, which compose.kinotic-servers.yml mounts and which outranks
-# every file packaged in the jar.
+# The e2e stack's profile for a server inside docker-compose
+# (SPRING_PROFILES_ACTIVE=test,e2e-tests,compose in compose.kinotic-e2e-test.yml): the portal build the
+# server serves on 9090, and the API behind it.
 kinotic:
   domain:
     portalBaseUrl: http://localhost:9090

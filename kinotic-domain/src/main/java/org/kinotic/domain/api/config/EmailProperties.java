@@ -19,10 +19,17 @@ import java.time.Duration;
 public class EmailProperties {
 
     /**
-     * When {@code false}, {@code EmailService} will log the verification URL instead of sending.
-     * Useful for local development without an Azure login.
+     * When {@code false}, no email is sent and each link a person must open is logged.
      */
     private boolean enabled = true;
+
+    /**
+     * When {@code true} and {@link #enabled} is {@code false}, each link a person must open is handed back to whoever
+     * asked for it, the verification link to the one signing up and an invitation's accept link to the inviter, as a
+     * demonstration server does. Nothing then proves an address belongs to the person using it, so this is never set
+     * on a server reachable by anyone but the people trying it.
+     */
+    private boolean handOffLinks = false;
 
     /**
      * ACS endpoint URL, e.g. {@code https://my-acs-resource.communication.azure.com}.

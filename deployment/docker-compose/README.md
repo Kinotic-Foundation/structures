@@ -49,7 +49,7 @@ docker compose -f compose.elasticsearch.yml -f compose.kinotic-migration.yml up 
 # (2) Full self-contained stack (everything in containers, including the server)
 docker compose up -d
 
-# (3) Tail the management server's logs (look here for verification URLs in dev — email is off)
+# (3) Tail the management server's logs
 docker compose logs -f kinotic-server-management
 
 # (4) Hot-reload a server image after a build (the same for kinotic-server-system and kinotic-server-app)
@@ -88,27 +88,19 @@ include `compose.kinotic-migration.yml` without `evaluation.env` and seed none o
 
 ## Try the auth flow (UI devs)
 
-The full compose stack (`docker compose up -d`) gives you a working signup/login flow out
-of the box. Email delivery is off, so verification links land in the management server's log
-instead of an inbox.
+The full compose stack (`docker compose up -d`) is the demonstration server: every server runs the
+`demonstration` profile, which sends no email and offers sign-up with an email and a password.
 
 ```bash
-# 1. Bring up the stack
 docker compose up -d
-
-# 2. Watch the management server's log for the verification URL on signup
-docker compose logs -f kinotic-server-management | grep -i "verification URL"
-
-# 3. Open the SPA
 open http://localhost:9090
 ```
 
-Steps in the SPA:
-
-1. Click **Sign Up**, fill in org name + email + display name, submit.
-2. Find the verification URL in the management server's log (printed by `EmailService` when email is disabled). Open it.
-3. Set a password → "Account created!" → click **Sign in**.
-4. Log in with the email + password you just set.
+1. Click **Sign Up**, fill in your name and email, submit. The page goes straight to the verification
+   step, since no email will arrive.
+2. Name your organization and set a password; you are signed in.
+3. On **Members**, add someone with an invitation: a dialog shows the invitation's link to send them,
+   or to open yourself.
 
 ### Adding "Continue with Keycloak" (local OIDC, no internet)
 
@@ -255,8 +247,8 @@ curl -s -H 'X-Scope-OrgID: kinotic-system' 'http://localhost:3100/loki/api/v1/la
 
 The management server's `application-development.yml` currently has `kinotic.domain.email.enabled: true`, pointed at
 the real ACS endpoint. Set it to `false` to have `EmailService` skip the send and log the
-verification URL to the IntelliJ console instead — which is what the compose stack does via
-`KINOTIC_DOMAIN_EMAIL_ENABLED=false`.
+verification URL to the IntelliJ console, and hand the links back as the demonstration server does
+([Demonstration server](../../website/content/02.platform/03.configuration.md)).
 
 If you also run the Vite frontend (`pnpm dev` on `:5173`), it calls the server directly at
 `localhost:58503` via `VITE_KINOTIC_HOST`/`VITE_KINOTIC_PORT` — see

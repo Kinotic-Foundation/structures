@@ -95,12 +95,27 @@
                 :icon="props.applicationId !== null ? 'pi pi-send' : 'pi pi-user-plus'" :loading="saving" :disabled="memberEmail.trim() === ''" />
       </template>
     </FormDrawer>
+
+    <Dialog :visible="invitationLink !== null" modal header="Send this invitation link" :style="{ width: '34rem' }"
+            @update:visible="visible => { if (!visible) invitationLink = null }">
+      <div v-if="invitationLink" class="flex flex-col gap-4">
+        <p class="text-sm text-surface-700 dark:text-surface-200">
+          This demonstration server can't send email, so no invitation reached {{ invitationLink.email }}.
+          Send them this link to accept the invitation, or open it yourself to try it.
+        </p>
+        <CopyableUrl label="Invitation link" :url="invitationLink.url" />
+      </div>
+      <template #footer>
+        <Button type="button" label="Done" @click="invitationLink = null" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, ref, type Component } from 'vue'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
@@ -129,6 +144,7 @@ import { PageHeader, TimePill } from '@kinotic-ai/frontend-common'
 import { statusSeverity, useCrudTablePage } from '@kinotic-ai/frontend-common'
 import type { CrudHeader } from '@kinotic-ai/frontend-common'
 import type { DescriptiveIdentifiable } from '@kinotic-ai/frontend-common'
+import CopyableUrl from '@/components/CopyableUrl.vue'
 import { KinoticStates } from '@/states'
 import { apiUrl, showErrorToast } from '@kinotic-ai/frontend-common'
 import { createDebug } from '@kinotic-ai/frontend-common'
@@ -179,6 +195,8 @@ const memberFormVisible = ref(false)
 const memberEmail = ref('')
 const memberDisplayName = ref('')
 const sendInvitation = ref(true)
+// The link of an invitation no email delivers, shown for the inviter to send on
+const invitationLink = ref<{ email: string, url: string } | null>(null)
 const saving = ref(false)
 const socialProviderKeys = ref<string[]>([])
 
@@ -349,16 +367,21 @@ async function submitMember() {
     const displayName = memberDisplayName.value.trim() || null
     if (props.applicationId !== null) {
       await Kinotic.members.inviteMember(email, displayName, props.applicationId)
-      toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
+      if (!(await showInvitationLink(email))) {
+        toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
+      }
     } else {
       const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value)
       // an address that already had an organization user is invited to accept, whatever the switch said
-      const detail = added.id === null
-          ? `${email} already signs in to Kinotic organizations, so an invitation was emailed for them to accept`
-          : sendInvitation.value
-              ? `Added ${email} and emailed an invitation`
-              : `Added ${email}; they sign in through your organization's provider`
-      toast.add({ severity: 'success', summary: 'Member added', detail, life: 6000 })
+      const invited = added.id === null || sendInvitation.value
+      if (!invited || !(await showInvitationLink(email))) {
+        const detail = added.id === null
+            ? `${email} already signs in to Kinotic organizations, so an invitation was emailed for them to accept`
+            : sendInvitation.value
+                ? `Added ${email} and emailed an invitation`
+                : `Added ${email}; they sign in through your organization's provider`
+        toast.add({ severity: 'success', summary: 'Member added', detail, life: 6000 })
+      }
     }
     memberFormVisible.value = false
     // A leftover filter would hide the new Pending row; clearing it reloads the
@@ -375,8 +398,25 @@ async function submitMember() {
   }
 }
 
-function sendInvitationTo(item: MemberRow) {
-  run(() => Kinotic.members.sendInvitation(item.email), 'Invitation sent', 'Failed to send invitation')
+async function sendInvitationTo(item: MemberRow) {
+  try {
+    await Kinotic.members.sendInvitation(item.email)
+    if (!(await showInvitationLink(item.email))) {
+      toast.add({ severity: 'success', summary: 'Invitation sent', life: 4000 })
+    }
+    refreshTable()
+  } catch (err) {
+    showErrorToast(toast, 'Failed to send invitation', err, { life: 8000 })
+  }
+}
+
+// A server that sends no email hands back the invitation's link; shows it and resolves true when it did
+async function showInvitationLink(email: string): Promise<boolean> {
+  const url = await Kinotic.members.findInvitationLink(email, props.applicationId)
+  if (url) {
+    invitationLink.value = { email, url }
+  }
+  return Boolean(url)
 }
 
 function rowActions(item: MemberRow): MenuItem[] {

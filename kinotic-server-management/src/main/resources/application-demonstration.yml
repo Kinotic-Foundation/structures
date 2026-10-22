@@ -1,0 +1,48 @@
+# The demonstration server: the whole platform on one machine from deployment/docker-compose
+# (compose.yml), to try Kinotic with no Azure and no mail service. compose.kinotic-servers.yml runs
+# every server with this profile alone, and supplies the container addresses: Elasticsearch, the
+# Ignite cluster and the observability stack.
+kinotic:
+  managementApi:
+    entityDefinition:
+      # A single-node cluster cannot assign replicas, and every published EntityDefinition costs
+      # numberOfShards * (1 + numberOfReplicas) against the 1000-shard default
+      numberOfShards: 1
+      numberOfReplicas: 0
+    # A developer's GitHub App replaces both from ./config/application.yml, which compose mounts
+    github:
+      webhookSecret: "-"
+      appPrivateKey: "-"
+    # The portal build this server serves on 9090, and the API behind it. A developer's tunnel replaces
+    # both from ./config/application.yml, which outranks every file packaged in the jar
+    apiBaseUrl: http://localhost:9090
+  managementServer:
+    # The portal's sign-up page offers an email and a password, which needs neither GitHub nor a mail service
+    passwordSignUp: true
+    turnstile:
+      # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every
+      # token verifies
+      siteKey: 1x00000000000000000000AA
+      secretKey: 1x0000000000000000000000000000000AA
+  domain:
+    cors:
+      # The portal this server serves, and a developer's ngrok tunnel to it. The tunnel is same-origin but
+      # still CORS-checked, because the social login forms POST and browsers send Origin on a POST navigation
+      allowedOriginPattern: "http:\\/\\/localhost:9090|https:\\/\\/[a-zA-Z0-9-]+\\.ngrok(-free)?\\.(app|dev|io)"
+      allowCredentials: true
+    portalBaseUrl: http://localhost:9090
+    appApiBaseUrl: http://localhost:58505
+    email:
+      # No mail service: a sign-up continues at its verification link at once, and an inviter is shown the
+      # invitation's link to send on
+      enabled: false
+      handOffLinks: true
+    secretStorage:
+      backend: IN_MEMORY
+      # SecretNameDeriver must derive the same storage names on every server; a demonstration-only value
+      masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
+  maxNumberOfCoresToUse: 4
+  platformSecrets:
+    # Seeded on first boot by DevPlatformSecretsGenerator
+    generateMissing: true
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys

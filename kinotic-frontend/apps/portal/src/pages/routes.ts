@@ -258,6 +258,11 @@ const pageRoutes: RouteRecordRaw[] = [
     meta: { authenticationRequired: false } as RouteMeta
   },
   {
+    path: '/signup/email',
+    component: () => import('@/pages/signup/Signup.vue'),
+    meta: { authenticationRequired: false } as RouteMeta
+  },
+  {
     path: '/signup/verify',
     component: () => import('@/pages/signup/VerifyEmail.vue'),
     meta: { authenticationRequired: false } as RouteMeta

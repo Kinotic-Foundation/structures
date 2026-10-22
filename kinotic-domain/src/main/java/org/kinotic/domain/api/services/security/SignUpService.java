@@ -18,16 +18,23 @@ public interface SignUpService {
     /**
      * Starts an email/password sign-up: validates and stores a pending record and emails a
      * verification link. The organization name and password are collected later, at completion. Fails with
-     * {@link ExistingUserException} when the email has an organization user someone signs in as, and with
-     * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet.
+     * {@link ExistingUserException} when the email has an organization user someone signs in as, with
+     * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet, and when
+     * a sign-up is already pending for the email. A pending sign-up that has expired is replaced.
+     * <p>
+     * When {@code kinotic.domain.email.enabled} is {@code false} and {@code kinotic.domain.email.handOffLinks} is
+     * {@code true}, no email is sent and the verification link is returned for the caller to open, so the address is
+     * never proven to be the caller's; an email/password sign-up already pending for the email then returns its link
+     * again.
      *
      * @param email           the email to verify
      * @param displayName     the founder's display name
      * @param emailTemplate   the verification email to send in place of Kinotic's, whose UI's {@code /signup/verify}
      *                        page the link opens, or {@code null} for Kinotic's, which opens the portal's
+     * @return a future emitting the verification link when it is handed back, or {@code null} once it is emailed
      * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
-    Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);
+    Future<String> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);
 
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it
