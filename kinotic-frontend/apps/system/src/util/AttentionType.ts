@@ -1,4 +1,4 @@
-/** What kind of thing needs an operator; the attention list groups its items by it. */
+/** What kind of thing needs a system user; the attention list groups its items by it. */
 export enum AttentionType {
     FAILED_RUN = 'failed-run',
     FAILED_WORKLOAD = 'failed-workload',

@@ -123,8 +123,9 @@ describe('Kinotic JS', () => {
             .find(tool => tool.name === toolName(FIND_PROJECTS_BY_REPO))
 
         expect(findProjects).toBeDefined()
+        // the title leads the description, since many hosts show the model only the name and description
         expect(findProjects!.description).toBe(
-            "Looks up projects in the current participant's organization whose backing GitHub repo has the given "
+            `${FIND_PROJECTS_BY_REPO}: Looks up projects in the current participant's organization whose backing GitHub repo has the given `
             + 'owner/repo full name. Returns the empty list when no project in that organization is backed by the repo.')
         expect(findProjects!.annotations?.readOnlyHint).toBe(true)
         // served explicitly because MCP defaults it to true, which reads as a call that leaves the platform

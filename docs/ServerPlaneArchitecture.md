@@ -9,7 +9,7 @@ design session of 2026-08-09.
 ## Context
 
 Today one deployable, `kinotic-server`, serves every participant type — application
-end-users, organization users, system operators, and machines — with one
+end-users, organization users, system users, and machines — with one
 `SecurityService`, one event bus, and zone rules (`ZoneRules`) as the sole partition.
 Three pressures forced this decision:
 
@@ -92,7 +92,7 @@ same tenant trust used for system-user SSO. Consequences:
   `oid` (the `(oidcSubject, oidcConfigId)` shape users already have) and **no
   `IdentityCredential`**. `AuthType` gains this dichotomy for machines; the
   `beforeSave` pin to `CLIENT_CREDENTIALS` relaxes accordingly.
-- Registration is **explicit**: a system operator registers the managed identity's `oid`
+- Registration is **explicit**: a system user registers the managed identity's `oid`
   through the system console. Trust-on-first-use via Entra app-role assignment was
   rejected — it would move the machine-registry authority out of kinotic.
 - The kinotic-side `enabled` flag remains a kill switch independent of Entra.

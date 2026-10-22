@@ -106,7 +106,7 @@ const ACTIVE_WORDS = new Set(['DEPLOYING', 'RUNNING', 'PENDING', 'PUBLISHING'])
 const STATUS_WORD = /\b(FAILED|DEPLOYED|READY|COMPLETED|DEPLOYING|RUNNING|PENDING|PUBLISHING)\b/
 
 const formatDateTime = DatetimeUtil.formatDateTime
-const formatRelativeDate = DatetimeUtil.formatRelativeDate
+const formatDayLabel = DatetimeUtil.formatDayLabel
 const formatTime = DatetimeUtil.formatTime
 
 const expanded = ref(false)
@@ -123,7 +123,7 @@ const days = computed(() => {
     const key = new Date(entry['@timestamp']).toDateString()
     let day = out[out.length - 1]
     if (!day || day.key !== key) {
-      day = { key, label: formatRelativeDate(entry['@timestamp']), entries: [] }
+      day = { key, label: formatDayLabel(entry['@timestamp']), entries: [] }
       out.push(day)
     }
     day.entries.push(entry)

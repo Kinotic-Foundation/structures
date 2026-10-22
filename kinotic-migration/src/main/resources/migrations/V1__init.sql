@@ -210,17 +210,18 @@ CREATE TABLE IF NOT EXISTS kinotic_service_directory (
     contractHash KEYWORD
 );
 
--- Participant Identity: authenticated identities — a person (type=USER), a client acting on a
--- person's behalf (type=DELEGATE), or a machine (type=MACHINE). Scope is encoded structurally by
--- which of organizationId / applicationId is set: organizationId only = ORGANIZATION, both set =
--- APPLICATION, both null = SYSTEM for a machine or delegate and, for a USER, an account: a person's
--- single identity on the platform, which acts in the scopes its kinotic_membership rows name. A
--- user's sign-in methods are its kinotic_identity_credential and its kinotic_oidc_binding rows; a
--- delegate authenticates with the tokens its owner's authorization minted and a machine with its
--- credential, so how a row authenticates follows from its type.
--- Uniqueness rules (enforced in service layer): one USER per (email, organizationId,
--- applicationId), so one account per email; one DELEGATE per (ownerId, clientKey, organizationId,
--- applicationId).
+-- Participant Identity: authenticated identities — a person of one scope (type=SYSTEM_USER for the
+-- system console, ORGANIZATION_USER for organizations, APPLICATION_USER for one application), a client
+-- acting on a person's behalf (type=DELEGATE), or a machine (type=MACHINE). Scope is encoded structurally
+-- by which of organizationId / applicationId is set: organizationId only = ORGANIZATION, both set =
+-- APPLICATION, both null = SYSTEM; an ORGANIZATION_USER carries neither and acts in the organizations its
+-- kinotic_organization_membership rows name. A user's sign-in methods are its kinotic_identity_credential
+-- and, for an organization's or an application's user, its kinotic_oidc_binding rows; a delegate
+-- authenticates with the tokens its owner's authorization minted and a machine with its credential, so how
+-- a row authenticates follows from its type.
+-- Uniqueness rules (enforced in service layer): one SYSTEM_USER and one ORGANIZATION_USER per email, one
+-- APPLICATION_USER per (email, organizationId, applicationId); one DELEGATE per (ownerId, clientKey,
+-- organizationId, applicationId).
 CREATE TABLE IF NOT EXISTS kinotic_participant_identity (
     id KEYWORD,
     type KEYWORD,
@@ -244,13 +245,12 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
     secretHash KEYWORD NOT INDEXED
 );
 
--- Membership: an account's membership of an organization, or of the platform when organizationId
--- is null (a platform operator). id is <identityId>:<organizationId or "system">, so a login reads
--- it by a get and an account is a member of a scope at most once. enabled is the account's standing
--- in that scope alone.
-CREATE TABLE IF NOT EXISTS kinotic_membership (
+-- Organization Membership: an ORGANIZATION_USER's membership of one organization. id is
+-- <organizationUserId>:<organizationId>, so a login reads it by a get and an organization user is a member
+-- of an organization at most once. enabled is the user's standing in that organization alone.
+CREATE TABLE IF NOT EXISTS kinotic_organization_membership (
     id KEYWORD,
-    identityId KEYWORD,
+    organizationUserId KEYWORD,
     organizationId KEYWORD,
     enabled BOOLEAN,
     created DATE,
@@ -258,10 +258,11 @@ CREATE TABLE IF NOT EXISTS kinotic_membership (
 );
 
 -- OIDC Binding: a user's sign-in method through a provider — the sub claim asserted under one OIDC
--- configuration, bound to the user it signs in. id is <oidcConfigId>:<subject> for an account and
--- <organizationId>/<applicationId>/<oidcConfigId>:<subject> for an application's user, so a callback
--- reads the binding by a get and a provider identity signs in at most one account and one user of
--- each application. organizationId and applicationId are the bound user's scope, null for an account.
+-- configuration, bound to the user it signs in. id is <oidcConfigId>:<subject> for an organization user
+-- and <organizationId>/<applicationId>/<oidcConfigId>:<subject> for an application's user, so a callback
+-- reads the binding by a get and a provider identity signs in at most one organization user and one user
+-- of each application. organizationId and applicationId are the bound user's scope, null for an
+-- organization user. A system user signs in with a password alone and holds no binding.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_binding (
     id KEYWORD,
     identityId KEYWORD,
@@ -312,6 +313,23 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     scopes KEYWORD NOT INDEXED,
     audience KEYWORD NOT INDEXED,
     enabled BOOLEAN,
+    created DATE,
+    updated DATE
+);
+
+-- LLM configuration: a large language model the platform's services call, which system users
+-- manage in the system console (LlmConfigurationService) and a service selects by its unique name.
+-- The row names no API key: LlmConfigurationService.save(configuration, apiKey) holds the key in the
+-- platform's scope of the secret storage, keyed by the row's id, and apiKeyHeld records that one is held.
+CREATE TABLE IF NOT EXISTS kinotic_llm_configuration (
+    id KEYWORD,
+    name KEYWORD,
+    provider KEYWORD,
+    model KEYWORD NOT INDEXED,
+    endpoint KEYWORD NOT INDEXED,
+    maxTokens INTEGER NOT INDEXED,
+    temperature DOUBLE NOT INDEXED,
+    apiKeyHeld BOOLEAN,
     created DATE,
     updated DATE
 );
@@ -517,12 +535,15 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
     jobRunId KEYWORD,
     taskPath KEYWORD,
     description TEXT,
+    icon KEYWORD,
     status KEYWORD,
     storeType KEYWORD,
     dynamicTasks BOOLEAN,
     storedName KEYWORD,
     stateValueType KEYWORD,
     stateValue JSON NOT INDEXED,
+    wireValue JSON NOT INDEXED,
+    view JSON NOT INDEXED,
     error TEXT,
     started DATE,
     finished DATE
@@ -572,7 +593,7 @@ INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secr
 -- users in AND verifies installation ownership at link time (see the Defense in Depth
 -- doc). Required App settings: a client secret (AKV name = secretNameRef); "Request
 -- user authorization (OAuth) during installation" checked; callback URLs under
--- "Identifying and authorizing users" = <portalBaseUrl>/github/install/callback FIRST
+-- "Identifying and authorizing users" = <managementApiBaseUrl>/api/github/install/callback FIRST
 -- (install redirects go to the first callback URL) plus the ORG_SIGNUP URL above; the
 -- "Email addresses: read-only" account permission. Scopes are inert for GitHub Apps.
 

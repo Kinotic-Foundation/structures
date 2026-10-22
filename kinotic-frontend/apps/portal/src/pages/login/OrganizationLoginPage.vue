@@ -25,7 +25,7 @@
         </div>
 
         <!-- Single-step email + password; the login answers a generic 401, so this form
-             exposes no account-existence oracle. -->
+             exposes no user-existence oracle. -->
         <div class="login-form__step">
           <IconField class="login-field">
             <InputText
@@ -62,7 +62,7 @@
 
       <div class="login-signup-link">
         <span>New to Kinotic?</span>
-        <router-link to="/signup">Create Account</router-link>
+        <router-link to="/signup">Create Organization</router-link>
       </div>
     </div>
   </AuthPageShell>

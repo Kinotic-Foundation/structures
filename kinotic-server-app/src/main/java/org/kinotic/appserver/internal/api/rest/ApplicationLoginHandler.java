@@ -13,7 +13,7 @@ import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -31,14 +31,14 @@ import org.springframework.stereotype.Component;
 /**
  * Login routes for end-users of an application built on Kinotic, served at the application's own API host.
  * Distinct from the org-login handler: the user is logging into an application's own user base (an
- * APP-scope {@link UserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
+ * {@link ApplicationParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
  * not into the platform-managed org admin surface. The application is the one whose API host the request
  * was addressed to, a login is made only from a page that is one of that application's UIs, and a login
  * from one of a tenant's sites, or one naming a tenant, is to that tenant: it admits the tenant's users and
  * offers the tenant's own providers as well as the application's (see
  * {@link ApplicationAuthEndpointSupport#loginScope}). A page offers the methods the login supports — email
  * and password, and the configurations {@code GET /api/auth/app/login/providers} lists — without asking
- * about an email first, so no endpoint tells whether an email has an account. An OIDC flow started here
+ * about an email first, so no endpoint tells whether an email has a user. An OIDC flow started here
  * returns to this handler's own callback at the application's API host; a sign-in through one of the
  * platform's social registrations, whose callback every application shares, runs through
  * {@link ApplicationSocialLoginHandler}.
@@ -134,7 +134,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         String tenantId = authEndpointSupport.readJsonBody(ctx).getString("tenantId");
         authEndpointSupport.loginScope(ctx, tenantId)
               .onSuccess(scope -> authEndpointSupport.handlePasswordLogin(ctx,
-                      (email, password) -> localAuthenticationService.authenticateLocal(
+                      (email, password) -> localAuthenticationService.authenticateApplicationUser(
                               email, password, scope.application().organizationId(), scope.application().applicationId())
                                                                        .map(user -> scope.memberOf(user) == null ? null : DomainUtil.createParticipant(user))))
               .onFailure(err -> fail(ctx, err, "Failed to sign in"));
@@ -168,17 +168,17 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                                   CallbackResult<OidcConfiguration> result,
                                   LoginScope scope) {
         authEndpointSupport.completeOidcLogin(ctx, result,
-                sub -> identityService.findByOidcIdentity(result.config().getId(), sub, scope.application().organizationId(),
-                                                         scope.application().applicationId())
+                sub -> identityService.findApplicationUserByOidcIdentity(result.config().getId(), sub, scope.application().organizationId(),
+                                                                        scope.application().applicationId())
                                       .map(scope::memberOf),
                 () -> newUserOf(scope, result.config()));
     }
 
     // the unsaved user an unknown identity becomes, or null when the scope admits no new user: a tenant admits one
     // through its own configuration only, and an application only while the platform assigns the user's tenant
-    private Future<UserParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
+    private Future<ApplicationParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
         ApplicationKey applicationKey = scope.application();
-        Future<UserParticipantIdentity> ret;
+        Future<ApplicationParticipantIdentity> ret;
         if (scope.tenantId() != null) {
             ret = Future.succeededFuture(config instanceof TenantOidcConfiguration ? newUser(applicationKey, scope.tenantId()) : null);
         } else {
@@ -189,8 +189,8 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         return ret;
     }
 
-    private static UserParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
-        UserParticipantIdentity ret = new UserParticipantIdentity();
+    private static ApplicationParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
+        ApplicationParticipantIdentity ret = new ApplicationParticipantIdentity();
         ret.setOrganizationId(applicationKey.organizationId())
            .setApplicationId(applicationKey.applicationId())
            .setTenantId(tenantId);

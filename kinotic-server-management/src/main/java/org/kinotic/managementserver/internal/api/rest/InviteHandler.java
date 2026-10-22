@@ -9,13 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.OrganizationService;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -54,6 +55,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     private final ParticipantIdentityService identityService;
     private final OrganizationService organizationService;
     private final OidcConfigurationService oidcConfigurationService;
+    private final ApplicationRepository applicationRepository;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
     private final KinoticManagementApiProperties managementApiProperties;
@@ -85,21 +87,21 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   Future<List<OidcConfiguration>> providers = invite.getApplicationId() != null
                           ? Future.succeededFuture(List.of())
                           : oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(), null);
-                  // the holder of the invitation owns the invited email, so telling them an account exists for it
-                  // tells a stranger nothing; the page then asks for that account's password, or, when it has none,
+                  // the holder of the invitation owns the invited email, so telling them an organization user exists for
+                  // it tells a stranger nothing; the page then asks for that user's password, or, when it has none,
                   // for the provider it is bound to, instead of a new password
-                  Future<UserParticipantIdentity> account = invite.getApplicationId() != null
+                  Future<OrganizationParticipantIdentity> user = invite.getApplicationId() != null
                           ? Future.succeededFuture()
-                          : identityService.findByEmail(invite.getEmail(), null, null);
-                  Future<Boolean> accountHasPassword = account.compose(found -> found == null
+                          : identityService.findOrganizationUserByEmail(invite.getEmail());
+                  Future<Boolean> userHasPassword = user.compose(found -> found == null
                           ? Future.succeededFuture(false)
                           : identityService.hasPassword(found.getId()));
-                  // an account an administrator added that nobody signs in to yet is the invitee's to claim, so the
-                  // page treats it as new: an account exists for the page once a method signs it in
-                  Future<Boolean> accountClaimed = account.compose(found -> found == null
+                  // an organization user an administrator added that nobody signs in as yet is the invitee's to claim,
+                  // so the page treats it as new: a user exists for the page once a method signs it in
+                  Future<Boolean> userClaimed = user.compose(found -> found == null
                           ? Future.succeededFuture(false)
                           : identityService.hasSignInMethod(found.getId()));
-                  return Future.all(orgName, providers, accountHasPassword, accountClaimed)
+                  return Future.all(orgName, providers, userHasPassword, userClaimed)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
                                        .put("displayName", invite.getDisplayName())
@@ -108,8 +110,8 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                                        .put("invitedByName", invite.getInvitedByName())
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
-                                       .put("accountExists", accountClaimed.result())
-                                       .put("accountHasPassword", accountHasPassword.result())
+                                       .put("organizationUserExists", userClaimed.result())
+                                       .put("organizationUserHasPassword", userHasPassword.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })
               .onSuccess(json -> ctx.response().putHeader("Content-Type", "application/json").end(json.encode()))
@@ -119,8 +121,8 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     /**
      * {@code POST /api/auth/invite/accept {token, password, displayName?}} — accept by setting a
      * password. Org invitees get a browser session, same as logging in, and a {@code 204}; app
-     * invitees get a payload identifying the application, which the accept page uses for its
-     * confirmation state, and sign in at the application's own UI.
+     * invitees get a payload identifying the application and its {@code primaryUiUrl}, where they
+     * sign in, which is {@code null} while the application has no primary UI.
      */
     private void handleLocalAccept(RoutingContext ctx) {
         JsonObject body = authEndpointSupport.readJsonBody(ctx);
@@ -135,28 +137,41 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
         inviteService.acceptLocalInvite(token, password, displayName)
               .onSuccess(member -> {
                   if (member instanceof ApplicationParticipant user) {
-                      // the management server holds organization logins only, so an application member
-                      // signs in at the application; the payload names it for the accept page
-                      ctx.response().putHeader("Content-Type", "application/json")
-                         .end(new JsonObject()
-                                 .put("scope", "APPLICATION")
-                                 .put("organizationId", user.getOrganizationId())
-                                 .put("applicationId", user.getApplicationId())
-                                 .encode());
+                      respondApplicationAccepted(ctx, user);
                   } else {
                       authEndpointSupport.respondSuccess(ctx, member);
                   }
               })
               .onFailure(err -> {
-                  if (err instanceof ExistingAccountException) {
-                      // the invitation stays valid: the page asks for the existing account's password
+                  if (err instanceof ExistingUserException) {
+                      // the invitation stays valid: the page asks for the existing organization user's password
                       authEndpointSupport.respondError(ctx, 401, err.getMessage());
-                  } else if (err instanceof AccountDisabledException) {
+                  } else if (err instanceof UserDisabledException) {
                       authEndpointSupport.respondError(ctx, 403, err.getMessage());
                   } else {
                       respondInviteFailure(ctx, err, "Failed to accept invitation");
                   }
               });
+    }
+
+    // the management server holds organization logins only, so an application member signs in at the
+    // application's primary UI; the payload names it for the accept page to send the browser to
+    private void respondApplicationAccepted(RoutingContext ctx, ApplicationParticipant user) {
+        applicationRepository.findById(user.getApplicationId(), user.getOrganizationId())
+                             .map(application -> application != null ? application.getPrimaryUiUrl() : null)
+                             // the invitation is already consumed, so a failed lookup still answers the acceptance
+                             .otherwise(err -> {
+                                 log.warn("Failed to load application {} for its primary UI: {}",
+                                          user.getApplicationId(), err.getMessage());
+                                 return null;
+                             })
+                             .onSuccess(primaryUiUrl -> ctx.response().putHeader("Content-Type", "application/json")
+                                                           .end(new JsonObject()
+                                                                   .put("scope", "APPLICATION")
+                                                                   .put("organizationId", user.getOrganizationId())
+                                                                   .put("applicationId", user.getApplicationId())
+                                                                   .put("primaryUiUrl", primaryUiUrl)
+                                                                   .encode()));
     }
 
     /**
@@ -230,11 +245,11 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                       // The invite is NOT consumed on mismatch — keep the token so the
                       // invitee can retry with another provider or a password.
                       redirectInviteError(ctx, OidcErrorCodes.EMAIL_MISMATCH, token);
-                  } else if (err instanceof ExistingAccountException) {
-                      // nor here: the account's holder accepts with the account's password
-                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_EXISTS, token);
-                  } else if (err instanceof AccountDisabledException) {
-                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_DISABLED, token);
+                  } else if (err instanceof ExistingUserException) {
+                      // nor here: the organization user's holder accepts with its password
+                      redirectInviteError(ctx, OidcErrorCodes.USER_EXISTS, token);
+                  } else if (err instanceof UserDisabledException) {
+                      redirectInviteError(ctx, OidcErrorCodes.USER_DISABLED, token);
                   } else {
                       log.warn("Invite acceptance failed: {}", err.getMessage());
                       redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);

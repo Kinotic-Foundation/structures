@@ -45,6 +45,10 @@ kinotic:
     # The system console's vite dev server (pnpm dev:system), which system logins return to
     consoleBaseUrl: http://localhost:5174
   domain:
+    cors:
+      # The system console's vite dev server
+      allowedOriginPattern: "http:\\/\\/localhost:5174"
+      allowCredentials: true
     # What a UI build is handed: the app server as a browser reaches it, not the address a workload
     # dials above
     appApiBaseUrl: http://localhost:58505
@@ -62,11 +66,6 @@ kinotic:
       # The management server's dev key: SecretNameDeriver must derive the same storage names on every
       # server. Dev-only value — production supplies this via Azure Key Vault.
       masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
-  apiGateway:
-    cors:
-      # The system console's vite dev server
-      allowedOriginPattern: "http:\\/\\/localhost:5174"
-      allowCredentials: true
   maxNumberOfCoresToUse: 4
   ignite:
     discoveryType: SHAREDFS

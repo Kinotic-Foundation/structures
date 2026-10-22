@@ -8,7 +8,7 @@ import org.kinotic.domain.api.model.WatchEventType;
  *
  * @param eventType what happened
  * @param source    what caused it
- * @param message   why, for an operator
+ * @param message   why, for a system user
  * @param value     what was written, as an object
  */
 public record WatchedChange(WatchEventType eventType, String source, String message, Object value) {

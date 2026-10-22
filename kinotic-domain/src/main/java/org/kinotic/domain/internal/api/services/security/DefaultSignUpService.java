@@ -4,13 +4,16 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.core.api.security.Participant;
@@ -32,42 +35,39 @@ public class DefaultSignUpService implements SignUpService {
 
     private final PendingSignUpRepository pendingSignUpRepository;
     private final ParticipantIdentityService identityService;
-    private final MembershipService membershipService;
+    private final OrganizationMembershipService membershipService;
     private final OrganizationService organizationService;
     private final EmailService emailService;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
-    public Future<Void> initiateLocalSignUp(String email, String displayName) {
+    public Future<Void> initiateLocalSignUp(String email, String displayName, String origin) {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
+        // the origin can come from a Referer the requester chose, so only an allowed UI's origin may host the link
+        String linkOrigin = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
 
+        String token = UUID.randomUUID().toString();
+        Date now = new Date();
+        PendingSignUp pending = new PendingSignUp()
+                .setId(UUID.randomUUID().toString())
+                .setEmail(email)
+                .setDisplayName(displayName)
+                .setAuthType(AuthType.PASSWORD)
+                .setVerificationToken(token)
+                .setCreated(now)
+                .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
         return pendingSignUpRepository.findByEmail(email)
                 .compose(existing -> {
                     if (existing != null) {
                         return Future.failedFuture(new IllegalArgumentException(
                                 "A sign-up is already pending for this email. Check your inbox for the verification link."));
                     }
-                    return identityService.findByEmail(email, null, null);
+                    return requireNoOrganizationUser(pending);
                 })
-                .compose(account -> {
-                    if (account != null) {
-                        return Future.failedFuture(new IllegalArgumentException(
-                                "An account with this email already exists."));
-                    }
-                    String token = UUID.randomUUID().toString();
-                    Date now = new Date();
-                    PendingSignUp pending = new PendingSignUp()
-                            .setId(UUID.randomUUID().toString())
-                            .setEmail(email)
-                            .setDisplayName(displayName)
-                            .setAuthType(AuthType.PASSWORD)
-                            .setVerificationToken(token)
-                            .setCreated(now)
-                            .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
-                    return pendingSignUpRepository.save(pending)
-                            .compose(saved -> emailService.sendVerificationEmail(email, displayName, token));
-                });
+                .compose(v -> pendingSignUpRepository.save(pending))
+                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, linkOrigin));
     }
 
     @Override
@@ -82,7 +82,7 @@ public class DefaultSignUpService implements SignUpService {
                .setVerificationToken(UUID.randomUUID().toString())
                .setCreated(now)
                .setExpiresAt(new Date(now.getTime() + OIDC_TTL_MS));
-        return pendingSignUpRepository.saveSync(pending);
+        return requireNoOrganizationUser(pending).compose(v -> pendingSignUpRepository.saveSync(pending));
     }
 
     @Override
@@ -92,7 +92,7 @@ public class DefaultSignUpService implements SignUpService {
         Validate.notBlank(password, "Password is required");
 
         return pendingSignUpRepository.findValidByToken(token)
-                .compose(pending -> requireNoAccount(pending)
+                .compose(pending -> requireNoOrganizationUser(pending)
                         .compose(v -> createOrgWithFounder(orgName, orgDescription, pending, password))
                         .compose(founder -> pendingSignUpRepository.deleteById(pending.getId())
                                 .map(founder)));
@@ -102,30 +102,30 @@ public class DefaultSignUpService implements SignUpService {
     public Future<Participant> completeOidcWithNewOrg(String token, String orgName, String orgDescription) {
         Validate.notBlank(orgName, "Organization name is required");
         return pendingSignUpRepository.findValidByToken(token)
-                .compose(pending -> requireNoAccount(pending)
+                .compose(pending -> requireNoOrganizationUser(pending)
                         .compose(v -> createOrgWithFounder(orgName, orgDescription, pending, null))
                         .compose(founder -> pendingSignUpRepository.deleteById(pending.getId())
                                 .map(founder)));
     }
 
-    /**
-     * Fails when the identity of {@code pending}, or its verified email, already has an account: a person
-     * founds one organization at most, by signing up once, and joins others by invitation. Checked here, at
-     * completion, as well as when the sign-up starts, so the organization is never created for an account
-     * that cannot be.
-     */
-    private Future<Void> requireNoAccount(PendingSignUp pending) {
-        Future<UserParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
-                ? identityService.findByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject(), null, null)
+    // a person founds one organization at most, by signing up once, and joins others by invitation; checked when the
+    // sign-up starts and again at completion, so the organization is never created for an organization user that
+    // cannot be. A member an administrator added that nobody signs in as yet is told how that member gets in.
+    private Future<Void> requireNoOrganizationUser(PendingSignUp pending) {
+        Future<OrganizationParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
+                ? identityService.findOrganizationUserByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject())
                 : Future.succeededFuture();
-        return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findByEmail(pending.getEmail(), null, null))
+        return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findOrganizationUserByEmail(pending.getEmail()))
                     .compose(found -> found == null
                             ? Future.succeededFuture()
-                            : Future.failedFuture(new IllegalArgumentException("An account for this identity already exists. Sign in instead.")));
+                            : identityService.hasSignInMethod(found.getId()).compose(claimed -> Future.failedFuture(claimed
+                                    ? new ExistingUserException("This email or identity is already registered with Kinotic organizations. Sign in instead.")
+                                    : new PendingMemberException("An administrator added this email to an organization. Accept the invitation"
+                                                                 + " emailed to you, or sign in on that organization's sign-in page."))));
     }
 
     /**
-     * Creates the organization (failing if the name is taken), the founder's account from the pending
+     * Creates the organization (failing if the name is taken), the founder's organization user from the pending
      * sign-up — with {@code password} as its credential, or bound to the pending record's verified identity
      * — its membership of the organization, which makes it the organization's creator, and provisions the
      * organization's sites subdomain at the edge.
@@ -134,26 +134,26 @@ public class DefaultSignUpService implements SignUpService {
      */
     private Future<Participant> createOrgWithFounder(String orgName, String orgDescription, PendingSignUp pending, String password) {
         Organization org = new Organization().setName(orgName).setDescription(orgDescription);
-        UserParticipantIdentity account = new UserParticipantIdentity();
-        account.setEmail(pending.getEmail())
-               .setDisplayName(pending.getDisplayName());
+        OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
+        user.setEmail(pending.getEmail())
+            .setDisplayName(pending.getDisplayName());
         return organizationService.create(org)
                 .compose(savedOrg -> {
-                    Future<UserParticipantIdentity> created = pending.getAuthType() == AuthType.OIDC
-                            ? identityService.createOidcUser(account, pending.getOidcConfigId(), pending.getOidcSubject())
-                            : identityService.createUser(account, password);
+                    Future<OrganizationParticipantIdentity> created = pending.getAuthType() == AuthType.OIDC
+                            ? identityService.createOidcUser(user, pending.getOidcConfigId(), pending.getOidcSubject())
+                            : identityService.createUser(user, password);
                     return created
-                            .compose(founder -> membershipService.addMember(founder.getId(), savedOrg.getId())
+                            .compose(founder -> membershipService.addMembership(founder.getId(), savedOrg.getId())
                                                                  .compose(membership -> {
                                                                      savedOrg.setCreatedBy(founder.getId());
                                                                      return organizationService.save(savedOrg)
                                                                                                .map(DomainUtil.createParticipant(founder, membership));
                                                                  })
-                                                                 // an account whose membership or organization could not be
+                                                                 // a founder whose membership or organization could not be
                                                                  // completed goes too: left behind, it could neither sign in
                                                                  // anywhere nor sign up again
                                                                  .recover(err -> identityService.deleteById(founder.getId())
-                                                                                                .onFailure(deleteErr -> log.warn("Could not delete the founder account {} of organization {}: {}",
+                                                                                                .onFailure(deleteErr -> log.warn("Could not delete the founder {} of organization {}: {}",
                                                                                                                                  founder.getId(), savedOrg.getId(), deleteErr.getMessage()))
                                                                                                 .transform(v -> Future.failedFuture(err))))
                             // and so does the organization, as when a sign-up of the same identity completed first, so

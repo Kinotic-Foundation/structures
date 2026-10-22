@@ -437,10 +437,17 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                                                             + function.getName() + "' on service " + qualifiedName);
                 }
 
+                // MCP hosts commonly show the model only the name and description, and the name is a hash,
+                // so the title leads the description to tell apart functions inherited from a generic base
+                // (CrudService.count on every service) that share one Javadoc
+                String description = decorator.getTitle() != null
+                        ? decorator.getTitle() + ": " + decorator.getDescription()
+                        : decorator.getDescription();
+
                 tools.add(new McpToolDefinition()
                                   .setName(toolName)
                                   .setTitle(decorator.getTitle())
-                                  .setDescription(decorator.getDescription())
+                                  .setDescription(description)
                                   .setInputSchema(schemaGenerator.generateInputSchema(function, referenceResolver))
                                   // the full invocation CRI, so dispatching a call needs no reconstruction;
                                   // no version: the invoker does not support version-specific routing

@@ -32,6 +32,7 @@ public class McpToolDirectoryTests extends KinoticTestBase {
 
     private static final String FIND_PROJECTS_BY_REPO = KinoticUtil.mcpToolName(PROJECT_SERVICE, "findByRepoFullName");
     private static final String GET_LOGIN_PROVIDERS = KinoticUtil.mcpToolName(APPLICATION_SERVICE, "getLoginProviders");
+    private static final String COUNT_APPLICATIONS = KinoticUtil.mcpToolName(APPLICATION_SERVICE, "count");
     // a service in a sub-package publishes in the zone its own package-info declares
     private static final String FIND_MICROSERVICE_DEPLOYMENTS = KinoticUtil.mcpToolName(MICROSERVICE_DEPLOYMENT_SERVICE, "findAllForProject");
 
@@ -48,17 +49,16 @@ public class McpToolDirectoryTests extends KinoticTestBase {
     public void mcpExposedServicesArePublishedAndListed() throws Exception {
         // the directory publishes on ApplicationReadyEvent and liveness flips entries online one at a
         // time, so the poll must wait for every expected tool before asserting anything
-        List<String> expected = List.of(FIND_PROJECTS_BY_REPO, GET_LOGIN_PROVIDERS, FIND_MICROSERVICE_DEPLOYMENTS);
+        List<String> expected = List.of(FIND_PROJECTS_BY_REPO, GET_LOGIN_PROVIDERS, FIND_MICROSERVICE_DEPLOYMENTS, COUNT_APPLICATIONS);
         CursorPageable pageable = Pageable.create(null, 1000, Sort.by("id"));
+        List<McpToolDefinition> tools = List.of();
         List<String> names = List.of();
         long deadline = System.currentTimeMillis() + 30_000;
         while (System.currentTimeMillis() < deadline && !names.containsAll(expected)) {
-            names = serviceDirectory.findMcpToolsCallableBy(null, null, pageable)
+            tools = serviceDirectory.findMcpToolsCallableBy(null, null, pageable)
                                     .await()
-                                    .getTools()
-                                    .stream()
-                                    .map(McpToolDefinition::getName)
-                                    .toList();
+                                    .getTools();
+            names = tools.stream().map(McpToolDefinition::getName).toList();
             if (!names.containsAll(expected)) {
                 Thread.sleep(1000);
             }
@@ -67,6 +67,14 @@ public class McpToolDirectoryTests extends KinoticTestBase {
         Assertions.assertTrue(names.containsAll(expected),
                               "timed out waiting for " + expected + " in the directory listing, got: " + names
                                       + "; entries: " + entries() + "; active addresses: " + activeAddresses());
+
+        // count is inherited from CrudService on every CRUD service, so only the leading title says whose it is
+        McpToolDefinition countApplications = tools.stream()
+                                                   .filter(tool -> tool.getName().equals(COUNT_APPLICATIONS))
+                                                   .findFirst()
+                                                   .orElseThrow();
+        Assertions.assertEquals("Application Service Count: Returns the number of entities available.",
+                                countApplications.getDescription());
     }
 
     @Test

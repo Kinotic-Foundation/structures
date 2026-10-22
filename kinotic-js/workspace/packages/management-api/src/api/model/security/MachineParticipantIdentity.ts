@@ -11,6 +11,12 @@ import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentit
 export class MachineParticipantIdentity extends ParticipantIdentity {
     public readonly type: ParticipantIdentityType.MACHINE = ParticipantIdentityType.MACHINE
 
+    /** The organization of the machine's scope, or null for SYSTEM. */
+    public organizationId: string | null = null
+
+    /** The application of the machine's scope, or null unless APPLICATION. */
+    public applicationId: string | null = null
+
     /**
      * What the machine is for; set when it is provisioned.
      */

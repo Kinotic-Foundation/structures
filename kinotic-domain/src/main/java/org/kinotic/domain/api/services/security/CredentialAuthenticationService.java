@@ -10,10 +10,11 @@ import java.util.function.BiPredicate;
 
 /**
  * Authenticates the credentials a client outside a browser presents in its request headers: a Kinotic access
- * token ({@code Authorization: Bearer}), or a {@code clientId} and {@code clientSecret} — an account's email and
- * password, acting in the organization the {@code organizationId} header names or in the platform when it names
- * none, an application user's email and password, checked in the application the {@code organizationId} and
- * {@code applicationId} headers select, or a machine's id and secret, whose scope those headers must agree with
+ * token ({@code Authorization: Bearer}), or a {@code clientId} and {@code clientSecret} — a user's email and
+ * password, checked against the kind of user the scope headers select: an application's user in the application
+ * the {@code organizationId} and {@code applicationId} headers name, an organization user acting in the
+ * organization the {@code organizationId} header names, or a system user when they name none — or a machine's id
+ * and secret, whose scope those headers must agree with
  * when supplied. Each server's {@link SecurityService} delegates here with the participants it admits.
  */
 public interface CredentialAuthenticationService {

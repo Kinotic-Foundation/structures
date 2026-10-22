@@ -173,8 +173,8 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         } else {
             LoginScope scope = new LoginScope(applicationKey, handoff.getTenantId());
             authEndpointSupport.completeLogin(ctx, handoff.getOrigin(),
-                    identityService.findByOidcIdentity(handoff.getConfigurationId(), handoff.getSubject(),
-                                                       applicationKey.organizationId(), applicationKey.applicationId())
+                    identityService.findApplicationUserByOidcIdentity(handoff.getConfigurationId(), handoff.getSubject(),
+                                                                      applicationKey.organizationId(), applicationKey.applicationId())
                                    .map(scope::memberOf)
                                    .map(user -> user == null ? null : AuthEndpointSupport.participantOf(user)));
         }

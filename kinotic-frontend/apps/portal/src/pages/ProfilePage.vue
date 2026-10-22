@@ -81,8 +81,8 @@
         </div>
       </section>
 
-      <!-- One account, several ways in: the password and every provider identity bound to it. The last
-           remaining method cannot be removed, so the account always keeps a way to sign in. -->
+      <!-- One user, several ways in: the password and every provider identity bound to it. The last
+           remaining method cannot be removed, so the user always keeps a way to sign in. -->
       <section class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-800/30">
         <div class="flex flex-col gap-1 px-6 pt-6">
           <h3 class="text-sm font-medium">Sign-in methods</h3>
@@ -115,11 +115,11 @@
           <span class="text-xs text-muted-color">Connect another way to sign in:</span>
           <SocialAuthButton v-for="provider in connectableProviders" :key="provider.configurationId" :provider="provider.provider"
                             :name="provider.type === OidcConfigurationType.ORG_SIGNUP ? undefined : provider.name"
-                            :action="apiUrl('/api/auth/account/methods/start/' + encodeURIComponent(provider.configurationId))" intent="connect" />
+                            :action="apiUrl('/api/auth/org/methods/start/' + encodeURIComponent(provider.configurationId))" intent="connect" />
         </div>
       </section>
 
-      <!-- The organizations the account is a member of; switching replaces the page's login and reloads -->
+      <!-- The organizations the user is a member of; switching replaces the page's login and reloads -->
       <section class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-800/30">
         <div class="flex flex-col gap-1 px-6 pt-6">
           <h3 class="text-sm font-medium">Organizations</h3>
@@ -191,7 +191,7 @@ import { DatetimeUtil, showErrorToast, statusSeverity } from '@kinotic-ai/fronte
 import { PageHeader } from '@kinotic-ai/frontend-common'
 import { PROFILE_STATE } from '@/states/IProfileState'
 
-/** One read-only fact about the account, rendered as a column of the identity card's footer. */
+/** One read-only fact about the user, rendered as a column of the identity card's footer. */
 interface ProfileDetail {
   label: string
   value: string
@@ -202,7 +202,7 @@ interface ProfileDetail {
 /** How long the copy button shows its confirmation before returning to the copy icon. */
 const COPIED_FEEDBACK_MILLIS = 2000
 
-/** The platform registrations an account may connect as a sign-in method; any other provider offered is omitted. */
+/** The platform registrations a user may connect as a sign-in method; any other provider offered is omitted. */
 
 const toast = useToast()
 const route = useRoute()
@@ -258,7 +258,7 @@ function consumeConnectResult() {
   if (connected) {
     toast.add({ severity: 'success', summary: 'Sign-in method connected', detail: `You can now sign in with ${connected}.`, life: 6000 })
   } else if (error === 'identity_in_use') {
-    toast.add({ severity: 'error', summary: 'Already connected elsewhere', detail: 'That account already signs in another Kinotic account.', life: 10000 })
+    toast.add({ severity: 'error', summary: 'Already connected elsewhere', detail: 'That identity already signs in another Kinotic user.', life: 10000 })
   } else if (error) {
     toast.add({ severity: 'error', summary: 'Could not connect', detail: 'The provider did not complete the sign-in. Please try again.', life: 10000 })
   }
@@ -315,7 +315,7 @@ async function removeMethod(method: SignInMethod) {
   }
 }
 
-/** Signs the account in to another of its organizations and reloads, so the realtime connection reconnects as that member. */
+/** Signs the user in to another of its organizations and reloads, so the realtime connection reconnects as that member. */
 async function switchTo(organizationId: string) {
   switchingTo.value = organizationId
   try {

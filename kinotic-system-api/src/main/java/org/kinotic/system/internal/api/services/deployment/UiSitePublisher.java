@@ -10,6 +10,7 @@ import org.kinotic.domain.api.config.PublishedSitesProperties;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.UiArtifact;
@@ -40,6 +41,7 @@ public class UiSitePublisher {
     private static final Duration UPLOAD_URL_TTL = Duration.ofHours(1);
 
     private final UiDeploymentRepository uiDeploymentRepository;
+    private final ApplicationRepository applicationRepository;
     private final SiteStorageService siteStorageService;
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
@@ -48,7 +50,8 @@ public class UiSitePublisher {
 
     /**
      * The row a UI publishes to: its existing site, or one minted for its first publish, which also ensures
-     * the organization's subdomain is provisioned at the edge. Fails when the site of a UI of the same name
+     * the organization's subdomain is provisioned at the edge and makes the UI the application's primary UI
+     * when the application has none. Fails when the site of a UI of the same name
      * belongs to another project of the application, or the edge refused the subdomain.
      */
     public Future<UiDeployment> deploymentFor(Project project, UiArtifact ui, UiDeployment existing) {
@@ -81,8 +84,9 @@ public class UiSitePublisher {
     }
 
     /**
-     * Mints the site's id, {@code <app>--<ui>.<org>}, its hostname under the sites domain, and its URL. The store
-     * enforces the id's uniqueness on create, which keeps a UI name to one project of the application.
+     * Mints the site's id, {@code <app>--<ui>.<org>}, its hostname under the sites domain, and its URL, and makes
+     * the UI the application's primary UI when the application has none. The store enforces the id's uniqueness
+     * on create, which keeps a UI name to one project of the application.
      */
     private Future<UiDeployment> mintDeployment(Project project, UiArtifact ui) {
         String label = HostLabelUtil.siteLabel(project.applicationKey(), ui.name());
@@ -112,7 +116,9 @@ public class UiSitePublisher {
                     .recover(error -> Future.failedFuture(error instanceof AlreadyExistsException
                             ? new IllegalStateException("The site of UI " + ui.name() + " of application " + project.getApplicationId()
                                     + " belongs to another project of the application; UI names are unique within an application")
-                            : error));
+                            : error))
+                    .compose(created -> applicationRepository.claimPrimaryUi(project.applicationKey(), created.getName(), created.getUrl())
+                                                             .map(created));
         }
         return ret;
     }

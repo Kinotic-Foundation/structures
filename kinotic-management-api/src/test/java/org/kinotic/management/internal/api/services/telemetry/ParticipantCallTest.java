@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 
 /**
  * Base of the tests that call a published service as a participant: an organization user of
- * acme and a platform operator, each call run on a Vert.x context with the participant bound,
+ * acme and a system user, each call run on a Vert.x context with the participant bound,
  * mirroring how the gateway invokes published services.
  */
 abstract class ParticipantCallTest {
@@ -26,7 +26,7 @@ abstract class ParticipantCallTest {
     protected static final Participant ACME_USER =
             new DefaultOrganizationParticipant("user-1", "acme", Map.of(), List.of("USER"));
     protected static final Participant PLATFORM_OPERATOR =
-            new DefaultSystemParticipant("operator-1", Map.of(), List.of("ADMIN"));
+            new DefaultSystemParticipant("system-user-1", Map.of(), List.of("ADMIN"));
 
     protected static SecurityContext securityContext;
     protected static TenantAccess tenantAccess;
@@ -34,9 +34,9 @@ abstract class ParticipantCallTest {
 
     @BeforeAll
     static void startVertx() {
-        // SecurityContext registers its ContextLocal at class load, which must happen
+        // No Vertx provider, since callAs is unused. SecurityContext registers its ContextLocal at class load, which must happen
         // before any Vertx instance is created
-        securityContext = new SecurityContext();
+        securityContext = new SecurityContext(null);
         tenantAccess = new TenantAccess(securityContext);
         vertx = Vertx.vertx();
     }

@@ -4,7 +4,7 @@ import {E2E_ORGANIZATION_ID, managementServer, restBase, systemServer} from '../
 
 /**
  * Exercises the browser login REST surface: POST /api/auth/system/login must admit only
- * SYSTEM-scope IamUsers (V3 seeds admin@kinotic.local), establish a session cookie that
+ * system users (V2 seeds admin@kinotic.local), establish a session cookie that
  * /api/auth/me accepts, and reject cross-scope or bad credentials with a generic 401.
  */
 describe('System login route', () => {

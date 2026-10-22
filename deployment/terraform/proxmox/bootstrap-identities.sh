@@ -48,7 +48,7 @@ bulk() {
 }
 
 # A second run against a populated cluster would leave two system users with one email
-existing="$(es "'$ES/kinotic_participant_identity/_count' -d '{\"query\":{\"bool\":{\"filter\":{\"term\":{\"email\":\"$ADMIN_EMAIL\"}},\"must_not\":{\"exists\":{\"field\":\"organizationId\"}}}}}'" \
+existing="$(es "'$ES/kinotic_participant_identity/_count' -d '{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"type\":\"SYSTEM_USER\"}},{\"term\":{\"email\":\"$ADMIN_EMAIL\"}}]}}}'" \
   | python3 -c 'import sys, json; print(json.load(sys.stdin)["count"])')"
 if [[ "$existing" != "0" ]]; then
   echo "A system user $ADMIN_EMAIL already exists; this is for an empty cluster" >&2
@@ -62,13 +62,9 @@ else
   admin_password="$(secret 24)"
   admin_hash="$(bcrypt "$admin_password")"
 fi
-{
-  rows "$admin_id" "$admin_hash" \
-    "{\"id\":\"$admin_id\",\"type\":\"USER\",\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"$ADMIN_EMAIL\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}"
-  # The platform membership, which admits the account to the system console
-  printf '{"index":{"_index":"kinotic_membership","_id":"%s:system"}}\n{"id":"%s:system","identityId":"%s","enabled":true,"created":"%s","updated":"%s"}\n' \
-    "$admin_id" "$admin_id" "$admin_id" "$NOW" "$NOW"
-} | bulk
+rows "$admin_id" "$admin_hash" \
+  "{\"id\":\"$admin_id\",\"type\":\"SYSTEM_USER\",\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"$ADMIN_EMAIL\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}" \
+  | bulk
 if [[ -n "${ADMIN_SECRET_HASH:-}" ]]; then
   echo "==> System user $ADMIN_EMAIL, with the password it already had"
 else

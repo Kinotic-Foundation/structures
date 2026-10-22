@@ -135,7 +135,7 @@ public class OidcFlowOrchestrator {
                                  .compose(user -> verifiedClaims(config, user, flowSession))
                                  .map(claims -> new CallbackResult<>(config, claims, flowSession.purpose(), flowSession.orgId(),
                                                                    flowSession.applicationId(), flowSession.tenantId(),
-                                                                   flowSession.inviteToken(), flowSession.accountId(),
+                                                                   flowSession.inviteToken(), flowSession.organizationUserId(),
                                                                    flowSession.origin()));
                      });
     }
@@ -230,13 +230,13 @@ public class OidcFlowOrchestrator {
     }
 
     /**
-     * Begins a {@link OidcFlowPurpose#CONNECT} flow binding the identity the provider asserts to account
-     * {@code accountId}; {@code orgId} is the organization whose configuration the flow runs through, or
+     * Begins a {@link OidcFlowPurpose#CONNECT} flow binding the identity the provider asserts to organization user
+     * {@code organizationUserId}; {@code orgId} is the organization whose configuration the flow runs through, or
      * {@code null} for one of the platform's registrations.
      */
-    public Future<String> startConnect(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String accountId) {
-        Validate.notBlank(accountId, "accountId cannot be blank");
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.CONNECT, orgId, null, null, null, accountId, SessionBinding.origin(ctx));
+    public Future<String> startConnect(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String organizationUserId) {
+        Validate.notBlank(organizationUserId, "organizationUserId cannot be blank");
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.CONNECT, orgId, null, null, null, organizationUserId, SessionBinding.origin(ctx));
     }
 
     private Future<String> startFlow(RoutingContext ctx,
@@ -247,7 +247,7 @@ public class OidcFlowOrchestrator {
                                      String applicationId,
                                      String tenantId,
                                      String inviteToken,
-                                     String accountId,
+                                     String organizationUserId,
                                      String origin) {
         String state = DomainUtil.generateUrlSafeToken(32);
         String nonce = DomainUtil.generateUrlSafeToken(32);
@@ -257,7 +257,7 @@ public class OidcFlowOrchestrator {
         Session session = ctx.session();
         session.regenerateId();
         session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), purpose, orgId,
-                                                               applicationId, tenantId, inviteToken, accountId, origin));
+                                                               applicationId, tenantId, inviteToken, organizationUserId, origin));
 
         // Scopes ride as RFC 6749's space-delimited string; a managed registration may name its own, every
         // other configuration gets the standard OIDC triple.
@@ -517,8 +517,8 @@ public class OidcFlowOrchestrator {
 
     /**
      * The client secret {@code config} sends its provider, or null for a public client, read from where
-     * its kind of configuration keeps it: the platform's secret storage, under the name the operator
-     * gave a managed registration, or the owning organization's scope of the secret storage for a
+     * its kind of configuration keeps it: the platform's secret storage, under the name a managed
+     * registration's {@code secretNameRef} gives, or the owning organization's scope of the secret storage for a
      * configuration an organization saved.
      */
     private Future<String> clientSecretOf(OidcConfiguration config) {
