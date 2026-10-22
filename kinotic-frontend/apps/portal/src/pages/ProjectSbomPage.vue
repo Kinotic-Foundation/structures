@@ -11,8 +11,16 @@
 
     <div v-if="loading" class="p-6 text-sm text-muted-color">Loading SBOM…</div>
 
-    <EmptyChartCharacter v-else-if="!dependencies" class="rounded-xl border border-dashed border-surface-300 py-14 dark:border-surface-700"
-                         title="No SBOM yet" hint="The last step of a deployment reads it from the project's bun.lock whenever the dependencies change." />
+    <template v-else-if="!dependencies">
+      <EmptyChartCharacter class="mb-4 rounded-xl border border-dashed border-surface-300 py-14 dark:border-surface-700"
+                           title="No SBOM yet" hint="The last step of a deployment reads it from the project's bun.lock whenever the dependencies change." />
+
+      <!-- a project whose dependencies changed keeps the alerts of its earlier SBOM until the next one is read -->
+      <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
+                        description="Advisories from OSV that affect the packages of the project's earlier SBOM, the most severe first. They are checked again once the new SBOM is read.">
+        <VulnerabilityFindingsTable :items="alerts" data-key="id" />
+      </DashboardSection>
+    </template>
 
     <template v-else>
       <div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

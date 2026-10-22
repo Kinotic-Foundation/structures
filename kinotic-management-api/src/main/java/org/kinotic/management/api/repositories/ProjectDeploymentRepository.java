@@ -1,5 +1,6 @@
 package org.kinotic.management.api.repositories;
 
+import co.elastic.clients.elasticsearch._types.Refresh;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
@@ -31,6 +32,16 @@ public class ProjectDeploymentRepository extends AbstractApplicationScopedReposi
         implements ReconcilableRepository<ProjectDeployment> {
 
     public static final WatchedIndex WATCHED = new WatchedIndex(WatchedType.PROJECT_DEPLOYMENT, "kinotic_project_deployment");
+
+    private static final String RECORD_SBOM_GENERATED_SCRIPT = """
+            def deployment = ctx._source;
+            if (deployment.artifacts == null || deployment.artifacts.dependencyHash != params.dependencyHash) {
+                ctx.op = 'noop';
+            } else {
+                deployment.sbomGenerated = true;
+                deployment.updated = params.updated;
+            }
+            """;
 
     private final WatchedStateRepository watchedStateRepository;
     private final WatchEventRepository watchEventRepository;
@@ -231,12 +242,20 @@ public class ProjectDeploymentRepository extends AbstractApplicationScopedReposi
 
     /**
      * Records that the project's {@link org.kinotic.management.api.model.deployment.ProjectDependencies}
-     * list the dependencies the artifacts list, leaving every other field as it is.
+     * list the dependencies the artifacts list, leaving every other field as it is, when the artifacts
+     * still list the dependencies with the hash.
+     *
+     * @return a future emitting whether it was recorded, false when the artifacts list other dependencies
      */
-    public Future<Void> recordSbomGenerated(String projectId, String orgId) {
-        Map<String, Object> fields = new HashMap<>();
-        fields.put("sbomGenerated", true);
-        return partial(projectId, orgId, fields);
+    public Future<Boolean> recordSbomGenerated(String projectId, String orgId, String dependencyHash) {
+        Validate.notBlank(projectId, "projectId cannot be blank");
+        Validate.notBlank(orgId, "orgId cannot be blank");
+        Validate.notBlank(dependencyHash, "dependencyHash cannot be blank");
+        return crudServiceTemplate.scriptedUpdate(indexName,
+                                                  composeDocumentId(projectId, orgId),
+                                                  RECORD_SBOM_GENERATED_SCRIPT,
+                                                  Map.of("dependencyHash", dependencyHash, "updated", new Date()),
+                                                  u -> u.routing(orgId).refresh(Refresh.WaitFor));
     }
 
     /**

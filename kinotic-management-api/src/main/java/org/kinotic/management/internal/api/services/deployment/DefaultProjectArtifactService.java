@@ -29,6 +29,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DefaultProjectArtifactService implements ProjectArtifactService {
 
+    private static final String NOT_LAST_REPORTED = "Dependency hash %s is not the one the sync workload of project %s last reported";
+
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final ProjectDependenciesRepository projectDependenciesRepository;
     private final VulnerabilityScanner vulnerabilityScanner;
@@ -71,20 +73,25 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
                     // the SBOM is recorded as the one of the dependencies the artifacts list, so it
                     // must have been generated from those
                     Validate.isTrue(deployment.getArtifacts() != null && dependencyHash.equals(deployment.getArtifacts().dependencyHash()),
-                                    "Dependency hash %s is not the one the sync workload of project %s last reported", dependencyHash, projectId);
+                                    NOT_LAST_REPORTED, dependencyHash, projectId);
                     dependencies.setId(projectId)
                                 .setOrganizationId(organizationId)
                                 .setApplicationId(deployment.getApplicationId());
                     // visible before the scan, so an advisory scan running alongside it finds the tree
                     return projectDependenciesRepository.saveSync(dependencies, organizationId)
-                            .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId))
+                            // checked again once stored, since a recordArtifacts of other dependencies can land
+                            // after the check above; the tree it leaves stays unmarked until the next SBOM replaces it
+                            .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId, dependencyHash))
                             // the SBOM stands once stored; alerts a failed scan leaves behind are corrected by the
                             // next scan of every project
-                            .compose(v -> vulnerabilityScanner.scanProject(dependencies)
-                                                              .recover(error -> {
-                                                                  log.error("Could not scan the SBOM of project {} for vulnerabilities", projectId, error);
-                                                                  return Future.succeededFuture();
-                                                              }));
+                            .compose(recorded -> {
+                                Validate.isTrue(recorded, NOT_LAST_REPORTED, dependencyHash, projectId);
+                                return vulnerabilityScanner.scanProject(dependencies)
+                                                           .recover(error -> {
+                                                               log.error("Could not scan the SBOM of project {} for vulnerabilities", projectId, error);
+                                                               return Future.succeededFuture();
+                                                           });
+                            });
                 });
     }
 
