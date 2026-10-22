@@ -142,11 +142,14 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         // omits the argument and leaves tenants to their administrators
                         newApplication.setTenantManagement(tenantManagement != null ? tenantManagement : TenantManagement.TENANT_ADMINISTRATORS);
                         // a create, which fails on an existing id, so of two callers racing only the one that wrote
-                        // the record provisions it, or deletes it when provisioning fails
+                        // the record deletes it when provisioning fails; the other provisions the record it finds,
+                        // which is idempotent, so neither returns an application before its store exists
                         ret = super.create(newApplication)
                                    .compose(this::provisioned)
                                    .recover(ex -> AlreadyExistsException.isCause(ex)
-                                           ? super.findById(applicationId)
+                                           ? super.findById(applicationId).compose(found -> found == null
+                                                   ? Future.failedFuture(ex)
+                                                   : storeProvisioner.provision(found))
                                            : Future.failedFuture(ex));
                     }
                     return ret;
@@ -166,11 +169,12 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return failOnDuplicateName(super.createSync(entity), entity).compose(this::provisioned);
     }
 
-    // An application whose store could not be provisioned is deleted again, so the create can be made again.
-    // Provisioning writes no grant, so whatever part of the store it wrote is adopted by the next provisioning
+    // An application whose store could not be provisioned is deleted again with whatever provisioning wrote, so the
+    // create can be made again
     private Future<Application> provisioned(Application application) {
         return storeProvisioner.provision(application)
                                .recover(e -> scopedRepository.deleteByIdSync(application.getId(), application.getOrganizationId())
+                                                             .compose(v -> released(application.getId()))
                                                              .transform(deleted -> Future.<Application>failedFuture(e)));
     }
 
