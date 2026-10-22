@@ -142,10 +142,12 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
     }
 
     // Every scan of every organization decodes the versions the trees list, so one that does not
-    // decode would fail them all
+    // decode would fail them all; the advisories spell a scope's @ encoded, so the one literal @
+    // starts the version
     private static boolean isVersionedPackageUrl(String purl) {
         int lastSlash = purl.lastIndexOf('/');
-        boolean ret = purl.startsWith("pkg:") && lastSlash > 0 && purl.lastIndexOf('@') > lastSlash;
+        int at = purl.indexOf('@');
+        boolean ret = purl.startsWith("pkg:") && lastSlash > 0 && at > lastSlash && at == purl.lastIndexOf('@');
         if (ret) {
             try {
                 URLDecoder.decode(purl, StandardCharsets.UTF_8);
