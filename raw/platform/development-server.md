@@ -513,13 +513,14 @@ kinotic-{org,system,app}-server/src/main/resources/
 /var/lib/kinotic/{config,data}/<service>, /es{1,2,3}/data   # each container's files and state
 ```
 
-Each server runs with `SPRING_PROFILES_ACTIVE=production,dev-server`. `production` is what
+Each server runs with `SPRING_PROFILES_ACTIVE=dev-server`. Leaving out `development` is what
 takes it off the development conveniences: no auto-seeded platform secrets
 (`kinotic.platformSecrets.generateMissing` is set by the development profile alone), the halting Ignite failure handler, the
 production shard defaults — which `dev-server` then overrides. Its environment is composed by
 terraform from what the three share — the compose services', the Azure root's outputs, and the
 addresses only the proxmox root knows — and what is its own; its secrets arrive through
-`secrets.yml`, which the profile imports, and the env file the applier merges.
+`secrets.yml`, which the profile imports, and the env file the applier merges. The one-shot
+`kinotic-migration` runs with the same profile, which applies no fixture migration.
 
 ### Elasticsearch
 

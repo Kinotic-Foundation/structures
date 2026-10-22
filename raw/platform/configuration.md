@@ -1068,7 +1068,11 @@ management-api. The Helm chart sets all three from the same paths in its values:
     </td>
     
     <td>
-      The portal as a browser reaches it: where the management server's browser flows send the user, and the base of the verification, invite and sign-in links in the platform's emails, which every server that sends mail reads. A sign-up started from another UI the management server's <code>
+      The portal as a browser reaches it: where the management server's browser flows send the user, and the base of the verification, invite and sign-in links in the platform's emails, which every server that sends mail reads, unless the service sending one passes an <a href="/platform/organization-management#email-templates">
+        email template
+      </a>
+      
+       naming its own UI. A sign-in, sign-up or invitation flow started from another UI the management server's <code>
         kinotic.domain.cors.allowedOriginPattern
       </code>
       
@@ -1076,7 +1080,7 @@ management-api. The Helm chart sets all three from the same paths in its values:
         *
       </code>
       
-      , returns to that UI instead: its verification link and its social sign-up's org-naming page are on the UI's origin. The development profiles set <code>
+      , returns to that UI instead. The development profiles set <code>
         http://localhost:5173
       </code>
       
@@ -1112,7 +1116,7 @@ management-api. The Helm chart sets all three from the same paths in its values:
         *
       </code>
       
-      , are also the UIs the management server's browser flows return to, trusted with sign-up verification links and GitHub App install codes, so name only origins you control. The local development profile's ngrok wildcard is the one exception, acceptable only on a developer's machine
+      , are also the only UIs the management server's browser flows return to, with their logins, social sign-up tokens, GitHub App install codes and errors, so name only origins you control. The local development profile's ngrok wildcard is the one exception, acceptable only on a developer's machine
     </td>
   </tr>
   
