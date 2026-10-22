@@ -79,6 +79,13 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
         return super.createSync(entity).compose(this::contained);
     }
 
+    // The graph before the record: grants that outlived their record would come back with an organization created
+    // under the same id, while a record that outlives its graph is deleted again
+    @Override
+    protected Future<Void> beforeDelete(String id) {
+        return relationships.removeObject(AuthzStoreService.SYSTEM, AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, id));
+    }
+
     // The organization's place in the graph, written once the record is, so a write that fails leaves an
     // organization nobody can reach rather than one nobody stores
     private Future<Organization> contained(Organization organization) {

@@ -201,8 +201,8 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     public Future<EntityDefinition> findById(String id) {
         return super.findById(id).compose(entityDefinition -> entityDefinition == null
                 ? Future.succeededFuture(null)
-                : permissions.findAccessibleIds(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                             .map(ids -> ids == null || ids.contains(id) ? entityDefinition : null));
+                : permissions.holds(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ, id)
+                             .map(held -> held ? entityDefinition : null));
     }
 
     @WithSpan

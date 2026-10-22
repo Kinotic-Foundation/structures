@@ -126,7 +126,7 @@ class DefaultRequestAuthorizerTest {
         // the rows of an entity definition, checked on the definition each request names
         ServiceDefinition entities = new ServiceDefinition().setNamespace("org.kinotic.persistence.api.services").setName("JsonEntitiesRepository");
         entities.addFunction(function("findById", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_read", false), "entityDefinitionId", "id"));
-        entities.addFunction(function("save", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_create", false), "entityDefinitionId", "entity"));
+        entities.addFunction(function("save", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_edit", false), "entityDefinitionId", "entity"));
         entities.addFunction(function("namedQuery", resolved(STATEMENT_RESOLVER), "entityDefinitionId", "queryName", "queryParameters"));
         entities.addFunction(function("namedQueryElsewhere", resolved("elsewhere"), "entityDefinitionId", "queryName", "queryParameters"));
         when(directory.findEntry(ENTITIES)).thenReturn(Future.succeededFuture(new ServiceDirectoryEntry().setId(ENTITIES).setServiceDefinition(entities)));
@@ -348,7 +348,7 @@ class DefaultRequestAuthorizerTest {
                              EventConstants.CONTENT_TYPE_JSON, bytes("[\"acme.crm.person\",{}]"))
                   .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-        assertEquals(new RelationshipTuple("user:sally@acme", "entity_definition_can_create", "entity_definition:acme.crm.person"),
+        assertEquals(new RelationshipTuple("user:sally@acme", "entity_definition_can_edit", "entity_definition:acme.crm.person"),
                      checked(Consistency.MINIMIZE_LATENCY));
         verify(relationships, never()).check(eq("acme.crm"), any(), any(), any(), any());
     }

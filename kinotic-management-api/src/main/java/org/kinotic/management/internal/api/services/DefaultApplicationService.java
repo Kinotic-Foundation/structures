@@ -81,7 +81,11 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     public Future<Application> findById(String id) {
         return super.findById(id).compose(application -> application == null
                 ? Future.succeededFuture(null)
-                : visibleIds().map(ids -> ids == null || ids.contains(id) ? application : null));
+                : permissions.holds(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_READ, id)
+                             // an application the caller may not read is reached through a project or an entity
+                             // definition in it the caller reads
+                             .compose(held -> held ? Future.succeededFuture(true) : visibleIds().map(ids -> ids == null || ids.contains(id)))
+                             .map(visible -> visible ? application : null));
     }
 
     @Override
@@ -156,16 +160,6 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return failOnDuplicateName(super.createSync(entity), entity).compose(storeProvisioner::provision);
     }
 
-    @Override
-    public Future<Void> deleteById(String id) {
-        return super.deleteById(id).compose(v -> released(id));
-    }
-
-    @Override
-    public Future<Void> deleteByIdSync(String id) {
-        return super.deleteByIdSync(id).compose(v -> released(id));
-    }
-
     // The application leaves the graph with every grant made on it, and its store goes with everything in it, so an
     // application created under the same id afterwards starts with no grant and an empty store
     private Future<Void> released(String applicationId) {
@@ -185,13 +179,15 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                 : Future.failedFuture(ex));
     }
 
+    // the graph before the record: a record that outlives its graph is deleted again, while a store that outlived
+    // its record would be adopted by an application created under the same id
     @Override
     protected Future<Void> beforeDelete(String id) {
         return projectRepository.countForApplication(id, requireOrganizationId()).compose(count -> {
             if(count > 0){
                 throw new IllegalStateException("Cannot delete an application with projects in it.");
             }
-            return Future.succeededFuture();
+            return released(id);
         });
     }
 

@@ -18,6 +18,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Provisions the authorization store of every application that has none, once the server is up and the
  * engine answers. An application created by a service gets its store with its record; one a migration seeds,
@@ -29,6 +31,9 @@ import org.springframework.stereotype.Component;
 public class ApplicationStoreBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
+    // an application whose store could not be provisioned is tried again by a later sweep, less often than a sweep
+    // that could not start
+    private static final long FAILED_RETRY_MILLIS = 60_000;
     private static final int PAGE_SIZE = 100;
 
     private final Vertx vertx;
@@ -43,10 +48,15 @@ public class ApplicationStoreBootstrap {
     }
 
     private void run() {
-        organizationPage(null, 0)
+        AtomicInteger failed = new AtomicInteger();
+        organizationPage(null, 0, failed)
                 .onSuccess(provisioned -> {
                     if (provisioned > 0) {
                         log.info("Provisioned the authorization store of {} application(s)", provisioned);
+                    }
+                    if (failed.get() > 0) {
+                        log.warn("The authorization store of {} application(s) could not be provisioned; the sweep is made again", failed.get());
+                        vertx.setTimer(FAILED_RETRY_MILLIS, t -> run());
                     }
                 })
                 // the engine may be unreachable while the stack starts; a sweep that fails is made again
@@ -56,31 +66,38 @@ public class ApplicationStoreBootstrap {
                 });
     }
 
-    private Future<Integer> organizationPage(String cursor, int provisioned) {
+    private Future<Integer> organizationPage(String cursor, int provisioned, AtomicInteger failed) {
         return organizations.findAll(Pageable.create(cursor, PAGE_SIZE, Sort.by("id")))
                             .compose(page -> {
                                 Future<Integer> ret = Future.succeededFuture(provisioned);
                                 for (Organization organization : page.getContent()) {
-                                    ret = ret.compose(count -> applicationPage(organization.getId(), 0, count));
+                                    ret = ret.compose(count -> applicationPage(organization.getId(), 0, count, failed));
                                 }
                                 String next = nextCursor(page);
-                                return next == null ? ret : ret.compose(count -> organizationPage(next, count));
+                                return next == null ? ret : ret.compose(count -> organizationPage(next, count, failed));
                             });
     }
 
-    private Future<Integer> applicationPage(String organizationId, int pageNumber, int provisioned) {
+    private Future<Integer> applicationPage(String organizationId, int pageNumber, int provisioned, AtomicInteger failed) {
         return applications.findAll(organizationId, Pageable.create(pageNumber, PAGE_SIZE, Sort.by("id")))
                            .compose(page -> {
                                Future<Integer> ret = Future.succeededFuture(provisioned);
                                for (Application application : page.getContent()) {
+                                   // one application that fails leaves the others to be provisioned
                                    ret = ret.compose(count -> records.findById(DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()))
                                                                      .compose(record -> record != null
                                                                              ? Future.succeededFuture(count)
-                                                                             : provisioner.provision(application).map(count + 1)));
+                                                                             : provisioner.provision(application).map(count + 1))
+                                                                     .recover(e -> {
+                                                                         log.warn("The authorization store of application {} of {} could not be provisioned: {}",
+                                                                                  application.getId(), organizationId, e.getMessage());
+                                                                         failed.incrementAndGet();
+                                                                         return Future.succeededFuture(count);
+                                                                     }));
                                }
                                return page.getContent().size() < PAGE_SIZE
                                        ? ret
-                                       : ret.compose(count -> applicationPage(organizationId, pageNumber + 1, count));
+                                       : ret.compose(count -> applicationPage(organizationId, pageNumber + 1, count, failed));
                            });
     }
 

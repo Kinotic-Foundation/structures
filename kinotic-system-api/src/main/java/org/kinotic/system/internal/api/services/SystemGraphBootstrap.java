@@ -21,6 +21,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
@@ -37,6 +38,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class SystemGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
+    // a staff member who could not be bound is tried again by a later sweep, less often than a sweep that could
+    // not read the staff
+    private static final long FAILED_RETRY_MILLIS = 60_000;
     // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
     private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
@@ -71,14 +75,21 @@ public class SystemGraphBootstrap {
     // The first grant ends the sweep for every later start, so a sweep that fails part way is made again here,
     // without asking the store, until it places everything; every binding has an id of its own, so one made twice is held once
     private void place() {
-        placeStaff().onSuccess(bound -> log.info("Bound {} system user(s) and machine(s) as the system's staff", bound))
-                    .onFailure(e -> {
-                        log.warn("The system staff sweep is made again: {}", e.getMessage());
-                        vertx.setTimer(RETRY_MILLIS, t -> place());
-                    });
+        AtomicInteger failed = new AtomicInteger();
+        placeStaff(failed).onSuccess(bound -> {
+                              log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
+                              if (failed.get() > 0) {
+                                  log.warn("{} system user(s) and machine(s) could not be bound; the system staff sweep is made again", failed.get());
+                                  vertx.setTimer(FAILED_RETRY_MILLIS, t -> place());
+                              }
+                          })
+                          .onFailure(e -> {
+                              log.warn("The system staff sweep is made again: {}", e.getMessage());
+                              vertx.setTimer(RETRY_MILLIS, t -> place());
+                          });
     }
 
-    private Future<Integer> placeStaff() {
+    private Future<Integer> placeStaff(AtomicInteger failed) {
         Pageable page = Pageable.create(0, PAGE_SIZE, null);
         return nodes.findAll(page)
                     .compose(found -> relationships.ensure(SYSTEM, found.getContent().stream()
@@ -90,22 +101,31 @@ public class SystemGraphBootstrap {
                                                           .filter(MachineParticipantIdentity::isEnabled)
                                                           .map(machine -> AuthzUtil.object(AuthzConstants.USER_TYPE, machine.getId()))
                                                           .toList(),
-                                                  VmNodeOrchestrationService.REGISTRAR_ROLE))
+                                                  VmNodeOrchestrationService.REGISTRAR_ROLE,
+                                                  failed))
                     .compose(bound -> identities.findSystemUsers(page)
                                                 .compose(users -> bindEach(users.getContent().stream()
                                                                                 .filter(SystemParticipantIdentity::isEnabled)
                                                                                 .map(user -> AuthzUtil.object(AuthzConstants.USER_TYPE, user.getId()))
                                                                                 .toList(),
-                                                                           AuthzConstants.SYSTEM_ADMIN_ROLE))
+                                                                           AuthzConstants.SYSTEM_ADMIN_ROLE,
+                                                                           failed))
                                                 .map(more -> bound + more));
     }
 
-    // Each user is bound under an id of its own, so every server sweeping at once binds it once
-    private Future<Integer> bindEach(List<String> users, String roleId) {
+    // Each user is bound under an id of its own, so every server sweeping at once binds it once; one that fails
+    // leaves the others to be bound
+    private Future<Integer> bindEach(List<String> users, String roleId, AtomicInteger failed) {
         Future<Integer> ret = Future.succeededFuture(0);
         for (String user : users) {
             String bindingId = roleId + "-of-" + AuthzUtil.idOf(user);
-            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT).map(count + 1));
+            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT)
+                                                    .map(count + 1)
+                                                    .recover(e -> {
+                                                        log.warn("{} could not be bound as {}: {}", user, roleId, e.getMessage());
+                                                        failed.incrementAndGet();
+                                                        return Future.succeededFuture(count);
+                                                    }));
         }
         return ret;
     }

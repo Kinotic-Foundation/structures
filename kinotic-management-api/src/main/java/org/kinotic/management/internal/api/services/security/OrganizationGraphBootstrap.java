@@ -23,6 +23,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
@@ -39,6 +40,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class OrganizationGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
+    // an organization that could not be placed is tried again by a later sweep, less often than a sweep that could
+    // not start
+    private static final long FAILED_RETRY_MILLIS = 60_000;
     private static final int PAGE_SIZE = 100;
 
     private final Vertx vertx;
@@ -53,11 +57,16 @@ public class OrganizationGraphBootstrap {
     }
 
     private void run() {
+        AtomicInteger failed = new AtomicInteger();
         stores.modelId(SYSTEM)
-              .compose(modelId -> page(null, 0))
+              .compose(modelId -> page(null, 0, failed))
               .onSuccess(placed -> {
                   if (placed > 0) {
                       log.info("Placed {} organization(s) in the authorization graph", placed);
+                  }
+                  if (failed.get() > 0) {
+                      log.warn("{} organization(s) could not be placed in the authorization graph; the sweep is made again", failed.get());
+                      vertx.setTimer(FAILED_RETRY_MILLIS, t -> run());
                   }
               })
               // the reconciler writes the system model shortly after the servers start, so a store that runs
@@ -68,15 +77,22 @@ public class OrganizationGraphBootstrap {
               });
     }
 
-    private Future<Integer> page(String cursor, int placed) {
+    private Future<Integer> page(String cursor, int placed, AtomicInteger failed) {
         return organizations.findAll(Pageable.create(cursor, PAGE_SIZE, Sort.by("id")))
                             .compose(page -> {
                                 Future<Integer> ret = Future.succeededFuture(placed);
                                 for (Organization organization : page.getContent()) {
-                                    ret = ret.compose(count -> place(organization).map(did -> did ? count + 1 : count));
+                                    // one organization that fails leaves the others to be placed
+                                    ret = ret.compose(count -> place(organization).map(did -> did ? count + 1 : count)
+                                                                                  .recover(e -> {
+                                                                                      log.warn("Organization {} could not be placed in the authorization graph: {}",
+                                                                                               organization.getId(), e.getMessage());
+                                                                                      failed.incrementAndGet();
+                                                                                      return Future.succeededFuture(count);
+                                                                                  }));
                                 }
                                 String next = nextCursor(page);
-                                return next == null ? ret : ret.compose(count -> page(next, count));
+                                return next == null ? ret : ret.compose(count -> page(next, count, failed));
                             });
     }
 
@@ -87,18 +103,23 @@ public class OrganizationGraphBootstrap {
     private Future<Boolean> place(Organization organization) {
         String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
         RelationshipTuple containment = DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), object);
-        // the containment is written last, so a sweep cut short places the organization again, and the creator is
-        // bound under an id of its own, so every server sweeping at once binds it once
+        // the containment is written last, so a sweep cut short places the organization again, and the creator's
+        // membership is bound under an id of its own, so every server sweeping at once binds it once
         return relationships.read(SYSTEM, object).compose(held -> held.contains(containment)
                 ? Future.succeededFuture(false)
                 : members(organization.getId(), 0)
-                        .compose(v -> organization.getCreatedBy() == null
-                                ? Future.succeededFuture()
-                                : relationships.ensureBound(SYSTEM,
-                                                            AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + organization.getCreatedBy(),
-                                                            AuthzConstants.ORGANIZATION_ADMIN_ROLE,
-                                                            DomainUtil.authzMember(organization.getCreatedBy(), organization.getId()),
-                                                            object))
+                        .compose(v -> {
+                            Future<Void> ret = Future.succeededFuture();
+                            if (organization.getCreatedBy() != null) {
+                                String creator = DomainUtil.authzMember(organization.getCreatedBy(), organization.getId());
+                                ret = relationships.ensureBound(SYSTEM,
+                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + AuthzUtil.idOf(creator),
+                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE,
+                                                                creator,
+                                                                object);
+                            }
+                            return ret;
+                        })
                         .compose(v -> relationships.ensure(SYSTEM, List.of(containment)))
                         .map(true));
     }

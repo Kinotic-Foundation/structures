@@ -259,6 +259,25 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     /**
+     * Whether the caller holds a permission on one resource of its organization, through any grant that reaches it.
+     *
+     * @param type       the resource type
+     * @param permission the permission's short name, such as {@code can_read}
+     * @param id         the resource's id within the caller's organization
+     * @return true when the caller holds the permission on the resource
+     */
+    public Future<Boolean> holds(String type, String permission, String id) {
+        Validate.notBlank(type, "type cannot be blank");
+        Validate.notBlank(permission, "permission cannot be blank");
+        Validate.notBlank(id, "id cannot be blank");
+        OrganizationParticipant participant = requireOrgParticipant();
+        RelationshipTuple held = new RelationshipTuple(DomainUtil.authzUser(participant),
+                                                       AuthzUtil.permissionName(type, permission),
+                                                       DomainUtil.authzObject(participant.getOrganizationId(), new Resource(type, id)));
+        return stores.modelId(SYSTEM).compose(modelId -> relationships.check(SYSTEM, modelId, held, Consistency.MINIMIZE_LATENCY));
+    }
+
+    /**
      * The resources of a type the caller holds a permission on, as {@link #listAccessible} lists them, or null when
      * the caller holds the permission on its organization, and so on every resource of the type in it.
      *

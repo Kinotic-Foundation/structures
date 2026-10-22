@@ -98,7 +98,10 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     public Future<Project> findById(String id) {
         return super.findById(id).compose(project -> project == null
                 ? Future.succeededFuture(null)
-                : visibleIds().map(ids -> ids == null || ids.contains(id) ? project : null));
+                : permissions.holds(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ, id)
+                             // a project the caller may not read is reached through an entity definition in it the caller reads
+                             .compose(held -> held ? Future.succeededFuture(true) : visibleIds().map(ids -> ids == null || ids.contains(id)))
+                             .map(visible -> visible ? project : null));
     }
 
     // What the caller may see, null for every project of the organization: the projects it reads, and those

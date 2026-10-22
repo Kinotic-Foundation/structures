@@ -99,8 +99,6 @@ public final class AuthzConstants {
     public static final String CAN_READ = "can_read";
     public static final String CAN_EDIT = "can_edit";
     public static final String CAN_DELETE = "can_delete";
-    /** The permission of saving a definition's rows, beside the derived verbs. */
-    public static final String CAN_CREATE = "can_create";
     /**
      * The permissions the system's own services declare, beside the derived verbs: each named once here, so a
      * declaration, a grant, a check and a test name one thing.

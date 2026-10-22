@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Decides a named query's permission from its statement: {@code can_create} for an INSERT, {@code can_edit} for an
- * UPDATE, {@code can_delete} for a DELETE and {@code can_read} for any other, on the entity definition the query
+ * Decides a named query's permission from its statement: {@code can_edit} for an INSERT, which replaces a row of
+ * the same id, and for an UPDATE, {@code can_delete} for a DELETE and {@code can_read} for any other, on the entity definition the query
  * is defined for. A definition or query that does not exist decides nothing.
  */
 @Component
@@ -37,10 +37,11 @@ import java.util.Map;
 public class NamedQueryPermissionResolver implements RequestPermissionResolver {
 
     private static final AuthzPermissionChoice READ = new AuthzPermissionChoice(AuthzConstants.CAN_READ, "the query reads rows");
-    private static final AuthzPermissionChoice CREATE = new AuthzPermissionChoice(AuthzConstants.CAN_CREATE, "the query is an INSERT");
+    private static final AuthzPermissionChoice INSERT = new AuthzPermissionChoice(AuthzConstants.CAN_EDIT, "the query is an INSERT");
     private static final AuthzPermissionChoice EDIT = new AuthzPermissionChoice(AuthzConstants.CAN_EDIT, "the query is an UPDATE");
     private static final AuthzPermissionChoice DELETE = new AuthzPermissionChoice(AuthzConstants.CAN_DELETE, "the query is a DELETE");
-    private static final List<AuthzPermissionChoice> POSSIBLE_PERMISSIONS = List.of(READ, CREATE, EDIT, DELETE);
+    // an INSERT needs the permission an UPDATE does, with its own reason
+    private static final List<AuthzPermissionChoice> POSSIBLE_PERMISSIONS = List.of(READ, EDIT, DELETE);
     private static final Duration RETENTION = Duration.ofMinutes(5);
     private static final int CAPACITY = 10_000;
 
@@ -123,7 +124,7 @@ public class NamedQueryPermissionResolver implements RequestPermissionResolver {
         if (decorator != null && decorator.getStatements() != null) {
             try {
                 ret = switch (migrationParser.parseStatement(decorator.getStatements(), "Named query " + query.getName())) {
-                    case InsertStatement _ -> CREATE;
+                    case InsertStatement _ -> INSERT;
                     case UpdateStatement _ -> EDIT;
                     case DeleteStatement _ -> DELETE;
                     default -> READ;

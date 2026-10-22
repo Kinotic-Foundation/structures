@@ -406,22 +406,10 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                 .map(Requeue.NONE);
     }
 
-    // Every grant made on the node is revoked, then the node leaves the system, so a node registered again
-    // under the same id starts with no agent
+    // Every grant made on the node is revoked and the node leaves the system, so a node registered again under the
+    // same id starts with no agent
     private Future<Void> released(String nodeId) {
-        String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
-                                                             AuthzConstants.SYSTEM_TYPE,
-                                                             node);
-        return relationships.read(AuthzStoreService.SYSTEM, node).compose(held -> {
-            Future<Void> chain = Future.succeededFuture();
-            for (RelationshipTuple tuple : held) {
-                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
-                    chain = chain.compose(v -> relationships.unbind(AuthzStoreService.SYSTEM, AuthzUtil.idOf(tuple.user()), node));
-                }
-            }
-            return chain.compose(v -> relationships.remove(AuthzStoreService.SYSTEM, List.of(onSystem)));
-        });
+        return relationships.removeObject(AuthzStoreService.SYSTEM, AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId));
     }
 
     // Applies the change to every open run on the node, one at a time
