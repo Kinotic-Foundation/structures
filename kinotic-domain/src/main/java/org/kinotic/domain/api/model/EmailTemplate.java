@@ -11,6 +11,10 @@ import lombok.experimental.Accessors;
  * {@code inviterName}, {@code organizationName}, {@code applicationName} (absent for an organization invitation),
  * {@code acceptUrl} and {@code expiresInDays} for an invitation, and {@code displayName} and {@code verificationUrl}
  * for a verification.
+ * <p>
+ * A call passing a template fails with {@link IllegalArgumentException}, before it saves anything, unless
+ * {@code uiBaseUrl} is an absolute http or https URL with no query, fragment or trailing slash and every source is
+ * present and compiles and renders.
  */
 @Getter
 @Setter

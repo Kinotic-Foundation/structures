@@ -30,6 +30,8 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -219,42 +221,35 @@ public class EmailService {
      * Checks an {@link EmailTemplate} a caller passes, so a broken one fails the call before it saves anything.
      *
      * @param template the template, or {@code null} for Kinotic's own, which needs no check
-     * @throws IllegalArgumentException when {@code uiBaseUrl} is blank or ends with {@code /}, or a source is missing
-     *                                  or does not compile
+     * @throws IllegalArgumentException when the template is not valid, as {@link EmailTemplate} describes
      */
     public void validateTemplate(EmailTemplate template) {
         if (template != null) {
-            Validate.notBlank(template.getUiBaseUrl(), "The email template's uiBaseUrl is required");
-            Validate.isTrue(!template.getUiBaseUrl().endsWith("/"), "The email template's uiBaseUrl must not end with /");
-            compileSource(TEXT_TEMPLATES, "subject", template.getSubject());
-            compileSource(HTML_TEMPLATES, "htmlBody", template.getHtmlBody());
-            compileSource(TEXT_TEMPLATES, "textBody", template.getTextBody());
-        }
-    }
-
-    private static void compileSource(Handlebars engine, String name, String source) {
-        Validate.notNull(source, "The email template's " + name + " is required");
-        try {
-            engine.compileInline(source);
-        } catch (IOException | RuntimeException e) {
-            throw new IllegalArgumentException("The email template's " + name + " does not compile: " + e.getMessage(), e);
+            Validate.isTrue(isBaseUrl(template.getUiBaseUrl()),
+                            "The email template's uiBaseUrl must be an absolute http or https URL with no query, fragment"
+                                    + " or trailing slash");
+            validateTemplateSources(template.getSubject(), template.getHtmlBody(), template.getTextBody());
         }
     }
 
     /**
-     * Parses and test-renders invitation template sources, so a broken template fails at
-     * save time rather than when the next invitation is sent.
+     * Parses and test-renders email template sources, so a broken template fails when it is saved or passed rather
+     * than when the next email is sent.
      *
-     * @throws IllegalArgumentException carrying the Handlebars message when a source does
-     *                                  not compile or render
+     * @throws IllegalArgumentException when a source is missing, or carrying the Handlebars message when one does not
+     *                                  compile or render
      */
-    public void validateInviteTemplate(String subject, String htmlBody, String textBody) {
+    public void validateTemplateSources(String subject, String htmlBody, String textBody) {
+        Validate.isTrue(subject != null && htmlBody != null && textBody != null,
+                        "An email template needs a subject, an HTML body and a text body");
         Map<String, Object> sample = new HashMap<>();
         sample.put("inviterName", "Inviter Name");
         sample.put("organizationName", "Organization Name");
         sample.put("applicationName", "application-id");
         sample.put("acceptUrl", "https://example.invalid/invite/accept?token=sample");
         sample.put("expiresInDays", 7L);
+        sample.put("displayName", "Display Name");
+        sample.put("verificationUrl", "https://example.invalid/signup/verify?token=sample");
         try {
             renderInline(TEXT_TEMPLATES, subject, sample);
             renderInline(HTML_TEMPLATES, htmlBody, sample);
@@ -263,6 +258,23 @@ public class EmailService {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new IllegalArgumentException("Invalid email template: " + cause.getMessage(), e);
         }
+    }
+
+    // the base the link paths are appended to, so a query, a fragment or a trailing slash would break every link
+    private static boolean isBaseUrl(String url) {
+        boolean ret = false;
+        if (url != null && !url.endsWith("/")) {
+            try {
+                URI uri = new URI(url);
+                ret = ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                        && uri.getHost() != null
+                        && uri.getRawQuery() == null
+                        && uri.getRawFragment() == null;
+            } catch (URISyntaxException e) {
+                // an unparseable URL is not a base URL
+            }
+        }
+        return ret;
     }
 
     /**

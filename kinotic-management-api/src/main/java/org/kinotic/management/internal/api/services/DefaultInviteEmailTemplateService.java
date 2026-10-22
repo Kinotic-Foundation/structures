@@ -49,7 +49,7 @@ public class DefaultInviteEmailTemplateService extends AbstractApplicationScoped
         entity.setOrganizationId(organizationId);
 
         // Fails at save rather than at the next send.
-        emailService.validateInviteTemplate(entity.getSubject(), entity.getHtmlBody(), entity.getTextBody());
+        emailService.validateTemplateSources(entity.getSubject(), entity.getHtmlBody(), entity.getTextBody());
 
         return applicationRepository.requireById(entity.getApplicationId(), organizationId)
                 .compose(_ -> inviteEmailTemplateRepository.findByApplication(entity.getApplicationId(), organizationId))

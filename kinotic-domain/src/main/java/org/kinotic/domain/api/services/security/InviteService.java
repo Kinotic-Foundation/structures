@@ -28,8 +28,7 @@ public interface InviteService {
      *               id, token, and expiry are assigned here
      * @param emailTemplate the invitation email to send in place of Kinotic's, or {@code null} for Kinotic's
      * @return a future emitting the saved invitation
-     * @throws IllegalArgumentException when {@code emailTemplate} has a blank {@code uiBaseUrl} or one ending with
-     *                                  {@code /}, or a source that is missing or does not compile
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
     Future<PendingInvite> createInvite(PendingInvite invite, EmailTemplate emailTemplate);
 
@@ -98,8 +97,7 @@ public interface InviteService {
      * with the same accept token, as the invitation email {@code emailTemplate}, or Kinotic's when it is {@code null}.
      * Fails when the organization has no such invitation.
      *
-     * @throws IllegalArgumentException when {@code emailTemplate} has a blank {@code uiBaseUrl} or one ending with
-     *                                  {@code /}, or a source that is missing or does not compile
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
     Future<Void> resendInvite(String inviteId, String organizationId, EmailTemplate emailTemplate);
 }

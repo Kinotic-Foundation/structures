@@ -17,6 +17,7 @@ import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.internal.api.services.EmailService;
 import org.kinotic.management.api.services.security.MemberInvitationService;
 import org.springframework.stereotype.Component;
 
@@ -30,11 +31,13 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     private final InviteService inviteService;
     private final OidcConfigurationService oidcConfigurationService;
     private final ApplicationRepository applicationRepository;
+    private final EmailService emailService;
 
     @Override
     public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation,
                                                 EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
+        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         String address = DomainUtil.normalizeEmail(email);
         return identityService.findOrganizationUserByEmail(address)
@@ -79,6 +82,7 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     @Override
     public Future<Void> sendInvitation(String email, EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
+        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         String organizationId = inviter.getOrganizationId();
         String address = DomainUtil.normalizeEmail(email);
@@ -114,6 +118,7 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     public Future<PendingInvite> inviteMember(String email, String displayName, String applicationId,
                                               EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
+        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         Validate.isTrue(StringUtils.isNotBlank(applicationId), "applicationId is required; an organization's members are added with addMember");
         // an invitation persists a reference to the application, so it must be one of the organization's

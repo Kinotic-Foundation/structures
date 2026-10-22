@@ -5,6 +5,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
@@ -36,6 +37,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
     private final KinoticManagementApiProperties managementApiProperties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -202,7 +204,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /** Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token. */
     private void redirectToCompleteOrg(RoutingContext ctx, String origin, String token) {
-        authEndpointSupport.redirectToPage(ctx, origin, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
+        // the token names the verified identity's new organization, so only a trusted UI's page receives it
+        String page = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
+        authEndpointSupport.redirectToPage(ctx, page, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
     }
 
 }
