@@ -24,7 +24,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.management.api.services.EntityDefinitionService;
-import org.kinotic.management.api.services.security.PermissionService;
+import org.kinotic.management.internal.api.services.security.DefaultPermissionService;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.cache.CacheEvictionEvent;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -47,7 +47,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     private final EntityDefinitionProperties entityDefinitionProperties;
     private final DomainPersistenceProperties domainPersistenceProperties;
     private final RelationshipService relationships;
-    private final PermissionService permissions;
+    private final DefaultPermissionService permissions;
 
     public DefaultEntityDefinitionService(ApplicationEventPublisher eventPublisher,
                                           CrudServiceTemplate crudServiceTemplate,
@@ -57,7 +57,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
                                           DomainPersistenceProperties domainPersistenceProperties,
                                           SecurityContext securityContext,
                                           RelationshipService relationships,
-                                          PermissionService permissions) {
+                                          DefaultPermissionService permissions) {
         super(entityDefinitionRepository, securityContext);
         this.relationships = relationships;
         this.permissions = permissions;
@@ -141,9 +141,11 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
                             .map(entityDefinition);
     }
 
+    // The definition leaves both stores with every grant made on it, so one created again under its id starts with none
     private Future<Void> removed(EntityDefinition entityDefinition) {
-        return relationships.remove(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
-                            .compose(v -> relationships.remove(storeOf(entityDefinition), List.of(containment(entityDefinition))));
+        String object = containment(entityDefinition).object();
+        return relationships.removeObject(AuthzStoreService.SYSTEM, object)
+                            .compose(v -> relationships.removeObject(storeOf(entityDefinition), object));
     }
 
     private static String storeOf(EntityDefinition entityDefinition) {
@@ -199,8 +201,8 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     public Future<EntityDefinition> findById(String id) {
         return super.findById(id).compose(entityDefinition -> entityDefinition == null
                 ? Future.succeededFuture(null)
-                : permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                             .map(ids -> ids.contains(id) ? entityDefinition : null));
+                : permissions.findAccessibleIds(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
+                             .map(ids -> ids == null || ids.contains(id) ? entityDefinition : null));
     }
 
     @WithSpan

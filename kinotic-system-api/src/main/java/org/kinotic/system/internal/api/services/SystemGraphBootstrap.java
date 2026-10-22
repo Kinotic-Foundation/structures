@@ -25,11 +25,11 @@ import java.util.List;
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places the system's staff and nodes in the authorization graph when the system has no administrator, once
- * the server is up and the system store runs a model: every node on the system, every enabled system
- * machine as a registrar of nodes, and every enabled system user as the system's administrator. A
- * system a migration seeds has system users, a vm-manager and nodes but no tuples, and this gives it the ones it
- * needs to be run; a system with an administrator, whatever else was granted or revoked since, is left as it is.
+ * Places the system's staff and nodes in the authorization graph when the system holds no grant, once the server
+ * is up and the system store runs a model: every node on the system, every enabled system machine as a registrar
+ * of nodes, and every enabled system user as the system's administrator. A system a migration seeds has system
+ * users, a vm-manager and nodes but no tuples, and this gives it the ones it needs to be run; a system holding a
+ * grant, whatever else was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -54,11 +54,10 @@ public class SystemGraphBootstrap {
 
     private void run() {
         stores.modelId(SYSTEM)
-              .compose(modelId -> administered())
-              .compose(administered -> administered ? Future.succeededFuture(0) : placeStaff())
-              .onSuccess(bound -> {
-                  if (bound > 0) {
-                      log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
+              .compose(modelId -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT))
+              .onSuccess(grants -> {
+                  if (grants.isEmpty()) {
+                      place();
                   }
               })
               // the reconciler writes the system model shortly after the servers start, so a store that runs
@@ -69,15 +68,18 @@ public class SystemGraphBootstrap {
               });
     }
 
-    private Future<Boolean> administered() {
-        return relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId())));
+    // The first grant ends the sweep for every later start, so a sweep that fails part way is made again here,
+    // without asking the store, until it places everything; every binding has an id of its own, so one made twice is held once
+    private void place() {
+        placeStaff().onSuccess(bound -> log.info("Bound {} system user(s) and machine(s) as the system's staff", bound))
+                    .onFailure(e -> {
+                        log.warn("The system staff sweep is made again: {}", e.getMessage());
+                        vertx.setTimer(RETRY_MILLIS, t -> place());
+                    });
     }
 
     private Future<Integer> placeStaff() {
         Pageable page = Pageable.create(0, PAGE_SIZE, null);
-        // an administrator ends the sweep for every server, so the nodes and machines are placed before it: a sweep
-        // cut short before the administrator leaves none, and the next sweep places everything again
         return nodes.findAll(page)
                     .compose(found -> relationships.ensure(SYSTEM, found.getContent().stream()
                                                                          .map(node -> DomainUtil.containment(SYSTEM_OBJECT,

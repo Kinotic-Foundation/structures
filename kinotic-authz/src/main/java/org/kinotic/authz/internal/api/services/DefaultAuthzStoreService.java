@@ -4,6 +4,7 @@ import dev.openfga.sdk.api.model.AuthorizationModel;
 import dev.openfga.sdk.api.model.CreateStoreRequest;
 import dev.openfga.sdk.api.model.CreateStoreResponse;
 import dev.openfga.sdk.api.model.Store;
+import dev.openfga.sdk.api.model.TypeDefinition;
 import dev.openfga.sdk.api.model.WriteAuthorizationModelRequest;
 import dev.openfga.sdk.api.model.WriteAuthorizationModelResponse;
 import dev.openfga.sdk.errors.FgaError;
@@ -240,6 +241,20 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
             }
         }
         return ret;
+    }
+
+    /**
+     * The types of the store's newest model version, empty for a store with none or a store that does not exist.
+     *
+     * @param store the store, named as its record is
+     * @return the type names
+     */
+    Future<List<String>> typesOf(String store) {
+        return findStore(storeNameOf(store))
+                .compose(found -> found == null ? Future.succeededFuture() : storeIdOf(store).compose(this::latestModel))
+                .map(latest -> latest == null
+                        ? List.<String>of()
+                        : latest.getTypeDefinitions().stream().map(TypeDefinition::getType).toList());
     }
 
     /**

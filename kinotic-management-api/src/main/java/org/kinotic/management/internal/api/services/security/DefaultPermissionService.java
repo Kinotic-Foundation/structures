@@ -258,6 +258,28 @@ public class DefaultPermissionService implements PermissionService {
                      .map(objects -> objects.stream().map(object -> DomainUtil.localId(type, AuthzUtil.idOf(object))).toList());
     }
 
+    /**
+     * The resources of a type the caller holds a permission on, as {@link #listAccessible} lists them, or null when
+     * the caller holds the permission on its organization, and so on every resource of the type in it.
+     *
+     * @param type       the resource type
+     * @param permission the permission's short name, such as {@code can_read}
+     * @return the ids of the resources, or null for every one in the caller's organization
+     */
+    public Future<List<String>> findAccessibleIds(String type, String permission) {
+        Validate.notBlank(type, "type cannot be blank");
+        Validate.notBlank(permission, "permission cannot be blank");
+        OrganizationParticipant participant = requireOrgParticipant();
+        RelationshipTuple everywhere = new RelationshipTuple(DomainUtil.authzUser(participant),
+                                                             AuthzUtil.permissionName(type, permission),
+                                                             AuthzUtil.object(ORGANIZATION, participant.getOrganizationId()));
+        // the engine lists a bounded number of objects, so a caller holding the permission throughout the
+        // organization is answered without a listing
+        return stores.modelId(SYSTEM)
+                     .compose(modelId -> relationships.check(SYSTEM, modelId, everywhere, Consistency.MINIMIZE_LATENCY))
+                     .compose(held -> held ? Future.succeededFuture(null) : listAccessible(type, permission));
+    }
+
     @Override
     public Future<AccessExplanation> explain(Subject subject, String permission, Resource resource) {
         validate(subject);

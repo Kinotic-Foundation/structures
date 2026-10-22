@@ -27,11 +27,11 @@ import java.util.List;
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places every organization that has no administrator in the authorization graph, once the server is up and the
- * system store runs a model: the organization on the system, its enabled members as its members, and the
+ * Places every organization that is not yet on the system in the authorization graph, once the server is up and
+ * the system store runs a model: the organization on the system, its enabled members as its members, and the
  * membership of its creator as its administrator. A sign-up does the same for the organization it creates; an
  * organization a migration seeds has records but no tuples, and this gives it the ones a sign-up would have. An
- * organization with an administrator, whatever else was granted or revoked since, is left as it is.
+ * organization on the system, whatever was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -86,18 +86,21 @@ public class OrganizationGraphBootstrap {
 
     private Future<Boolean> place(Organization organization) {
         String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
-        return administered(object).compose(administered -> administered
+        RelationshipTuple containment = DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), object);
+        // the containment is written last, so a sweep cut short places the organization again, and the creator is
+        // bound under an id of its own, so every server sweeping at once binds it once
+        return relationships.read(SYSTEM, object).compose(held -> held.contains(containment)
                 ? Future.succeededFuture(false)
-                : relationships.ensure(SYSTEM, List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
-                                                                                object)))
-                               .compose(v -> members(organization.getId(), 0))
-                               .compose(v -> organization.getCreatedBy() == null
-                                       ? Future.succeededFuture()
-                                       : relationships.bind(SYSTEM,
+                : members(organization.getId(), 0)
+                        .compose(v -> organization.getCreatedBy() == null
+                                ? Future.succeededFuture()
+                                : relationships.ensureBound(SYSTEM,
+                                                            AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + organization.getCreatedBy(),
                                                             AuthzConstants.ORGANIZATION_ADMIN_ROLE,
                                                             DomainUtil.authzMember(organization.getCreatedBy(), organization.getId()),
-                                                            object).mapEmpty())
-                               .map(true));
+                                                            object))
+                        .compose(v -> relationships.ensure(SYSTEM, List.of(containment)))
+                        .map(true));
     }
 
     private Future<Void> members(String organizationId, int pageNumber) {
@@ -111,10 +114,5 @@ public class OrganizationGraphBootstrap {
             Future<Void> ret = relationships.ensure(SYSTEM, enabled);
             return page.getContent().size() < PAGE_SIZE ? ret : ret.compose(v -> members(organizationId, pageNumber + 1));
         });
-    }
-
-    private Future<Boolean> administered(String object) {
-        return relationships.findGrants(SYSTEM, object)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzConstants.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId())));
     }
 }

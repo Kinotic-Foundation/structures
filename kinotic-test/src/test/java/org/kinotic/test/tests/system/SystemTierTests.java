@@ -60,8 +60,8 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 /**
  * Verifies the system tier is authorized as the gateway authorizes it, against the system store: the
  * system's seeded administrator and vm-manager are bound once; a support system user reads every organization,
- * the cluster and the servers' logs and is refused the system's writes; a maintainer manages machines and
- * workloads and is refused a node's reports; a machine granted the registrar role registers a node, reports
+ * the cluster and the servers' logs and is refused the system's writes; a maintainer manages workloads and is
+ * refused access, machines and a node's reports; a machine granted the registrar role registers a node, reports
  * for that node alone, and loses its agent grant when the node is deregistered; a system grant names only
  * the system's own staff; and the telemetry tenant a system participant may read follows its grant.
  */
@@ -177,14 +177,17 @@ public class SystemTierTests extends KinoticTestBase {
     }
 
     @Test
-    public void aMaintainerRunsTheSystemAndIsRefusedANodesReports() throws Exception {
+    public void aMaintainerRunsTheSystemAndIsRefusedItsAuthorityAndANodesReports() throws Exception {
         SystemParticipantIdentity maintainer = systemUser("system-user");
         await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzConstants.SYSTEM_MAINTAINER_ROLE));
         Participant caller = userParticipant(maintainer.getId());
 
         assertTrue(awaitUntil(() -> admitted(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"))), "the maintainer never managed workloads");
-        authorize(MEMBER_SERVICE, "createMachine", caller, List.of("a machine"));
-        authorize(MEMBER_SERVICE, "rotateSecret", caller, List.of(SEEDED_VM_MANAGER_ID));
+        // granting roles or holding a machine's credentials would let the maintainer make itself an administrator
+        assertRefused(ACCESS_SERVICE, "grant", caller, List.of(new Subject(SubjectType.USER, maintainer.getId()), AuthzConstants.SYSTEM_ADMIN_ROLE),
+                      "system_can_manage_access");
+        assertRefused(MEMBER_SERVICE, "createMachine", caller, List.of("a machine"), "system_can_manage_machines");
+        assertRefused(MEMBER_SERVICE, "rotateSecret", caller, List.of(SEEDED_VM_MANAGER_ID), "system_can_manage_machines");
         authorize(ORGANIZATION_SERVICE, "findOrganizations", caller, List.of(PAGE));
         // a listing of nodes with room is a read of nodes, checked on the system
         authorize(NODE_SERVICE, "findAvailableNode", caller, List.of(1, 1024, 1024));

@@ -389,6 +389,37 @@ class OpenFgaIntegrationTest {
     }
 
     @Test
+    void aRemovedObjectAndARemovedSubjectLeaveNothingOfThemselves() throws Exception {
+        AuthzModel model = generator.systemModel(List.of(projectService()));
+        String modelId = await(storeService.ensureModel(SYSTEM, model));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
+        await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("application:crm-gone", "application", "project:billing-gone"),
+                                                         new RelationshipTuple("application:crm-gone", "application", "project:payroll-gone"),
+                                                         new RelationshipTuple("user:sally-gone", "member", "group:devs-gone"))));
+        await(relationshipService.bind(SYSTEM, "project.editor", "user:sally-gone", "project:billing-gone"));
+        String kept = await(relationshipService.bind(SYSTEM, "project.editor", "user:marcus-gone", "project:billing-gone"));
+        await(relationshipService.bind(SYSTEM, "project.editor", "group:devs-gone#member", "project:payroll-gone"));
+
+        // the subject leaves its groups and its grants, and the grants of others stay
+        await(relationshipService.removeSubject(SYSTEM, "user:sally-gone"));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-gone", "project_can_edit", "project:payroll-gone"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.readByUser(SYSTEM, "user:sally-gone", "project_role_binding")).isEmpty());
+        assertTrue(await(relationshipService.findGrants(SYSTEM, "project:billing-gone")).stream().allMatch(grant -> grant.id().equals(kept)));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+
+        // the object loses its place and every grant made on it
+        await(relationshipService.removeObject(SYSTEM, "project:billing-gone"));
+        assertTrue(await(relationshipService.read(SYSTEM, "project:billing-gone")).isEmpty());
+        assertTrue(await(relationshipService.read(SYSTEM, AuthzUtil.bindingObject("project:billing-gone", kept))).isEmpty());
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+
+        // a store that does not exist holds nothing of anyone
+        await(relationshipService.removeSubject("application:acme.no-such-application-gone", "user:sally-gone"));
+        await(relationshipService.removeObject(SYSTEM, "project:payroll-gone"));
+    }
+
+    @Test
     void theStoreResolvedOnOneContextKeepsLaterCallersOnTheirOwn() throws Exception {
         // the store is resolved once and kept, so every caller after the first composes on a kept result
         DefaultAuthzStoreService node = new DefaultAuthzStoreService(fga, properties, vertx);

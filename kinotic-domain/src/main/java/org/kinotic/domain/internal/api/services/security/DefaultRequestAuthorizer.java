@@ -18,6 +18,7 @@ import org.kinotic.core.api.event.CRI;
 import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.core.api.security.SecurityExceptionFactory;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
@@ -314,6 +315,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         ParticipantScope scope = participant.getScope();
         Future<Void> ret;
         try {
+            requireWithinCeiling(participant, check.getPermissionResource(), permission.getPermission());
             Resource checked = scopeLevelOf(check, scope);
             String resourceId = authzIdOf(checked.type(), resolve(checked.id(), spec, scope, arguments), scope);
             if (!AuthzUtil.isObjectId(resourceId)) {
@@ -341,6 +343,20 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
             ret = Future.failedFuture(e);
         }
         return ret;
+    }
+
+    // A delegate exercises its owner's permissions within its type's ceiling, so a client the owner authorized reaches
+    // only what that type of client needs; a delegate naming no type of a known ceiling is refused everything
+    private void requireWithinCeiling(Participant participant, String type, String permission) {
+        Map<String, String> metadata = participant.getMetadata() != null ? participant.getMetadata() : Map.of();
+        if (metadata.containsKey(DomainUtil.ON_BEHALF_OF_METADATA_KEY)) {
+            String delegateType = metadata.get(DomainUtil.DELEGATE_TYPE_METADATA_KEY);
+            boolean permitted = Arrays.stream(DelegateType.values())
+                                      .anyMatch(known -> known.name().equals(delegateType) && known.permits(type, permission));
+            if (!permitted) {
+                throw securityExceptions.notAuthorized("{} of {} is beyond what a {} delegate may exercise", permission, type, delegateType);
+            }
+        }
     }
 
     // A refusal names the permission, and why the request needs it when a resolver decided it

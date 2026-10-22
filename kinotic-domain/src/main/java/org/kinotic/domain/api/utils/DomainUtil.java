@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.OrganizationScoped;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
@@ -93,6 +94,11 @@ public class DomainUtil {
      * The participant metadata key naming the owner a delegate acts for, whose authority the delegate holds.
      */
     public static final String ON_BEHALF_OF_METADATA_KEY = "onBehalfOf";
+
+    /**
+     * The participant metadata key naming a delegate's {@link DelegateType}, which bounds the owner's permissions it exercises.
+     */
+    public static final String DELEGATE_TYPE_METADATA_KEY = "delegateType";
 
     // The authorization types whose ids are unique only within an organization, qualified by it in the stores
     private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzConstants.APPLICATION_TYPE, AuthzConstants.PROJECT_TYPE);
@@ -728,6 +734,7 @@ public class DomainUtil {
             }
             case DelegatingParticipantIdentity delegate -> {
                 metadata.put(ON_BEHALF_OF_METADATA_KEY, delegate.getOwnerId());
+                metadata.put(DELEGATE_TYPE_METADATA_KEY, delegate.getDelegateType().name());
                 metadata.put("displayName",
                              delegate.getDisplayName() != null ? delegate.getDisplayName() : delegate.getId());
             }

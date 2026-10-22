@@ -60,13 +60,7 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
         DomainUtil.validateTenantId(entity.getId());
         entity.setUpdated(new Date());
         String organizationId = requireOrganizationId();
-        return applications.requireById(entity.getApplicationId(), organizationId)
-                           // stored under the organization, an id names one tenant of one of its applications, so a
-                           // write under another application's tenant id would move that tenant
-                           .compose(application -> tenantRepository.findById(entity.getId(), organizationId))
-                           .compose(stored -> stored != null
-                                   ? requireOfApplication(stored, entity.getApplicationId()).mapEmpty()
-                                   : Future.succeededFuture());
+        return applications.requireById(entity.getApplicationId(), organizationId).mapEmpty();
     }
 
     // the graph first, then the record: a record that outlives its graph is deleted again, while grants that outlived

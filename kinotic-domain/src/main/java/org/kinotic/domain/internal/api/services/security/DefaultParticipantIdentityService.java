@@ -35,6 +35,8 @@ import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.internal.api.services.AbstractCrudService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -634,6 +636,23 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 });
     }
 
+    // An identity acting as itself leaves the stores it is held in, so one created again under its id starts with no
+    // grant; an organization user leaves through its memberships, and a delegate holds nothing of its own
+    private Future<Void> withdrawn(ParticipantIdentity identity) {
+        Future<Void> ret = Future.succeededFuture();
+        if (identity != null
+                && !(identity instanceof OrganizationParticipantIdentity)
+                && !(identity instanceof DelegatingParticipantIdentity)) {
+            String user = AuthzUtil.object(AuthzConstants.USER_TYPE, identity.getId());
+            ParticipantScope scope = DomainUtil.scopeOf(identity);
+            if (scope.applicationId() != null) {
+                ret = relationships.removeSubject(DomainUtil.authzApplicationId(scope.organizationId(), scope.applicationId()), user);
+            }
+            ret = ret.compose(v -> relationships.removeSubject(AuthzStoreService.SYSTEM, user));
+        }
+        return ret;
+    }
+
     @Override
     protected Future<Void> beforeDelete(String id) {
         // Cascade the IdentityCredential. Credential lookups are by id (realtime GETs), so the
@@ -641,7 +660,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         // Delegates owned by the deleted identity go with it — a delegate must not outlive
         // the authority it wields (resolveParticipant would reject it anyway; this is hygiene).
         // the memberships and the bindings go with the user as well: neither means anything without it
-        return credentialRepository.deleteById(id)
+        return identityRepository.findById(id)
+                .compose(this::withdrawn)
+                .compose(v -> credentialRepository.deleteById(id))
                 .compose(v -> bindingRepository.findByIdentity(id))
                 .compose(bindings -> Future.all(bindings.stream().map(binding -> bindingRepository.deleteById(binding.getId())).toList()))
                 .compose(v -> membershipRepository.findByOrganizationUser(id))

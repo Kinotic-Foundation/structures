@@ -315,9 +315,10 @@ public class AuthzModelGeneratorTest {
         assertEquals(model.roles().get("project.admin"), model.roles().get(AuthzConstants.APPLICATION_DEVELOPER_ROLE));
         // a permission named can_read_<something> only reads, so the viewer holds it
         assertEquals(Set.of("organization_can_read_members"), model.roles().get("organization.viewer"));
-        assertEquals(Set.of("organization_can_read_members", "organization_can_manage_members"), model.roles().get("organization.editor"));
+        // deciding who may act, as managing members or machines does, is an administrator's, never an editor's
+        assertEquals(Set.of("organization_can_read_members"), model.roles().get("organization.editor"));
+        assertEquals(Set.of("system_can_read_cluster"), model.roles().get("system.editor"));
         // a type with no reading permission has no viewer, and a role bundling nothing is not a role
-        assertEquals(Set.of("system_can_read_cluster", "system_can_manage_machines"), model.roles().get("system.editor"));
         assertFalse(model.roles().containsKey("tenant.viewer"));
         assertFalse(model.roles().containsKey("tenant.admin"));
     }
@@ -340,9 +341,8 @@ public class AuthzModelGeneratorTest {
         Set<String> everything = new TreeSet<>();
         model.permissions().forEach((type, permissions) -> permissions.forEach(permission -> everything.add(AuthzUtil.permissionName(type, permission))));
         assertEquals(everything, model.roles().get(AuthzConstants.SYSTEM_ADMIN_ROLE));
-        // the maintainer holds the system's own permissions and reads everything on it
-        assertEquals(Set.of("system_can_read_cluster", "system_can_manage_machines",
-                            "organization_can_read_members", "project_can_read", "vm_node_can_read"),
+        // the maintainer holds the system's own permissions but those deciding who may act, and reads everything on it
+        assertEquals(Set.of("system_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
                      model.roles().get(AuthzConstants.SYSTEM_MAINTAINER_ROLE));
         // support reads the system and everything on it
         assertEquals(Set.of("system_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
