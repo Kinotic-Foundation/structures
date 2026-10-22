@@ -25,6 +25,7 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.security.ApplicationAccessService;
 import org.springframework.stereotype.Component;
@@ -47,7 +48,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
 
     @Override
     public Future<List<RoleDefinition>> findRoles(String applicationId) {
-        return requireApplication(applicationId).compose(this::model).map(model -> model.builtInRoles(AuthzUtil.APPLICATION_TYPE));
+        return requireApplication(applicationId).compose(this::model).map(model -> model.builtInRoles(AuthzConstants.APPLICATION_TYPE));
     }
 
     @Override
@@ -125,12 +126,12 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     private static List<Resource> reaching(Application application, Resource resource) {
         List<Resource> ret = new ArrayList<>();
         ret.add(resource);
-        if (AuthzUtil.TENANT_DEFINITION_TYPE.equals(resource.type())) {
-            ret.add(new Resource(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.definitionOf(resource.id())));
-            ret.add(new Resource(AuthzUtil.TENANT_TYPE, AuthzUtil.tenantOf(resource.id())));
+        if (AuthzConstants.TENANT_DEFINITION_TYPE.equals(resource.type())) {
+            ret.add(new Resource(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzUtil.definitionOf(resource.id())));
+            ret.add(new Resource(AuthzConstants.TENANT_TYPE, AuthzUtil.tenantOf(resource.id())));
         }
-        if (!AuthzUtil.APPLICATION_TYPE.equals(resource.type())) {
-            ret.add(new Resource(AuthzUtil.APPLICATION_TYPE, application.getId()));
+        if (!AuthzConstants.APPLICATION_TYPE.equals(resource.type())) {
+            ret.add(new Resource(AuthzConstants.APPLICATION_TYPE, application.getId()));
         }
         return ret;
     }
@@ -138,11 +139,11 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     // A grant is made on a tenant placed under the application, on a definition the application holds, or on both
     private Future<Void> contained(Application application, Resource resource) {
         Future<Void> ret;
-        if (AuthzUtil.TENANT_TYPE.equals(resource.type())) {
+        if (AuthzConstants.TENANT_TYPE.equals(resource.type())) {
             ret = placed(application, resource.id());
-        } else if (AuthzUtil.ENTITY_DEFINITION_TYPE.equals(resource.type())) {
+        } else if (AuthzConstants.ENTITY_DEFINITION_TYPE.equals(resource.type())) {
             ret = requireDefinition(application, resource.id());
-        } else if (AuthzUtil.TENANT_DEFINITION_TYPE.equals(resource.type())) {
+        } else if (AuthzConstants.TENANT_DEFINITION_TYPE.equals(resource.type())) {
             ret = requireDefinition(application, AuthzUtil.definitionOf(resource.id()))
                     .compose(v -> placed(application, AuthzUtil.tenantOf(resource.id())));
         } else {
@@ -155,8 +156,8 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     // the application reach it; the application itself is where the graph starts
     private Future<Void> placed(Application application, String tenantId) {
         return relationships.ensure(storeOf(application), List.of(new RelationshipTuple(applicationObjectOf(application),
-                                                                                        AuthzUtil.APPLICATION_TYPE,
-                                                                                        AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenantId))));
+                                                                                        AuthzConstants.APPLICATION_TYPE,
+                                                                                        AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenantId))));
     }
 
     // A grant on a definition is made on one the application holds, which placed it in the store when it was created
@@ -170,7 +171,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     }
 
     private static List<RelationshipTuple> edgesOf(Resource resource) {
-        return AuthzUtil.TENANT_DEFINITION_TYPE.equals(resource.type())
+        return AuthzConstants.TENANT_DEFINITION_TYPE.equals(resource.type())
                 ? DomainUtil.tenantDefinitionEdges(AuthzUtil.definitionOf(resource.id()), AuthzUtil.tenantOf(resource.id()))
                 : List.of();
     }
@@ -224,7 +225,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     }
 
     private static String applicationObjectOf(Application application) {
-        return AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
+        return AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
     }
 
     private static String objectOf(Application application, Resource resource) {
@@ -235,9 +236,9 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         Validate.notBlank(applicationId, "applicationId cannot be blank");
         Validate.notNull(resource, "resource cannot be null");
         Validate.notBlank(resource.id(), "resource id cannot be blank");
-        boolean theApplication = AuthzUtil.APPLICATION_TYPE.equals(resource.type()) && applicationId.equals(resource.id());
-        boolean pair = AuthzUtil.TENANT_DEFINITION_TYPE.equals(resource.type());
-        Validate.isTrue(theApplication || AuthzUtil.TENANT_TYPE.equals(resource.type()) || AuthzUtil.ENTITY_DEFINITION_TYPE.equals(resource.type()) || pair,
+        boolean theApplication = AuthzConstants.APPLICATION_TYPE.equals(resource.type()) && applicationId.equals(resource.id());
+        boolean pair = AuthzConstants.TENANT_DEFINITION_TYPE.equals(resource.type());
+        Validate.isTrue(theApplication || AuthzConstants.TENANT_TYPE.equals(resource.type()) || AuthzConstants.ENTITY_DEFINITION_TYPE.equals(resource.type()) || pair,
                         "a grant in an application is made on the application itself, one of its tenants, one of its entity definitions"
                                 + " or a definition within a tenant, not on %s", resource);
         Validate.isTrue(!pair || resource.id().indexOf('@') > 0,
@@ -252,6 +253,6 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     }
 
     private static String userOf(Subject subject) {
-        return AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id());
+        return AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id());
     }
 }

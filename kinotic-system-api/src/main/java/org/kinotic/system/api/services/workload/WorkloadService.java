@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
@@ -18,28 +18,28 @@ import org.kinotic.management.api.model.workload.Workload;
  * writing one {@code can_manage_workloads}.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_WORKLOADS)
+@AuthzResource(value = AuthzConstants.SYSTEM_TYPE, resourceId = AuthzConstants.SYSTEM_OBJECT_ID, permission = AuthzConstants.CAN_MANAGE_WORKLOADS)
 public interface WorkloadService extends IdentifiableCrudService<Workload, String> {
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Workload> findById(String id);
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Long> count();
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Page<Workload>> findAll(Pageable pageable);
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Page<Workload>> search(String searchText, Pageable pageable);
 
     // CrudService declares syncIndex an edit, which only a redeclaration overrides
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_WORKLOADS)
     Future<Void> syncIndex();
 
     /**
@@ -48,7 +48,7 @@ public interface WorkloadService extends IdentifiableCrudService<Workload, Strin
      * @param pageable the page to return
      * @return a future that will complete with a page of workloads
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Page<Workload>> findAllForNode(String nodeId, Pageable pageable);
 
     /**
@@ -59,7 +59,7 @@ public interface WorkloadService extends IdentifiableCrudService<Workload, Strin
      * @return a future that will complete with a page of ledger entries, empty when the workload does
      * not exist
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_WORKLOADS)
     Future<Page<WatchEvent>> findHistory(String workloadId, Pageable pageable);
 
 }

@@ -26,6 +26,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.services.ApplicationService;
@@ -183,10 +184,10 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertRefused(MEMBER_SERVICE, "findMembers", caller, listing, "organization:" + TEST_ORG_ID);
 
         // a listing of the caller's own access is admitted by the zone alone
-        authorize(PERMISSION_SERVICE, "listAccessible", caller, List.of(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ));
+        authorize(PERMISSION_SERVICE, "listAccessible", caller, List.of(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ));
 
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, member.getId()), "organization.viewer",
-                                                        new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))));
+                                                        new Resource(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID))));
         assertTrue(awaitUntil(() -> admitted(MEMBER_SERVICE, "findMembers", caller, listing)), "the viewer never saw the members");
         assertRefused(MEMBER_SERVICE, "removeMember", caller, List.of(member.getId()), "organization_can_manage_members");
 
@@ -195,15 +196,15 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         // organization holds every project's
         assertRefused(PROJECT_SERVICE, "syncIndex", caller, List.of(), "project_can_edit on organization:" + TEST_ORG_ID);
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, member.getId()), "project.editor",
-                                                        new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))));
+                                                        new Resource(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID))));
         assertTrue(awaitUntil(() -> admitted(PROJECT_SERVICE, "syncIndex", caller, List.of())), "the editor of projects never re-synced them");
     }
 
     @Test
     public void theSeededOrganizationIsAdministeredByItsCreator() throws Exception {
-        String organization = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, SEEDED_ORGANIZATION_ID);
+        String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, SEEDED_ORGANIZATION_ID);
         RelationshipTuple manages = new RelationshipTuple(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID),
-                                                          AuthzUtil.permissionName(AuthzUtil.ORGANIZATION_TYPE, "can_manage_access"),
+                                                          AuthzUtil.permissionName(AuthzConstants.ORGANIZATION_TYPE, "can_manage_access"),
                                                           organization);
         assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.SYSTEM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
                    "the creator was never bound as the administrator");
@@ -212,7 +213,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         Subject creator = new Subject(SubjectType.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
         long creatorBindings = await(relationships.findGrants(AuthzStoreService.SYSTEM, organization))
                 .stream()
-                .filter(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))
+                .filter(grant -> AuthzConstants.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))
                 .count();
         assertEquals(1, creatorBindings);
     }

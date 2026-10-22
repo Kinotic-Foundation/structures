@@ -10,7 +10,7 @@ import org.kinotic.domain.api.services.EntityStatementResolver;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.idl.api.schema.FunctionDefinition;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.persistence.api.model.NamedQueryOperation;
 import org.kinotic.persistence.api.services.security.AuthorizationService;
 import org.kinotic.persistence.api.services.security.AuthorizationServiceFactory;
@@ -100,9 +100,9 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                                             ElasticsearchSqlWriter.write(aggregate),
                                                                             domainPersistenceProperties);
             // the caller's request was checked for can_read, which admits reading rows, not writing them
-            case InsertStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_CREATE);
-            case UpdateStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_EDIT);
-            case DeleteStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_DELETE);
+            case InsertStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_CREATE);
+            case UpdateStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_EDIT);
+            case DeleteStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_DELETE);
             default -> throw new IllegalArgumentException("Named query " + queryName
                                                                   + ": a named query is a SELECT, INSERT, UPDATE or DELETE, so "
                                                                   + statement.getClass().getSimpleName().replace("Statement", "")

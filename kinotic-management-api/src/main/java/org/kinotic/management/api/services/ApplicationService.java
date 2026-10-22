@@ -11,7 +11,7 @@ import org.kinotic.domain.api.services.OrganizationScopedCrudService;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
 import org.kinotic.idl.api.annotations.McpTool;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Publish
 @McpTool
-@AuthzResource(value = AuthzUtil.APPLICATION_TYPE, parent = AuthzUtil.ORGANIZATION_TYPE)
+@AuthzResource(value = AuthzConstants.APPLICATION_TYPE, parent = AuthzConstants.ORGANIZATION_TYPE)
 public interface ApplicationService extends OrganizationScopedCrudService<Application, String> {
 
     /**

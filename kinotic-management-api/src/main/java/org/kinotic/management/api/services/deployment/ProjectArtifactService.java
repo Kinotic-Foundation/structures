@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.model.deployment.ProjectArtifacts;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
@@ -17,7 +17,7 @@ import org.kinotic.management.api.services.ProjectService;
  * organization can report on the project's behalf.
  */
 @Publish
-@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
+@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzConstants.APPLICATION_TYPE)
 public interface ProjectArtifactService {
 
     /**
@@ -30,7 +30,7 @@ public interface ProjectArtifactService {
      *                  and a UI's name must not contain {@code --}
      * @return a future completing once the deployment record holds the artifacts
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT)
     Future<Void> recordArtifacts(String projectId, ProjectArtifacts artifacts);
 
     /**
@@ -45,7 +45,7 @@ public interface ProjectArtifactService {
      * @return a future completing once the tree is stored and the deployment record says the
      *         project has an SBOM of its dependencies
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT)
     Future<Void> recordSbom(String projectId, String dependencyHash, ProjectDependencies dependencies);
 
 }

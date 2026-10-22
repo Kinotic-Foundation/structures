@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.WatchEvent;
@@ -25,7 +25,7 @@ import java.util.List;
  * or the application it is of, and is checked on that.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
+@AuthzResource(value = AuthzConstants.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
 public interface UiDeploymentService {
 
     /**
@@ -36,7 +36,7 @@ public interface UiDeploymentService {
      * @return a future emitting the deployments, empty when the project has none
      */
     @McpTool
-    @AuthzCheck(resource = AuthzUtil.PROJECT_TYPE, resourceId = "{projectId}")
+    @AuthzCheck(resource = AuthzConstants.PROJECT_TYPE, resourceId = "{projectId}")
     Future<List<UiDeployment>> findAllForProject(String projectId);
 
     /**
@@ -47,7 +47,7 @@ public interface UiDeploymentService {
      * @return a future emitting the deployments, empty when the application has none
      */
     @McpTool
-    @AuthzCheck(resource = AuthzUtil.APPLICATION_TYPE, resourceId = "{applicationId}")
+    @AuthzCheck(resource = AuthzConstants.APPLICATION_TYPE, resourceId = "{applicationId}")
     Future<List<UiDeployment>> findAllForApplication(String applicationId);
 
     /**
@@ -60,7 +60,7 @@ public interface UiDeploymentService {
      * @return a future emitting a page of ledger entries, empty when nothing has happened to the deployment
      */
     @McpTool
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_DEPLOYMENTS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_DEPLOYMENTS)
     Future<Page<WatchEvent>> findHistory(String deploymentId, Pageable pageable);
 
     /**
@@ -71,7 +71,7 @@ public interface UiDeploymentService {
      * @param deploymentId the deployment of a UI of one of the caller's organization's projects
      * @return a future completing when the removal is asked for
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_DEPLOYMENTS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_DEPLOYMENTS)
     Future<Void> remove(String deploymentId);
 
 }

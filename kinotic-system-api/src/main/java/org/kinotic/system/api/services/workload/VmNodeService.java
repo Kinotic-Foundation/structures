@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
@@ -17,7 +17,7 @@ import org.kinotic.system.api.model.workload.VmNode;
  * on the system reaches every node, and one made on a node reaches that node alone.
  */
 @Publish
-@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.SYSTEM_TYPE)
+@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzConstants.SYSTEM_TYPE)
 public interface VmNodeService extends IdentifiableCrudService<VmNode, String> {
 
     /** The resource type a node is in the authorization model. */

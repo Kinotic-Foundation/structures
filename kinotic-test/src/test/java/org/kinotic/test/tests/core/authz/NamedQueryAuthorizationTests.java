@@ -17,6 +17,7 @@ import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.StringC3Type;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.EntityDefinitionService;
@@ -73,16 +74,16 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
         ApplicationParticipantIdentity bob = endUser(tenantId);
         ScopedParticipant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectType.USER, bob.getId());
-        Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
+        Resource personHere = new Resource(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
         List<Object> request = List.of(person.getId(), RENAME_QUERY, List.of());
 
-        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.VIEWER), personHere)));
+        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.VIEWER), personHere)));
         // the request's check reads only can_read, which the viewer holds
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "namedQuery", caller, request)), "the viewer was never admitted to the named query");
         Throwable refused = assertThrows(ExecutionException.class, () -> await(rename(person, caller))).getCause();
         assertInstanceOf(AuthorizationException.class, refused);
 
-        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), personHere)));
+        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), personHere)));
         assertTrue(awaitUntil(() -> {
             boolean ran;
             try {

@@ -31,6 +31,7 @@ import org.kinotic.domain.api.repositories.RoleRepository;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.security.PermissionService;
 import org.springframework.stereotype.Component;
@@ -53,7 +54,7 @@ public class DefaultPermissionService implements PermissionService {
     // an organization's roles fit one page: the console reads them whole
     private static final int ROLE_PAGE_SIZE = 1000;
     // the root of the tier an organization's members manage: the organization and everything inside it but tenants
-    private static final String ORGANIZATION = AuthzUtil.ORGANIZATION_TYPE;
+    private static final String ORGANIZATION = AuthzConstants.ORGANIZATION_TYPE;
 
     private final SecurityContext securityContext;
     private final ServiceDirectory directory;
@@ -163,7 +164,7 @@ public class DefaultPermissionService implements PermissionService {
     public Future<Void> deleteGroup(String groupId) {
         Validate.notBlank(groupId, "groupId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
-        String group = AuthzUtil.object(AuthzUtil.GROUP_TYPE, groupId);
+        String group = AuthzUtil.object(AuthzConstants.GROUP_TYPE, groupId);
         return requireGroup(groupId, organizationId)
                 .compose(row -> model())
                 .compose(model -> requireUnused(membersOf(group), model.tier(ORGANIZATION), "Group " + groupId))
@@ -178,11 +179,11 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(groupId, "groupId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireGroup(groupId, organizationId)
-                .compose(row -> relationships.read(SYSTEM, AuthzUtil.object(AuthzUtil.GROUP_TYPE, groupId)))
+                .compose(row -> relationships.read(SYSTEM, AuthzUtil.object(AuthzConstants.GROUP_TYPE, groupId)))
                 .compose(held -> {
                     List<Future<ParticipantIdentity>> members = new ArrayList<>();
                     for (RelationshipTuple tuple : held) {
-                        if (AuthzUtil.MEMBER_RELATION.equals(tuple.relation()) && AuthzUtil.USER_TYPE.equals(AuthzUtil.typeOf(tuple.user()))) {
+                        if (AuthzConstants.MEMBER_RELATION.equals(tuple.relation()) && AuthzConstants.USER_TYPE.equals(AuthzUtil.typeOf(tuple.user()))) {
                             members.add(identities.findById(DomainUtil.identityOf(AuthzUtil.idOf(tuple.user()))));
                         }
                     }
@@ -302,7 +303,7 @@ public class DefaultPermissionService implements PermissionService {
      * resource must be in.
      */
     private Future<List<String>> requireInOrganization(Resource resource, String organizationId) {
-        String organization = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId);
+        String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId);
         return lineage(DomainUtil.authzObject(organizationId, resource), new ArrayList<>()).map(lineage -> {
             int within = lineage.indexOf(organization);
             if (within < 0) {
@@ -319,7 +320,7 @@ public class DefaultPermissionService implements PermissionService {
         return relationships.read(SYSTEM, object).compose(held -> {
             String parent = null;
             for (RelationshipTuple tuple : held) {
-                if (!AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())
+                if (!AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())
                         && tuple.relation().equals(AuthzUtil.typeOf(tuple.user()))) {
                     parent = tuple.user();
                     break;
@@ -431,7 +432,7 @@ public class DefaultPermissionService implements PermissionService {
         return relationships.read(SYSTEM, AuthzUtil.roleObject(role.getId())).map(held -> {
             Set<String> permissions = new TreeSet<>();
             for (RelationshipTuple tuple : held) {
-                if (AuthzUtil.EVERYONE.equals(tuple.user())) {
+                if (AuthzConstants.EVERYONE.equals(tuple.user())) {
                     permissions.add(tuple.relation());
                 }
             }
@@ -462,17 +463,17 @@ public class DefaultPermissionService implements PermissionService {
 
     private static String userOf(Subject subject) {
         return subject.type() == SubjectType.USER
-                ? AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id())
-                : membersOf(AuthzUtil.object(AuthzUtil.GROUP_TYPE, subject.id()));
+                ? AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id())
+                : membersOf(AuthzUtil.object(AuthzConstants.GROUP_TYPE, subject.id()));
     }
 
     private static String membersOf(String group) {
-        return group + "#" + AuthzUtil.MEMBER_RELATION;
+        return group + "#" + AuthzConstants.MEMBER_RELATION;
     }
 
     private static RelationshipTuple membership(String member, String groupId) {
         return new RelationshipTuple(member,
-                                     AuthzUtil.MEMBER_RELATION,
-                                     AuthzUtil.object(AuthzUtil.GROUP_TYPE, groupId));
+                                     AuthzConstants.MEMBER_RELATION,
+                                     AuthzUtil.object(AuthzConstants.GROUP_TYPE, groupId));
     }
 }

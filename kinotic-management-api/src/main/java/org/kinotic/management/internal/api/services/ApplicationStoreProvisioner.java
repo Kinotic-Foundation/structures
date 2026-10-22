@@ -20,6 +20,7 @@ import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.repositories.ProjectRepository;
 import org.springframework.stereotype.Component;
@@ -80,12 +81,12 @@ public class ApplicationStoreProvisioner {
      */
     public Future<Void> removeTenant(Tenant tenant) {
         String store = DomainUtil.authzApplicationId(tenant.getOrganizationId(), tenant.getApplicationId());
-        String tenantObject = AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenant.getId());
+        String tenantObject = AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenant.getId());
         return eachPage(pageable -> entityDefinitions.findAllForApplication(tenant.getApplicationId(), tenant.getOrganizationId(), pageable),
                         page -> {
                             Future<Void> ret = Future.succeededFuture();
                             for (EntityDefinition definition : page) {
-                                String within = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE,
+                                String within = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE,
                                                                  AuthzUtil.tenantDefinitionId(definition.getId(), tenant.getId()));
                                 ret = ret.compose(v -> unbindAll(store, within));
                             }
@@ -100,7 +101,7 @@ public class ApplicationStoreProvisioner {
         return relationships.read(store, object).compose(held -> {
             Future<Void> ret = Future.succeededFuture();
             for (RelationshipTuple tuple : held) {
-                if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())) {
+                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
                     ret = ret.compose(v -> relationships.unbind(store, AuthzUtil.idOf(tuple.user()), object));
                 }
             }
@@ -116,7 +117,7 @@ public class ApplicationStoreProvisioner {
      * @return the containment tuple
      */
     public static RelationshipTuple containment(String organizationId, String applicationId) {
-        return DomainUtil.containment(AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId),
+        return DomainUtil.containment(AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId),
                                       DomainUtil.authzApplication(organizationId, applicationId));
     }
 
@@ -200,6 +201,6 @@ public class ApplicationStoreProvisioner {
     // The one tuple the application holds in its own store: everyone is placed on it, which the placement of each
     // definition under it is read through
     private static RelationshipTuple placement(String store) {
-        return new RelationshipTuple(AuthzUtil.EVERYONE, AuthzUtil.PLACED_RELATION, AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store));
+        return new RelationshipTuple(AuthzConstants.EVERYONE, AuthzConstants.PLACED_RELATION, AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, store));
     }
 }

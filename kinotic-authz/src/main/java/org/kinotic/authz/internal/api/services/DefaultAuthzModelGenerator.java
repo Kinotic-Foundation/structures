@@ -8,6 +8,7 @@ import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.node.ArrayNode;
@@ -28,22 +29,22 @@ import java.util.TreeSet;
 @Component
 public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
-    static final String USER = AuthzUtil.USER_TYPE;
-    static final String GROUP = AuthzUtil.GROUP_TYPE;
-    static final String ORGANIZATION = AuthzUtil.ORGANIZATION_TYPE;
-    static final String APPLICATION = AuthzUtil.APPLICATION_TYPE;
-    static final String TENANT = AuthzUtil.TENANT_TYPE;
-    static final String MEMBER = AuthzUtil.MEMBER_RELATION;
-    static final String END_USER = AuthzUtil.END_USER_RELATION;
-    static final String GRANT = AuthzUtil.GRANT_RELATION;
-    static final String ROLE = AuthzUtil.ROLE_RELATION;
-    static final String ROLE_BINDING = AuthzUtil.ROLE_BINDING_RELATION;
+    static final String USER = AuthzConstants.USER_TYPE;
+    static final String GROUP = AuthzConstants.GROUP_TYPE;
+    static final String ORGANIZATION = AuthzConstants.ORGANIZATION_TYPE;
+    static final String APPLICATION = AuthzConstants.APPLICATION_TYPE;
+    static final String TENANT = AuthzConstants.TENANT_TYPE;
+    static final String MEMBER = AuthzConstants.MEMBER_RELATION;
+    static final String END_USER = AuthzConstants.END_USER_RELATION;
+    static final String GRANT = AuthzConstants.GRANT_RELATION;
+    static final String ROLE = AuthzConstants.ROLE_RELATION;
+    static final String ROLE_BINDING = AuthzConstants.ROLE_BINDING_RELATION;
 
     private static final String SCHEMA_VERSION = "1.1";
-    private static final String ENTITY_DEFINITION = AuthzUtil.ENTITY_DEFINITION_TYPE;
-    private static final String TENANT_DEFINITION = AuthzUtil.TENANT_DEFINITION_TYPE;
-    private static final String DEFINITION = AuthzUtil.DEFINITION_RELATION;
-    private static final String PLACED = AuthzUtil.PLACED_RELATION;
+    private static final String ENTITY_DEFINITION = AuthzConstants.ENTITY_DEFINITION_TYPE;
+    private static final String TENANT_DEFINITION = AuthzConstants.TENANT_DEFINITION_TYPE;
+    private static final String DEFINITION = AuthzConstants.DEFINITION_RELATION;
+    private static final String PLACED = AuthzConstants.PLACED_RELATION;
 
     @Override
     public AuthzModel systemModel(Collection<ServiceDefinition> services) {
@@ -184,20 +185,20 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         for (ResourceType type : types.values()) {
             Set<String> own = modelNames(type, type.permissions.keySet());
             Set<String> editing = new TreeSet<>(own);
-            editing.remove(AuthzUtil.permissionName(type.name, AuthzUtil.CAN_DELETE));
+            editing.remove(AuthzUtil.permissionName(type.name, AuthzConstants.CAN_DELETE));
             // managing access would let an editor grant itself any role, the type's admin included
-            editing.remove(AuthzUtil.permissionName(type.name, AuthzUtil.CAN_MANAGE_ACCESS));
-            role(ret, AuthzUtil.roleId(type.name, AuthzUtil.VIEWER), reading(type));
-            role(ret, AuthzUtil.roleId(type.name, AuthzUtil.EDITOR), editing);
-            role(ret, AuthzUtil.roleId(type.name, AuthzUtil.ADMIN), inside(type, types, carried, true, false));
+            editing.remove(AuthzUtil.permissionName(type.name, AuthzConstants.CAN_MANAGE_ACCESS));
+            role(ret, AuthzUtil.roleId(type.name, AuthzConstants.VIEWER), reading(type));
+            role(ret, AuthzUtil.roleId(type.name, AuthzConstants.EDITOR), editing);
+            role(ret, AuthzUtil.roleId(type.name, AuthzConstants.ADMIN), inside(type, types, carried, true, false));
         }
         if (storeType == AuthzStoreType.SYSTEM) {
-            ResourceType system = types.get(AuthzUtil.SYSTEM_TYPE);
+            ResourceType system = types.get(AuthzConstants.SYSTEM_TYPE);
             Set<String> maintaining = modelNames(system, system.permissions.keySet());
             maintaining.addAll(inside(system, types, carried, false, true));
-            role(ret, AuthzUtil.APPLICATION_DEVELOPER_ROLE, inside(types.get(APPLICATION), types, carried, false, false));
-            role(ret, AuthzUtil.SYSTEM_MAINTAINER_ROLE, maintaining);
-            role(ret, AuthzUtil.SYSTEM_SUPPORT_ROLE, inside(system, types, carried, true, true));
+            role(ret, AuthzConstants.APPLICATION_DEVELOPER_ROLE, inside(types.get(APPLICATION), types, carried, false, false));
+            role(ret, AuthzConstants.SYSTEM_MAINTAINER_ROLE, maintaining);
+            role(ret, AuthzConstants.SYSTEM_SUPPORT_ROLE, inside(system, types, carried, true, true));
         }
         for (ResourceType type : types.values()) {
             for (Map.Entry<String, Set<String>> declared : type.declaredRoles.entrySet()) {
@@ -259,8 +260,8 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     private static Map<String, ResourceType> kernelTypes(AuthzStoreType storeType) {
         Map<String, ResourceType> ret = new LinkedHashMap<>();
         if (storeType == AuthzStoreType.SYSTEM) {
-            ret.put(AuthzUtil.SYSTEM_TYPE, new ResourceType(AuthzUtil.SYSTEM_TYPE, null));
-            ResourceType organization = new ResourceType(ORGANIZATION, AuthzUtil.SYSTEM_TYPE);
+            ret.put(AuthzConstants.SYSTEM_TYPE, new ResourceType(AuthzConstants.SYSTEM_TYPE, null));
+            ResourceType organization = new ResourceType(ORGANIZATION, AuthzConstants.SYSTEM_TYPE);
             organization.memberships.put(MEMBER, Set.of(USER));
             ret.put(ORGANIZATION, organization);
             ResourceType application = new ResourceType(APPLICATION, ORGANIZATION);
@@ -271,7 +272,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             application.memberships.put(END_USER, Set.of(USER));
             // held by everyone through the one wildcard tuple the store is provisioned with, so a definition
             // under the application is told from one of another application by reading it through the definition
-            application.memberships.put(PLACED, Set.of(AuthzUtil.EVERYONE));
+            application.memberships.put(PLACED, Set.of(AuthzConstants.EVERYONE));
             ret.put(APPLICATION, application);
             // the definition the request names, whose permissions the entities repository declares; placed is held
             // by everyone for a definition under the application, by no one for one this store does not hold
@@ -333,8 +334,8 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     // the derived verbs form a ladder: deleting implies editing, editing implies reading, wherever both exist
     private static void deriveLattice(Map<String, ResourceType> types) {
         for (ResourceType type : types.values()) {
-            implyIfBoth(type, AuthzUtil.CAN_DELETE, AuthzUtil.CAN_EDIT);
-            implyIfBoth(type, AuthzUtil.CAN_EDIT, AuthzUtil.CAN_READ);
+            implyIfBoth(type, AuthzConstants.CAN_DELETE, AuthzConstants.CAN_EDIT);
+            implyIfBoth(type, AuthzConstants.CAN_EDIT, AuthzConstants.CAN_READ);
         }
     }
 
@@ -347,9 +348,9 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     private static void validate(Map<String, ResourceType> types) {
         for (ResourceType type : types.values()) {
             // the model names a type's roles and bindings by suffixing it, so a type named like one would collide
-            if (type.name.endsWith(AuthzUtil.ROLE_TYPE_SUFFIX) || type.name.endsWith(AuthzUtil.ROLE_BINDING_TYPE_SUFFIX)) {
-                throw new IllegalArgumentException("Resource type '" + type.name + "' ends with '" + AuthzUtil.ROLE_TYPE_SUFFIX
-                                                           + "' or '" + AuthzUtil.ROLE_BINDING_TYPE_SUFFIX
+            if (type.name.endsWith(AuthzConstants.ROLE_TYPE_SUFFIX) || type.name.endsWith(AuthzConstants.ROLE_BINDING_TYPE_SUFFIX)) {
+                throw new IllegalArgumentException("Resource type '" + type.name + "' ends with '" + AuthzConstants.ROLE_TYPE_SUFFIX
+                                                           + "' or '" + AuthzConstants.ROLE_BINDING_TYPE_SUFFIX
                                                            + "', which name the model's roles and bindings");
             }
             if (type.parent != null && !types.containsKey(type.parent)) {
@@ -365,9 +366,9 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             }
             for (Map.Entry<String, Set<String>> permission : type.permissions.entrySet()) {
                 String name = AuthzUtil.permissionName(type.name, permission.getKey());
-                if (name.length() > AuthzUtil.MAX_RELATION_NAME_LENGTH) {
+                if (name.length() > AuthzConstants.MAX_RELATION_NAME_LENGTH) {
                     throw new IllegalArgumentException("Permission '" + name + "' is longer than the "
-                                                               + AuthzUtil.MAX_RELATION_NAME_LENGTH + " characters a relation name may have");
+                                                               + AuthzConstants.MAX_RELATION_NAME_LENGTH + " characters a relation name may have");
                 }
                 for (String implied : permission.getValue()) {
                     if (!type.permissions.containsKey(implied)) {

@@ -12,6 +12,7 @@ import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.WatchEvent;
 import org.kinotic.domain.api.model.WatchEventType;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
@@ -105,8 +106,8 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     // grant on an entity definition makes its project reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
+        return Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ),
+                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
                                      .compose(ids -> entityDefinitionRepository.findProjectIdsOf(ids, organizationId)))
                      .map(visible -> {
                          Set<String> ret = new HashSet<>(visible.<Collection<String>>resultAt(0));

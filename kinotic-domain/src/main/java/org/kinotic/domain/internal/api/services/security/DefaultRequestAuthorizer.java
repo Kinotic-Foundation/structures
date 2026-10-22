@@ -30,6 +30,7 @@ import org.kinotic.domain.internal.api.model.ParameterReference;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ParameterDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -79,10 +80,10 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
 
     // the scope levels a check can be made on, each named by the template of its id, innermost first: a caller
     // missing one is checked on the next, and one missing them all on the system
-    private static final List<Resource> SCOPE_LEVELS = List.of(new Resource(AuthzUtil.TENANT_TYPE, "{@tenantId}"),
-                                                               new Resource(AuthzUtil.APPLICATION_TYPE, "{@applicationId}"),
-                                                               new Resource(AuthzUtil.ORGANIZATION_TYPE, "{@organizationId}"));
-    private static final Resource SYSTEM_LEVEL = new Resource(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
+    private static final List<Resource> SCOPE_LEVELS = List.of(new Resource(AuthzConstants.TENANT_TYPE, "{@tenantId}"),
+                                                               new Resource(AuthzConstants.APPLICATION_TYPE, "{@applicationId}"),
+                                                               new Resource(AuthzConstants.ORGANIZATION_TYPE, "{@organizationId}"));
+    private static final Resource SYSTEM_LEVEL = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final ObjectProvider<ServiceDirectory> directoryProvider;
     private final AuthzStoreService stores;
@@ -125,9 +126,9 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     public Future<Void> authorizeOnEntityDefinition(Participant participant, String permission, String entityDefinitionId) {
         Validate.notBlank(permission, "permission cannot be blank");
         Validate.notBlank(entityDefinitionId, "entityDefinitionId cannot be blank");
-        AuthzCheckC3Decorator check = new AuthzCheckC3Decorator().setResource(AuthzUtil.ENTITY_DEFINITION_TYPE)
+        AuthzCheckC3Decorator check = new AuthzCheckC3Decorator().setResource(AuthzConstants.ENTITY_DEFINITION_TYPE)
                                                                  .setResourceId(entityDefinitionId)
-                                                                 .setPermissionResource(AuthzUtil.ENTITY_DEFINITION_TYPE)
+                                                                 .setPermissionResource(AuthzConstants.ENTITY_DEFINITION_TYPE)
                                                                  .setPermission(permission);
         // the id is literal, so the check reads no argument
         return withStore(participant, (scoped, store) -> check(new FunctionSpec(check, List.of()), scoped, store, reference -> null));
@@ -245,9 +246,9 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
             // its two edges come with the check, the tenant's from the caller's scope and the definition's from the
             // request, and the model reaches it through a grant on the tenant only for a definition placed in the
             // application
-            boolean withinTenant = AuthzUtil.ENTITY_DEFINITION_TYPE.equals(checked.type()) && scope.tenantId() != null;
+            boolean withinTenant = AuthzConstants.ENTITY_DEFINITION_TYPE.equals(checked.type()) && scope.tenantId() != null;
             String object = withinTenant
-                    ? AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(resourceId, scope.tenantId()))
+                    ? AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(resourceId, scope.tenantId()))
                     : AuthzUtil.object(checked.type(), resourceId);
             List<RelationshipTuple> edges = withinTenant ? DomainUtil.tenantDefinitionEdges(resourceId, scope.tenantId()) : List.of();
             RelationshipTuple relationship = new RelationshipTuple(DomainUtil.authzUser(participant),

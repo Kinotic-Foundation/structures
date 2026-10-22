@@ -14,6 +14,7 @@ import org.kinotic.domain.api.model.Requeue;
 import org.kinotic.domain.api.services.Reconciler;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.DeployTarget;
@@ -245,8 +246,8 @@ public class DeployWorkerTests extends KinoticTestBase {
 
         MicroserviceDeployment deployed = awaitDeployed(deployment.getId(), null);
 
-        String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, deployed.getMachineIdentityId());
-        String registers = AuthzUtil.permissionName(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_REGISTER_SERVICES);
+        String machine = AuthzUtil.object(AuthzConstants.USER_TYPE, deployed.getMachineIdentityId());
+        String registers = AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES);
         String modelId = await(stores.modelId(AuthzStoreService.SYSTEM));
         assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
                                              new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID)),

@@ -24,6 +24,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.workload.Workload;
 import org.kinotic.management.api.model.workload.WorkloadStatus;
@@ -101,8 +102,8 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
      */
     private Future<Void> contained(String nodeId, Participant registrar) {
         String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
-                                                             AuthzUtil.SYSTEM_TYPE,
+        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
+                                                             AuthzConstants.SYSTEM_TYPE,
                                                              node);
         Future<Void> ret = relationships.ensure(AuthzStoreService.SYSTEM, List.of(onSystem));
         if (registrar != null) {
@@ -409,13 +410,13 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
     // under the same id starts with no agent
     private Future<Void> released(String nodeId) {
         String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
-                                                             AuthzUtil.SYSTEM_TYPE,
+        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
+                                                             AuthzConstants.SYSTEM_TYPE,
                                                              node);
         return relationships.read(AuthzStoreService.SYSTEM, node).compose(held -> {
             Future<Void> chain = Future.succeededFuture();
             for (RelationshipTuple tuple : held) {
-                if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())) {
+                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
                     chain = chain.compose(v -> relationships.unbind(AuthzStoreService.SYSTEM, AuthzUtil.idOf(tuple.user()), node));
                 }
             }

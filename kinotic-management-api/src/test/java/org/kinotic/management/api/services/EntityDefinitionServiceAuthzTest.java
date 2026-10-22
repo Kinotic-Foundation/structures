@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.idl.api.directory.ServiceDeclaration;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.internal.api.services.DefaultEntityDefinitionService;
 
 import java.util.List;
@@ -25,7 +25,7 @@ public class EntityDefinitionServiceAuthzTest {
 
         AuthzCheckC3Decorator unPublish = check(service, "unPublish");
         AuthzCheckC3Decorator deleteById = check(service, "deleteById");
-        assertEquals(AuthzUtil.CAN_DELETE, deleteById.getPermission());
+        assertEquals(AuthzConstants.CAN_DELETE, deleteById.getPermission());
         assertEquals(deleteById.getPermission(), unPublish.getPermission());
         assertEquals(deleteById.getResource(), unPublish.getResource());
         assertEquals(deleteById.getPermissionResource(), unPublish.getPermissionResource());
@@ -37,7 +37,7 @@ public class EntityDefinitionServiceAuthzTest {
     public void publishIsCheckedAsEditingTheDefinition() {
         AuthzCheckC3Decorator publish = check(service(), "publish");
 
-        assertEquals(AuthzUtil.CAN_EDIT, publish.getPermission());
+        assertEquals(AuthzConstants.CAN_EDIT, publish.getPermission());
         assertEquals(EntityDefinitionService.RESOURCE_TYPE, publish.getResource());
         assertEquals("{entityDefinitionId}", publish.getResourceId());
     }

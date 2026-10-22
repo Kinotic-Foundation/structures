@@ -13,7 +13,7 @@ import org.kinotic.grind.api.model.events.TaskCompletedEvent;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import reactor.core.publisher.Flux;
 
 /**
@@ -28,7 +28,7 @@ import reactor.core.publisher.Flux;
  * recorded on {@link JobRun#getNodeId()}.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
+@AuthzResource(value = AuthzConstants.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
 public interface JobMonitoringService {
 
     /**
@@ -45,7 +45,7 @@ public interface JobMonitoringService {
      * @param pageable the page of runs to return
      * @return a future that will complete with the page of runs
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_JOBS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_JOBS)
     @ScopeOptional
     Future<Page<JobRun>> findJobRuns(Pageable pageable);
 
@@ -56,7 +56,7 @@ public interface JobMonitoringService {
      * @return a future that will complete with the run, or fail if the run does not exist
      *         or belongs to another organization
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_JOBS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_JOBS)
     @ScopeOptional
     Future<JobRun> findJobRun(String jobRunId);
 
@@ -70,7 +70,7 @@ public interface JobMonitoringService {
      * @return a future that will complete with the page of records, or fail if the run does
      *         not exist or belongs to another organization
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_JOBS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_JOBS)
     @ScopeOptional
     Future<Page<TaskRecord>> findTasks(String jobRunId, Pageable pageable);
 
@@ -84,7 +84,7 @@ public interface JobMonitoringService {
      * @return the run's event stream, empty when the run is not currently executing on this
      *         node
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_JOBS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_JOBS)
     Flux<JobRunEvent> watch(String jobRunId);
 
 }

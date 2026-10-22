@@ -17,7 +17,7 @@ import org.kinotic.authz.api.config.KinoticAuthzProperties;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.core.api.utils.KinoticUtil;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -193,7 +193,7 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
             ret = MAPPER.createObjectNode();
             ret.set("schema_version", target.get("schema_version"));
             ArrayNode types = ret.putArray("type_definitions");
-            types.add(typeDefinition(target, AuthzUtil.USER_TYPE).deepCopy());
+            types.add(typeDefinition(target, AuthzConstants.USER_TYPE).deepCopy());
             for (ObjectNode targetRole : roleTypes(target)) {
                 types.add(targetRole.deepCopy());
             }
@@ -225,7 +225,7 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
     private static List<ObjectNode> roleTypes(ObjectNode definition) {
         List<ObjectNode> ret = new ArrayList<>();
         for (JsonNode typeDefinition : definition.path("type_definitions")) {
-            if (typeDefinition.path("type").asString().endsWith(AuthzUtil.ROLE_TYPE_SUFFIX)) {
+            if (typeDefinition.path("type").asString().endsWith(AuthzConstants.ROLE_TYPE_SUFFIX)) {
                 ret.add((ObjectNode) typeDefinition);
             }
         }

@@ -21,6 +21,7 @@ import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -313,11 +314,11 @@ class OpenFgaIntegrationTest {
         assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         // a binding of the organization admin on the organization reaches the project inside it
         await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("organization:acme-roles", "organization", "application:crm-roles"))));
-        await(relationshipService.bind(SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "organization:acme-roles"));
+        await(relationshipService.bind(SYSTEM, AuthzConstants.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "organization:acme-roles"));
         assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         // the engine refuses a role homed above the resource, and a binding attached to a resource of another type
         assertThrows(ExecutionException.class,
-                     () -> await(relationshipService.bind(SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "project:billing-roles")));
+                     () -> await(relationshipService.bind(SYSTEM, AuthzConstants.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "project:billing-roles")));
         assertThrows(ExecutionException.class, () -> await(relationshipService.write(SYSTEM, List.of(
                 new RelationshipTuple("organization_role_binding:misplaced-roles", "role_binding", "project:billing-roles")), List.of())));
     }

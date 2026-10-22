@@ -28,6 +28,7 @@ import org.kinotic.domain.internal.api.repositories.IdentityCredentialRepository
 import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.OrganizationMembershipRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -203,8 +204,8 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     private Future<Void> withdrawn(String user) {
         return directoryProvider.getObject().findSystemDefinitions().map(generator::systemModel).compose(model -> {
             List<Future<List<RelationshipTuple>>> reads = new ArrayList<>();
-            reads.add(relationships.readByUser(AuthzStoreService.SYSTEM, user, AuthzUtil.GROUP_TYPE));
-            for (String type : model.tier(AuthzUtil.ORGANIZATION_TYPE)) {
+            reads.add(relationships.readByUser(AuthzStoreService.SYSTEM, user, AuthzConstants.GROUP_TYPE));
+            for (String type : model.tier(AuthzConstants.ORGANIZATION_TYPE)) {
                 reads.add(relationships.readByUser(AuthzStoreService.SYSTEM, user, AuthzUtil.roleBindingType(type)));
             }
             return Future.all(reads);
@@ -219,8 +220,8 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
 
     private static RelationshipTuple memberOf(String organizationUserId, String organizationId) {
         return new RelationshipTuple(DomainUtil.authzMember(organizationUserId, organizationId),
-                                     AuthzUtil.MEMBER_RELATION,
-                                     AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId));
+                                     AuthzConstants.MEMBER_RELATION,
+                                     AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId));
     }
 
     private Future<OrganizationMembership> requireMembership(String organizationUserId, String organizationId) {

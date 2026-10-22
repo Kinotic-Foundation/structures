@@ -12,7 +12,7 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.schema.FunctionDefinition;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.persistence.api.model.FastestType;
 import org.kinotic.persistence.api.model.QueryParameter;
 import org.kinotic.persistence.api.model.TenantSpecificId;
@@ -31,7 +31,7 @@ import java.util.List;
  */
 @Publish
 @Zone(DomainUtil.APP_API_ZONE)
-@AuthzResource(value = AuthzUtil.ENTITY_DEFINITION_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
+@AuthzResource(value = AuthzConstants.ENTITY_DEFINITION_TYPE, parent = AuthzConstants.APPLICATION_TYPE)
 public interface AdminJsonEntitiesRepository {
 
     /**
@@ -65,7 +65,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteById(String entityDefinitionId, TenantSpecificId id, ScopedParticipant participant);
 
     /**
@@ -77,7 +77,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteByQuery(String entityDefinitionId, String query, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -124,7 +124,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<List<RawJson>> namedQuery(String entityDefinitionId,
                                      String queryName,
                                      List<QueryParameter> queryParameters,
@@ -142,7 +142,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Page<RawJson>> namedQueryPage(String entityDefinitionId,
                                          String queryName,
                                          List<QueryParameter> queryParameters,

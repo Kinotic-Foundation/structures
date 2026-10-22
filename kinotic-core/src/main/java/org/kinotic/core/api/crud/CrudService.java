@@ -1,7 +1,7 @@
 package org.kinotic.core.api.crud;
 
 import org.kinotic.idl.api.annotations.AuthzCheck;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import io.vertx.core.Future;
 import org.kinotic.idl.api.annotations.McpToolInfo;
 
@@ -97,6 +97,6 @@ public interface CrudService<T, ID> {
      * @return {@link Future} signaling when the index has been refreshed
      */
     @McpToolInfo(idempotentHint = true)
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT)
     Future<Void> syncIndex();
 }

@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.ZoneRulesService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
@@ -136,7 +137,7 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
         List<ServiceDirectoryEntry> register = List.of(entry(appId, DomainUtil.applicationZone(TEST_ORG_ID, appId),
                                                              definition(NAMESPACE, "ReportService")));
 
-        assertRefused(DIRECTORY_SERVICE, "register", runtime, register, AuthzUtil.CAN_REGISTER_SERVICES);
+        assertRefused(DIRECTORY_SERVICE, "register", runtime, register, AuthzConstants.CAN_REGISTER_SERVICES);
         grantRuntime(appId);
         assertTrue(awaitUntil(() -> admitted(DIRECTORY_SERVICE, "register", runtime, register)), "the granted runtime was never admitted");
         // a person of the organization holding no role registers no application's services
@@ -145,7 +146,7 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
                                                                             Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
                                                                                    ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                                             List.of());
-        assertRefused(DIRECTORY_SERVICE, "register", person, register, AuthzUtil.CAN_REGISTER_SERVICES);
+        assertRefused(DIRECTORY_SERVICE, "register", person, register, AuthzConstants.CAN_REGISTER_SERVICES);
     }
 
     @Test
@@ -181,8 +182,8 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
     private void grantRuntime(String applicationId) throws Exception {
         await(relationships.ensureBound(AuthzStoreService.SYSTEM,
                                         "runtime-of-" + runtime.getId() + "-" + applicationId,
-                                        AuthzUtil.APPLICATION_RUNTIME_ROLE,
-                                        AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()),
+                                        AuthzConstants.APPLICATION_RUNTIME_ROLE,
+                                        AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()),
                                         DomainUtil.authzApplication(TEST_ORG_ID, applicationId)));
     }
 

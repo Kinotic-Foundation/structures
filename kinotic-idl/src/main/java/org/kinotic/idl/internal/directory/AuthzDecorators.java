@@ -16,6 +16,7 @@ import org.kinotic.idl.api.schema.StringC3Type;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.core.annotation.AnnotationUtils;
 
@@ -345,8 +346,8 @@ final class AuthzDecorators {
                                      List<ParameterDefinition> parameters,
                                      ConversionContext conversionContext) {
         String ret;
-        if (AuthzUtil.SYSTEM_TYPE.equals(resource)) {
-            ret = AuthzUtil.SYSTEM_OBJECT_ID;
+        if (AuthzConstants.SYSTEM_TYPE.equals(resource)) {
+            ret = AuthzConstants.SYSTEM_OBJECT_ID;
         } else if (resource.equals(parent)) {
             ret = parentId(parent, parameters, conversionContext);
         } else {
@@ -367,11 +368,11 @@ final class AuthzDecorators {
         String verb = leadingWord(functionName);
         String ret;
         if (READ_VERBS.contains(verb)) {
-            ret = AuthzUtil.CAN_READ;
+            ret = AuthzConstants.CAN_READ;
         } else if (EDIT_VERBS.contains(verb) || CREATE_VERB.equals(verb)) {
-            ret = AuthzUtil.CAN_EDIT;
+            ret = AuthzConstants.CAN_EDIT;
         } else if (DELETE_VERBS.contains(verb)) {
-            ret = AuthzUtil.CAN_DELETE;
+            ret = AuthzConstants.CAN_DELETE;
         } else {
             ret = null;
         }
@@ -421,10 +422,10 @@ final class AuthzDecorators {
             ret = propertyReference(parameters, idName, conversionContext);
         }
         if (ret == null && SCOPED_PARENTS.contains(parent)) {
-            ret = "{" + AuthzUtil.SCOPE_REFERENCE_PREFIX + idName + "}";
+            ret = "{" + AuthzConstants.SCOPE_REFERENCE_PREFIX + idName + "}";
         }
-        if (ret == null && AuthzUtil.SYSTEM_TYPE.equals(parent)) {
-            ret = AuthzUtil.SYSTEM_OBJECT_ID;
+        if (ret == null && AuthzConstants.SYSTEM_TYPE.equals(parent)) {
+            ret = AuthzConstants.SYSTEM_OBJECT_ID;
         }
         return ret;
     }

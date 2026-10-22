@@ -12,6 +12,7 @@ import org.kinotic.domain.internal.api.repositories.OrganizationMembershipReposi
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
@@ -82,8 +83,8 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
     // organization nobody can reach rather than one nobody stores
     private Future<Organization> contained(Organization organization) {
         return relationships.ensure(AuthzStoreService.SYSTEM,
-                                    List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
-                                                                   AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organization.getId()))))
+                                    List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
+                                                                   AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId()))))
                             .map(organization);
     }
 

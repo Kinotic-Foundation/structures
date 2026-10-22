@@ -3,7 +3,7 @@ package org.kinotic.system.api.services.deployment;
 import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 /**
  * The operations on the platform's infrastructure behind the management plane's deployment
@@ -12,7 +12,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
  * request before it reaches this service, which checks nothing about the caller.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_WORKLOADS)
+@AuthzResource(value = AuthzConstants.SYSTEM_TYPE, resourceId = AuthzConstants.SYSTEM_OBJECT_ID, permission = AuthzConstants.CAN_MANAGE_WORKLOADS)
 public interface DeploymentOperationsService {
 
     /**

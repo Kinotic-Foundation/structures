@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.model.MigrationRequest;
 import org.kinotic.management.api.model.MigrationResult;
 
@@ -13,7 +13,7 @@ import org.kinotic.management.api.model.MigrationResult;
  * This service allows external clients to apply their own migrations to projects.
  */
 @Publish
-@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
+@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzConstants.APPLICATION_TYPE)
 public interface MigrationService {
 
     /**
@@ -22,7 +22,7 @@ public interface MigrationService {
      * @param migrationRequest the request containing migrations and project information
      * @return a future that completes with the migration result
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{migrationRequest.projectId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT, resourceId = "{migrationRequest.projectId}")
     Future<MigrationResult> executeMigrations(MigrationRequest migrationRequest);
 
     /**
@@ -41,6 +41,6 @@ public interface MigrationService {
      * @param version the migration version to check
      * @return a future that completes with true if the migration has been applied, false otherwise
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ)
     Future<Boolean> isMigrationApplied(String projectId, String version);
 }

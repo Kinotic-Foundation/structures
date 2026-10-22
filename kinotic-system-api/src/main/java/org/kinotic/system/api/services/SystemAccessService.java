@@ -8,7 +8,7 @@ import org.kinotic.authz.api.model.Subject;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 import java.util.List;
 
@@ -19,20 +19,20 @@ import java.util.List;
  * machines.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
+@AuthzResource(value = AuthzConstants.SYSTEM_TYPE, resourceId = AuthzConstants.SYSTEM_OBJECT_ID)
 public interface SystemAccessService {
 
     /**
      * Every role a grant on the system can name: the built-in roles the model defines, each with the
      * permissions it bundles.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles();
 
     /**
      * The grants made on the system.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants();
 
     /**
@@ -43,7 +43,7 @@ public interface SystemAccessService {
      * @param roleId  the role granted, a built-in role's id
      * @return the grant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_ACCESS)
     Future<Grant> grant(Subject subject, String roleId);
 
     /**
@@ -51,7 +51,7 @@ public interface SystemAccessService {
      *
      * @param grantId the grant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_ACCESS)
     Future<Void> revoke(String grantId);
 
     /**
@@ -61,7 +61,7 @@ public interface SystemAccessService {
      * @param subject    the system user or machine
      * @param permission the permission's short name, such as {@code can_manage_workloads}
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<AccessExplanation> explain(Subject subject, String permission);
 
 }

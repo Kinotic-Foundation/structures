@@ -7,13 +7,13 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.WatchEvent;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 /**
  * The ledger of every watched record on the platform, as the console reads it.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
+@AuthzResource(value = AuthzConstants.SYSTEM_TYPE, resourceId = AuthzConstants.SYSTEM_OBJECT_ID)
 public interface WatchEventService {
 
     /**
@@ -24,7 +24,7 @@ public interface WatchEventService {
      * @param pageable the page to return
      * @return a future that will complete with a page of ledger entries
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_CLUSTER)
     Future<Page<WatchEvent>> findAll(Pageable pageable);
 
 }

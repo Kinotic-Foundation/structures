@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
@@ -249,11 +250,11 @@ public class AuthzModelGeneratorTest {
         assertEquals(List.of("system_role", "vm_node_role"), directTypes(type(model, "system_role_binding"), "role"));
         assertEquals(List.of("tenant_role"), directTypes(type(model, "tenant_role_binding"), "role"));
         assertTrue(model.grantable("project.editor", "organization"));
-        assertFalse(model.grantable(AuthzUtil.ORGANIZATION_ADMIN_ROLE, "project"));
+        assertFalse(model.grantable(AuthzConstants.ORGANIZATION_ADMIN_ROLE, "project"));
         assertFalse(model.grantable("project.editor", "system"));
         assertFalse(model.grantable("tenant.admin", "organization"));
         assertEquals(Set.of("application", "organization", "project"), model.grantableOn("project", "organization"));
-        assertEquals(Set.of(), model.grantableOn(AuthzUtil.SYSTEM_TYPE, "organization"));
+        assertEquals(Set.of(), model.grantableOn(AuthzConstants.SYSTEM_TYPE, "organization"));
         assertEquals(Set.of("organization", "project"), model.catalog("organization").keySet());
     }
 
@@ -293,9 +294,9 @@ public class AuthzModelGeneratorTest {
         // the admin of a container holds everything inside it and its own, the developer everything but the container's own
         assertEquals(Set.of("project_can_read", "project_can_edit", "project_can_deploy", "project_can_delete",
                             "organization_can_read_members", "organization_can_manage_members"),
-                     model.roles().get(AuthzUtil.ORGANIZATION_ADMIN_ROLE));
+                     model.roles().get(AuthzConstants.ORGANIZATION_ADMIN_ROLE));
         assertEquals(model.roles().get("project.admin"), model.roles().get("application.admin"));
-        assertEquals(model.roles().get("project.admin"), model.roles().get(AuthzUtil.APPLICATION_DEVELOPER_ROLE));
+        assertEquals(model.roles().get("project.admin"), model.roles().get(AuthzConstants.APPLICATION_DEVELOPER_ROLE));
         // a permission named can_read_<something> only reads, so the viewer holds it
         assertEquals(Set.of("organization_can_read_members"), model.roles().get("organization.viewer"));
         assertEquals(Set.of("organization_can_read_members", "organization_can_manage_members"), model.roles().get("organization.editor"));
@@ -322,14 +323,14 @@ public class AuthzModelGeneratorTest {
         // the administrator holds everything in the model
         Set<String> everything = new TreeSet<>();
         model.permissions().forEach((type, permissions) -> permissions.forEach(permission -> everything.add(AuthzUtil.permissionName(type, permission))));
-        assertEquals(everything, model.roles().get(AuthzUtil.SYSTEM_ADMIN_ROLE));
+        assertEquals(everything, model.roles().get(AuthzConstants.SYSTEM_ADMIN_ROLE));
         // the maintainer holds the system's own permissions and reads everything on it
         assertEquals(Set.of("system_can_read_cluster", "system_can_manage_machines",
                             "organization_can_read_members", "project_can_read", "vm_node_can_read"),
-                     model.roles().get(AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+                     model.roles().get(AuthzConstants.SYSTEM_MAINTAINER_ROLE));
         // support reads the system and everything on it
         assertEquals(Set.of("system_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
-                     model.roles().get(AuthzUtil.SYSTEM_SUPPORT_ROLE));
+                     model.roles().get(AuthzConstants.SYSTEM_SUPPORT_ROLE));
         assertFalse(model.roles().containsKey("application.maintainer"));
     }
 

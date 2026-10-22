@@ -13,6 +13,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.security.ApplicationAccessService;
@@ -62,8 +63,8 @@ public class ApplicationIsolationTests extends KinoticTestBase {
         ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectType.USER, bob.getId());
-        Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
-        Grant here = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), personHere)));
+        Resource personHere = new Resource(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
+        Grant here = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), personHere)));
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "findById", caller, List.of(person.getId(), "row-1"))),
                    "the editor was never admitted to its own application's rows");
 
@@ -72,8 +73,8 @@ public class ApplicationIsolationTests extends KinoticTestBase {
         assertRefused(ENTITIES_SERVICE, "bulkUpdate", caller, List.of(theirs, List.of(Map.of("id", "row-1"))), theirs);
 
         // a grant on the whole application reaches every definition it holds, and still none it does not
-        Resource application = new Resource(AuthzUtil.APPLICATION_TYPE, TEST_APP_ID);
-        Grant everywhere = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.ADMIN), application)));
+        Resource application = new Resource(AuthzConstants.APPLICATION_TYPE, TEST_APP_ID);
+        Grant everywhere = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.ADMIN), application)));
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "deleteById", caller, List.of(person.getId(), "row-1"))),
                    "the admin granted on the application was never admitted");
         assertRefused(ENTITIES_SERVICE, "findById", caller, List.of(theirs, "row-1"), theirs);

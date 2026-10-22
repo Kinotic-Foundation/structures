@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -84,16 +85,16 @@ public class OrganizationGraphBootstrap {
     }
 
     private Future<Boolean> place(Organization organization) {
-        String object = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organization.getId());
+        String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
         return administered(object).compose(administered -> administered
                 ? Future.succeededFuture(false)
-                : relationships.ensure(SYSTEM, List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
+                : relationships.ensure(SYSTEM, List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
                                                                                 object)))
                                .compose(v -> members(organization.getId(), 0))
                                .compose(v -> organization.getCreatedBy() == null
                                        ? Future.succeededFuture()
                                        : relationships.bind(SYSTEM,
-                                                            AuthzUtil.ORGANIZATION_ADMIN_ROLE,
+                                                            AuthzConstants.ORGANIZATION_ADMIN_ROLE,
                                                             DomainUtil.authzMember(organization.getCreatedBy(), organization.getId()),
                                                             object).mapEmpty())
                                .map(true));
@@ -104,8 +105,8 @@ public class OrganizationGraphBootstrap {
             List<RelationshipTuple> enabled = page.getContent().stream()
                                                   .filter(OrganizationMember::enabled)
                                                   .map(member -> new RelationshipTuple(DomainUtil.authzMember(member.id(), organizationId),
-                                                                                       AuthzUtil.MEMBER_RELATION,
-                                                                                       AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId)))
+                                                                                       AuthzConstants.MEMBER_RELATION,
+                                                                                       AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId)))
                                                   .toList();
             Future<Void> ret = relationships.ensure(SYSTEM, enabled);
             return page.getContent().size() < PAGE_SIZE ? ret : ret.compose(v -> members(organizationId, pageNumber + 1));
@@ -114,6 +115,6 @@ public class OrganizationGraphBootstrap {
 
     private Future<Boolean> administered(String object) {
         return relationships.findGrants(SYSTEM, object)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId())));
+                            .map(grants -> grants.stream().anyMatch(grant -> AuthzConstants.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId())));
     }
 }

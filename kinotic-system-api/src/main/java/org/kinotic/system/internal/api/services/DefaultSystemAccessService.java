@@ -20,6 +20,7 @@ import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity
 import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.system.api.services.SystemAccessService;
 import org.springframework.stereotype.Component;
@@ -33,8 +34,8 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 @RequiredArgsConstructor
 public class DefaultSystemAccessService implements SystemAccessService {
 
-    private static final Resource SYSTEM_RESOURCE = new Resource(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
-    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
+    private static final Resource SYSTEM_RESOURCE = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
+    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final ServiceDirectory directory;
     private final AuthzModelGenerator generator;
@@ -44,7 +45,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
 
     @Override
     public Future<List<RoleDefinition>> findRoles() {
-        return model().map(model -> model.builtInRoles(AuthzUtil.SYSTEM_TYPE));
+        return model().map(model -> model.builtInRoles(AuthzConstants.SYSTEM_TYPE));
     }
 
     @Override
@@ -57,7 +58,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
         validate(subject);
         Validate.notBlank(roleId, "roleId cannot be blank");
         return model().compose(model -> {
-            if (!model.roles().containsKey(roleId) || !model.grantable(roleId, AuthzUtil.SYSTEM_TYPE)) {
+            if (!model.roles().containsKey(roleId) || !model.grantable(roleId, AuthzConstants.SYSTEM_TYPE)) {
                 throw new IllegalArgumentException("No role of the system has id " + roleId);
             }
             return requireStaff(subject);
@@ -75,7 +76,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
     public Future<AccessExplanation> explain(Subject subject, String permission) {
         validate(subject);
         Validate.notBlank(permission, "permission cannot be blank");
-        String name = AuthzUtil.permissionName(AuthzUtil.SYSTEM_TYPE, permission);
+        String name = AuthzUtil.permissionName(AuthzConstants.SYSTEM_TYPE, permission);
         return requireStaff(subject).compose(stored -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
                 .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> {
                     RelationshipTuple holds = new RelationshipTuple(userOf(stored), name, SYSTEM_OBJECT);
@@ -120,6 +121,6 @@ public class DefaultSystemAccessService implements SystemAccessService {
     }
 
     private static String userOf(Subject subject) {
-        return AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id());
+        return AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id());
     }
 }

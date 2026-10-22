@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.model.github.GitHubAppInstallation;
 import org.kinotic.management.api.model.github.GitHubInstallCompletion;
 
@@ -29,7 +29,7 @@ import org.kinotic.management.api.model.github.GitHubInstallCompletion;
  * organization without completing the round-trip below.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
+@AuthzResource(value = AuthzConstants.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
 public interface GitHubAppInstallationService {
 
     /**
@@ -50,7 +50,7 @@ public interface GitHubAppInstallationService {
      *                 page, which completes the install itself. May be null.
      * @throws IllegalArgumentException when {@code returnTo} is neither a path nor a URL on an allowed origin
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_INTEGRATIONS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_INTEGRATIONS)
     Future<String> startInstall(String returnTo);
 
     /**
@@ -74,7 +74,7 @@ public interface GitHubAppInstallationService {
      *         doesn't match the caller's org, or when the authorizing GitHub user cannot
      *         access the claimed installation
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_INTEGRATIONS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_INTEGRATIONS)
     Future<GitHubInstallCompletion> completeInstall(long installationId, String state, String code);
 
     /**
@@ -82,7 +82,7 @@ public interface GitHubAppInstallationService {
      * GitHub is not yet linked. Drives the "linked / not linked" indicator in the
      * org-settings UI.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_INTEGRATIONS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_INTEGRATIONS)
     Future<GitHubAppInstallation> findForCurrentOrg();
 
     /**
@@ -90,6 +90,6 @@ public interface GitHubAppInstallationService {
      * to {@link #findForCurrentOrg()} before completing. No-op when nothing is linked. The
      * organization can link again through {@link #startInstall(String)}.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_INTEGRATIONS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_INTEGRATIONS)
     Future<Void> unlink();
 }

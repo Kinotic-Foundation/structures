@@ -31,6 +31,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -94,7 +95,7 @@ public class DomainUtil {
     public static final String ON_BEHALF_OF_METADATA_KEY = "onBehalfOf";
 
     // The authorization types whose ids are unique only within an organization, qualified by it in the stores
-    private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE);
+    private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzConstants.APPLICATION_TYPE, AuthzConstants.PROJECT_TYPE);
 
     /**
      * The user a participant acts as in the authorization stores, in {@code user:id} form. An organization user acts
@@ -114,7 +115,7 @@ public class DomainUtil {
         if (organizationId == null
                 || participant instanceof ApplicationParticipant
                 || ParticipantConstants.PARTICIPANT_TYPE_MACHINE.equals(metadata.get(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY))) {
-            ret = AuthzUtil.object(AuthzUtil.USER_TYPE, id);
+            ret = AuthzUtil.object(AuthzConstants.USER_TYPE, id);
         } else {
             ret = authzMember(id, organizationId);
         }
@@ -132,7 +133,7 @@ public class DomainUtil {
     public static String authzMember(String organizationUserId, String organizationId) {
         Validate.notBlank(organizationUserId, "organizationUserId cannot be blank");
         Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return AuthzUtil.object(AuthzUtil.USER_TYPE, organizationUserId + "@" + organizationId);
+        return AuthzUtil.object(AuthzConstants.USER_TYPE, organizationUserId + "@" + organizationId);
     }
 
     /**
@@ -189,7 +190,7 @@ public class DomainUtil {
      * @return {@code <organizationId>.<applicationId>}
      */
     public static String authzApplicationId(String organizationId, String applicationId) {
-        return authzId(AuthzUtil.APPLICATION_TYPE, organizationId, applicationId);
+        return authzId(AuthzConstants.APPLICATION_TYPE, organizationId, applicationId);
     }
 
     /**
@@ -200,7 +201,7 @@ public class DomainUtil {
      * @return the object
      */
     public static String authzApplication(String organizationId, String applicationId) {
-        return AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, authzApplicationId(organizationId, applicationId));
+        return AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, authzApplicationId(organizationId, applicationId));
     }
 
     /**
@@ -224,13 +225,13 @@ public class DomainUtil {
      * @return the tuples, the end user tuple first
      */
     public static List<RelationshipTuple> applicationUserTuples(ApplicationParticipantIdentity user) {
-        String me = AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId());
+        String me = AuthzUtil.object(AuthzConstants.USER_TYPE, user.getId());
         String application = authzApplication(user.getOrganizationId(), user.getApplicationId());
-        List<RelationshipTuple> ret = new ArrayList<>(List.of(new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, application)));
+        List<RelationshipTuple> ret = new ArrayList<>(List.of(new RelationshipTuple(me, AuthzConstants.END_USER_RELATION, application)));
         if (user.getTenantId() != null) {
-            String tenant = AuthzUtil.object(AuthzUtil.TENANT_TYPE, user.getTenantId());
+            String tenant = AuthzUtil.object(AuthzConstants.TENANT_TYPE, user.getTenantId());
             ret.add(containment(application, tenant));
-            ret.add(new RelationshipTuple(me, AuthzUtil.MEMBER_RELATION, tenant));
+            ret.add(new RelationshipTuple(me, AuthzConstants.MEMBER_RELATION, tenant));
         }
         return ret;
     }
@@ -245,9 +246,9 @@ public class DomainUtil {
      * @return the edges to give the check
      */
     public static List<RelationshipTuple> tenantDefinitionEdges(String definitionId, String tenantId) {
-        String object = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(definitionId, tenantId));
-        return List.of(new RelationshipTuple(AuthzUtil.object(AuthzUtil.ENTITY_DEFINITION_TYPE, definitionId), AuthzUtil.DEFINITION_RELATION, object),
-                       new RelationshipTuple(AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenantId), AuthzUtil.TENANT_TYPE, object));
+        String object = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(definitionId, tenantId));
+        return List.of(new RelationshipTuple(AuthzUtil.object(AuthzConstants.ENTITY_DEFINITION_TYPE, definitionId), AuthzConstants.DEFINITION_RELATION, object),
+                       new RelationshipTuple(AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenantId), AuthzConstants.TENANT_TYPE, object));
     }
 
     /**

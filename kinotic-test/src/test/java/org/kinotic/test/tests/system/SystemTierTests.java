@@ -29,6 +29,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipan
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.telemetry.ServerLogQuery;
 import org.kinotic.management.api.services.telemetry.LogService;
@@ -134,13 +135,13 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void theSeededStaffAreBoundOnce() throws Exception {
         // the system server sweeps the system once the store runs a model, shortly after the servers start
-        assertTrue(awaitUntil(() -> grantsOf(SEEDED_ADMIN_ID, AuthzUtil.SYSTEM_ADMIN_ROLE) == 1), "the seeded system user never administered the system");
+        assertTrue(awaitUntil(() -> grantsOf(SEEDED_ADMIN_ID, AuthzConstants.SYSTEM_ADMIN_ROLE) == 1), "the seeded system user never administered the system");
         assertTrue(awaitUntil(() -> grantsOf(SEEDED_VM_MANAGER_ID, VmNodeOrchestrationService.REGISTRAR_ROLE) == 1), "the seeded vm-manager never registered nodes");
 
         // the administrator holds everything on the system and inside it
         Participant admin = userParticipant(SEEDED_ADMIN_ID);
         authorize(MEMBER_SERVICE, "createMachine", admin, List.of("a machine"));
-        authorize(ACCESS_SERVICE, "grant", admin, List.of(new Subject(SubjectType.USER, SEEDED_ADMIN_ID), AuthzUtil.SYSTEM_SUPPORT_ROLE));
+        authorize(ACCESS_SERVICE, "grant", admin, List.of(new Subject(SubjectType.USER, SEEDED_ADMIN_ID), AuthzConstants.SYSTEM_SUPPORT_ROLE));
         authorize(ORGANIZATION_SERVICE, "findMembers", admin, Arrays.asList(organization().getId(), null, PAGE));
         authorize(NODE_SERVICE, "registerNode", admin, List.of(NodeFixtures.registration("any-node", 1, 1024, 1024)));
     }
@@ -149,7 +150,7 @@ public class SystemTierTests extends KinoticTestBase {
     public void supportReadsTheSystemAndIsRefusedItsWrites() throws Exception {
         SystemParticipantIdentity support = systemUser("system-user");
         Subject subject = new Subject(SubjectType.USER, support.getId());
-        Grant grant = await(access.grant(subject, AuthzUtil.SYSTEM_SUPPORT_ROLE));
+        Grant grant = await(access.grant(subject, AuthzConstants.SYSTEM_SUPPORT_ROLE));
         Organization organization = organization();
         Participant caller = userParticipant(support.getId());
 
@@ -162,7 +163,7 @@ public class SystemTierTests extends KinoticTestBase {
         authorize(LOG_SERVICE, "serverHistory", caller, List.of(Map.of("telemetryServiceName", "kinotic-test")));
         assertRefused(MEMBER_SERVICE, "createMachine", caller, List.of("a machine"), "system_can_manage_machines");
         assertRefused(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"), "system_can_manage_workloads");
-        assertRefused(ACCESS_SERVICE, "grant", caller, List.of(subject, AuthzUtil.SYSTEM_SUPPORT_ROLE), "system_can_manage_access");
+        assertRefused(ACCESS_SERVICE, "grant", caller, List.of(subject, AuthzConstants.SYSTEM_SUPPORT_ROLE), "system_can_manage_access");
 
         AccessExplanation explanation = await(access.explain(subject, "can_read_cluster"));
         assertTrue(explanation.allowed());
@@ -178,7 +179,7 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void aMaintainerRunsTheSystemAndIsRefusedANodesReports() throws Exception {
         SystemParticipantIdentity maintainer = systemUser("system-user");
-        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzConstants.SYSTEM_MAINTAINER_ROLE));
         Participant caller = userParticipant(maintainer.getId());
 
         assertTrue(awaitUntil(() -> admitted(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"))), "the maintainer never managed workloads");
@@ -196,7 +197,7 @@ public class SystemTierTests extends KinoticTestBase {
         MachineParticipantIdentity other = machine("tier bystander");
         SystemParticipantIdentity maintainer = systemUser("system-user");
         await(access.grant(new Subject(SubjectType.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
-        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzConstants.SYSTEM_MAINTAINER_ROLE));
         Participant registrarCaller = machineParticipant(registrar.getId());
         Participant otherCaller = machineParticipant(other.getId());
         VmNodeRegistration node = NodeFixtures.registration("tier-" + suffix(), 4, 4096, 10240);
@@ -241,9 +242,9 @@ public class SystemTierTests extends KinoticTestBase {
         SystemParticipantIdentity user = systemUser("system-user");
 
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectType.USER, member.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.USER, member.getId()), AuthzConstants.SYSTEM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectType.GROUP, user.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.GROUP, user.getId()), AuthzConstants.SYSTEM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> access.grant(new Subject(SubjectType.USER, user.getId()), "project.editor-of-nothing")));
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.revoke("no-such-grant")));
@@ -251,21 +252,21 @@ public class SystemTierTests extends KinoticTestBase {
         // organization's or a tenant's
         List<RoleDefinition> defined = await(access.findRoles());
         List<String> roles = defined.stream().map(RoleDefinition::id).toList();
-        assertTrue(roles.containsAll(List.of(AuthzUtil.SYSTEM_ADMIN_ROLE, AuthzUtil.SYSTEM_MAINTAINER_ROLE, AuthzUtil.SYSTEM_SUPPORT_ROLE,
+        assertTrue(roles.containsAll(List.of(AuthzConstants.SYSTEM_ADMIN_ROLE, AuthzConstants.SYSTEM_MAINTAINER_ROLE, AuthzConstants.SYSTEM_SUPPORT_ROLE,
                                              VmNodeOrchestrationService.REGISTRAR_ROLE, VmNodeOrchestrationService.AGENT_ROLE)), roles.toString());
-        Set<String> organizationTree = Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE,
-                                              AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.TENANT_TYPE);
+        Set<String> organizationTree = Set.of(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.APPLICATION_TYPE, AuthzConstants.PROJECT_TYPE,
+                                              AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.TENANT_TYPE);
         assertTrue(defined.stream().noneMatch(role -> organizationTree.contains(role.resourceType())), roles.toString());
-        assertTrue(defined.stream().allMatch(role -> role.grantableOn().contains(AuthzUtil.SYSTEM_TYPE)), roles.toString());
+        assertTrue(defined.stream().allMatch(role -> role.grantableOn().contains(AuthzConstants.SYSTEM_TYPE)), roles.toString());
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectType.USER, user.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.USER, user.getId()), AuthzConstants.ORGANIZATION_ADMIN_ROLE)));
     }
 
     @Test
     public void theTelemetryTenantFollowsTheSystemGrant() throws Exception {
         SystemParticipantIdentity newcomer = systemUser("system-user");
         SystemParticipantIdentity support = systemUser("system-user");
-        await(access.grant(new Subject(SubjectType.USER, support.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, support.getId()), AuthzConstants.SYSTEM_SUPPORT_ROLE));
         ServerLogQuery query = new ServerLogQuery().setTelemetryServiceName("kinotic-test").setStart(0).setEnd(1).setLimit(1);
 
         assertInstanceOf(AuthorizationException.class, failure(() -> runAs(userParticipant(newcomer.getId()), () -> logService.serverHistory(query))));

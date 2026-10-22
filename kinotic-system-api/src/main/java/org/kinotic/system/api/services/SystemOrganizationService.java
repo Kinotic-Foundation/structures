@@ -8,7 +8,7 @@ import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
@@ -22,7 +22,7 @@ import org.kinotic.management.api.model.PendingInviteSummary;
  * reaches every organization on it.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, parent = AuthzUtil.SYSTEM_TYPE)
+@AuthzResource(value = AuthzConstants.ORGANIZATION_TYPE, parent = AuthzConstants.SYSTEM_TYPE)
 public interface SystemOrganizationService {
 
     /**
@@ -82,7 +82,7 @@ public interface SystemOrganizationService {
      * @param pageable the page settings to use
      * @return a page of {@link OrganizationMember}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_MEMBERS)
     Future<Page<OrganizationMember>> findMembers(String organizationId, Pageable pageable);
 
     /**
@@ -93,7 +93,7 @@ public interface SystemOrganizationService {
      * @param pageable the page settings to use
      * @return a page of matching {@link OrganizationMember}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_MEMBERS)
     Future<Page<OrganizationMember>> searchMembers(String searchText, String organizationId, Pageable pageable);
 
     /**
@@ -104,7 +104,7 @@ public interface SystemOrganizationService {
      * @param pageable the page settings to use
      * @return a page of the application's users
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_MEMBERS)
     Future<Page<ApplicationParticipantIdentity>> findApplicationUsers(String organizationId,
                                                                       String applicationId,
                                                                       Pageable pageable);
@@ -118,7 +118,7 @@ public interface SystemOrganizationService {
      * @param pageable the page settings to use
      * @return a page of the application's matching users
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_MEMBERS)
     Future<Page<ApplicationParticipantIdentity>> searchApplicationUsers(String searchText,
                                                                         String organizationId,
                                                                         String applicationId,
@@ -133,7 +133,7 @@ public interface SystemOrganizationService {
      * @param pageable the page settings to use
      * @return a page of {@link PendingInviteSummary}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_MEMBERS)
     Future<Page<PendingInviteSummary>> findPendingInvites(String organizationId,
                                                                      String applicationId,
                                                                      Pageable pageable);

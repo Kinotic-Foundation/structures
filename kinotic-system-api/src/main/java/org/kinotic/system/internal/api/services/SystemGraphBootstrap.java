@@ -11,6 +11,7 @@ import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.system.api.services.workload.VmNodeOrchestrationService;
 import org.kinotic.system.api.services.workload.VmNodeService;
@@ -38,7 +39,7 @@ public class SystemGraphBootstrap {
     private static final long RETRY_MILLIS = 2_000;
     // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
-    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
+    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final Vertx vertx;
     private final ParticipantIdentityService identities;
@@ -70,7 +71,7 @@ public class SystemGraphBootstrap {
 
     private Future<Boolean> administered() {
         return relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzUtil.SYSTEM_ADMIN_ROLE.equals(grant.roleId())));
+                            .map(grants -> grants.stream().anyMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId())));
     }
 
     private Future<Integer> placeStaff() {
@@ -85,15 +86,15 @@ public class SystemGraphBootstrap {
                     .compose(v -> identities.findMachinesByScope(null, null, page))
                     .compose(machines -> bindEach(machines.getContent().stream()
                                                           .filter(MachineParticipantIdentity::isEnabled)
-                                                          .map(machine -> AuthzUtil.object(AuthzUtil.USER_TYPE, machine.getId()))
+                                                          .map(machine -> AuthzUtil.object(AuthzConstants.USER_TYPE, machine.getId()))
                                                           .toList(),
                                                   VmNodeOrchestrationService.REGISTRAR_ROLE))
                     .compose(bound -> identities.findSystemUsers(page)
                                                 .compose(users -> bindEach(users.getContent().stream()
                                                                                 .filter(SystemParticipantIdentity::isEnabled)
-                                                                                .map(user -> AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId()))
+                                                                                .map(user -> AuthzUtil.object(AuthzConstants.USER_TYPE, user.getId()))
                                                                                 .toList(),
-                                                                           AuthzUtil.SYSTEM_ADMIN_ROLE))
+                                                                           AuthzConstants.SYSTEM_ADMIN_ROLE))
                                                 .map(more -> bound + more));
     }
 

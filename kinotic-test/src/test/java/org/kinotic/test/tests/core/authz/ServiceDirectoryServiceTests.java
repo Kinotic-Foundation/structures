@@ -26,6 +26,7 @@ import org.kinotic.idl.api.schema.StringC3Type;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.security.ApplicationAccessService;
@@ -98,9 +99,9 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
 
         // the gateway refuses a runtime the application has not granted the role to
         assertRefused(DIRECTORY_SERVICE, "register", runtimeCaller, List.of(entry),
-                      AuthzUtil.permissionName(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_REGISTER_SERVICES) + " on application:" + DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID));
-        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+                      AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES) + " on application:" + DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID));
+        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         assertTrue(awaitUntil(() -> admitted(DIRECTORY_SERVICE, "register", runtimeCaller, List.of(entry))), "the runtime was never admitted");
 
         await(runAs(runtimeCaller, () -> directoryService.register(entry)));
@@ -120,7 +121,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         assertEquals("tenant:{@tenantId}", generate.getResource() + ":" + generate.getResourceId());
         assertEquals(type + "_can_generate", generate.getPermissionResource() + "_" + generate.getPermission());
         // the application's store takes the service up: a viewer of its type, and the role it declares
-        assertTrue(awaitUntil(() -> roleIds().containsAll(List.of(AuthzUtil.roleId(type, AuthzUtil.VIEWER), type + ".generator"))
+        assertTrue(awaitUntil(() -> roleIds().containsAll(List.of(AuthzUtil.roleId(type, AuthzConstants.VIEWER), type + ".generator"))
                                     && seeded(type + ".generator")),
                    "the store never ran a model carrying the service");
         RoleDefinition generator = await(runAsOrganization(() -> access.findRoles(TEST_APP_ID))).stream()
@@ -133,9 +134,9 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectType.USER, bob.getId());
-        Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, tenantId);
+        Resource tenant = new Resource(AuthzConstants.TENANT_TYPE, tenantId);
         assertRefused(service, "findReports", caller, List.of(), type + "_can_read on tenant:" + tenantId);
-        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(type, AuthzUtil.VIEWER), tenant)));
+        await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(type, AuthzConstants.VIEWER), tenant)));
         assertTrue(awaitUntil(() -> admitted(service, "findReports", caller, List.of())), "the viewer was never admitted");
         assertRefused(service, "generate", caller, List.of("q3"), type + "_can_generate");
         await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, type + ".generator", tenant)));
@@ -165,15 +166,15 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(TEST_APP_ID, "Sample application", null)));
         MachineParticipantIdentity runtime = runtime();
         Participant runtimeCaller = machine(runtime.getId());
-        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         String type = "report" + suffix();
         String name = "ReportService" + suffix();
         String service = ZONE + "~" + NAMESPACE + "." + name;
         assertTrue(awaitUntil(() -> admitted(DIRECTORY_SERVICE, "register", runtimeCaller, List.of(entry(TEST_APP_ID, ZONE, reports(name, type))))),
                    "the runtime was never admitted");
         await(runAs(runtimeCaller, () -> directoryService.register(entry(TEST_APP_ID, ZONE, reports(name, type)))));
-        assertTrue(awaitUntil(() -> roleIds().contains(AuthzUtil.roleId(type, AuthzUtil.VIEWER))), "the store never ran a model carrying the service");
+        assertTrue(awaitUntil(() -> roleIds().contains(AuthzUtil.roleId(type, AuthzConstants.VIEWER))), "the store never ran a model carrying the service");
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
@@ -190,8 +191,8 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(TEST_APP_ID, "Sample application", null)));
         MachineParticipantIdentity runtime = runtime();
         Participant runtimeCaller = machine(runtime.getId());
-        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+        await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         String type = "report" + suffix();
         String name = "ReportService" + suffix();
         // the address @Publish() serves at: the zone and the name, no namespace between them
@@ -207,7 +208,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         assertNotNull(stored, "the service was not stored at the address it is served at");
         assertEquals(ZONE + "." + name, stored.getServiceDefinition().getQualifiedName());
         // the gateway finds the contract at the address and checks the declared permission
-        assertTrue(awaitUntil(() -> roleIds().contains(AuthzUtil.roleId(type, AuthzUtil.VIEWER))), "the store never ran a model carrying the service");
+        assertTrue(awaitUntil(() -> roleIds().contains(AuthzUtil.roleId(type, AuthzConstants.VIEWER))), "the store never ran a model carrying the service");
         String tenantId = "tenant-" + suffix();
         Participant caller = applicationParticipant(tenantId, endUser(tenantId).getId());
         assertRefused(service, "generate", caller, List.of("q1"), type + "_can_generate on tenant:" + tenantId);
@@ -222,7 +223,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
     private static ServiceDefinition reports(String name, String type, boolean generateChecked) {
         AuthzResourceC3Decorator resource = new AuthzResourceC3Decorator()
                 .setResourceType(type)
-                .setParent(AuthzUtil.TENANT_TYPE)
+                .setParent(AuthzConstants.TENANT_TYPE)
                 .setRoles(generateChecked
                                   ? List.of(new AuthzRoleDeclaration().setId(type + ".generator").setPermissions(List.of("can_generate")))
                                   : List.of());
@@ -230,7 +231,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         ret.setDecorators(List.of(resource));
         ret.addFunction(function("findReports", null));
         ret.addFunction(function("generate", generateChecked
-                ? new AuthzCheckC3Decorator().setPermission("can_generate").setResource(AuthzUtil.TENANT_TYPE)
+                ? new AuthzCheckC3Decorator().setPermission("can_generate").setResource(AuthzConstants.TENANT_TYPE)
                 : new AuthzCheckC3Decorator().setUnchecked(true), "name"));
         ret.addFunction(function("ping", new AuthzCheckC3Decorator().setUnchecked(true)));
         return ret;

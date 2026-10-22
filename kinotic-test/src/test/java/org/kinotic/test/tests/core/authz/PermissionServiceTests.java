@@ -29,6 +29,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.services.ApplicationService;
@@ -123,7 +124,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
                 new RoleDefinition(null, "Climber", null, false, ProjectService.RESOURCE_TYPE, null, Set.of("application_can_edit"))))));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition(null, "Reader", null, false, AuthzUtil.SYSTEM_TYPE, null, Set.of("project_can_read"))))));
+                new RoleDefinition(null, "Reader", null, false, AuthzConstants.SYSTEM_TYPE, null, Set.of("project_can_read"))))));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
                 new RoleDefinition("project.editor", "Project Editor", null, true, ProjectService.RESOURCE_TYPE, null, Set.of("project_can_edit"))))));
 
@@ -133,7 +134,7 @@ public class PermissionServiceTests extends KinoticTestBase {
 
         // a role a grant holds stays until the grant is revoked
         Application application = application();
-        Resource onApplication = new Resource(AuthzUtil.APPLICATION_TYPE, application.getId());
+        Resource onApplication = new Resource(AuthzConstants.APPLICATION_TYPE, application.getId());
         Subject holder = user(member(TEST_ORG_ID, "permission"));
         Grant grant = await(runAsOrganization(() -> permissions.grant(holder, saved.id(), onApplication)));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.deleteRole(saved.id()))));
@@ -145,7 +146,7 @@ public class PermissionServiceTests extends KinoticTestBase {
 
     @Test
     public void theOrganizationsTierOffersAndAcceptsOnlyItsOwnRoles() throws Exception {
-        Set<String> tier = Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE, AuthzUtil.ENTITY_DEFINITION_TYPE);
+        Set<String> tier = Set.of(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE, AuthzConstants.ENTITY_DEFINITION_TYPE);
         Map<String, Set<String>> catalog = await(runAsOrganization(permissions::findPermissions));
         assertTrue(tier.containsAll(catalog.keySet()), catalog.keySet().toString());
         List<RoleDefinition> roles = await(runAsOrganization(permissions::findRoles));
@@ -154,25 +155,25 @@ public class PermissionServiceTests extends KinoticTestBase {
             assertTrue(tier.containsAll(role.grantableOn()), "role " + role.id() + " is grantable outside the organization's tier");
         }
         List<String> ids = roles.stream().map(RoleDefinition::id).toList();
-        assertFalse(ids.contains(AuthzUtil.SYSTEM_SUPPORT_ROLE), ids.toString());
-        assertFalse(ids.contains(AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN)), ids.toString());
+        assertFalse(ids.contains(AuthzConstants.SYSTEM_SUPPORT_ROLE), ids.toString());
+        assertFalse(ids.contains(AuthzUtil.roleId(AuthzConstants.TENANT_TYPE, AuthzConstants.ADMIN)), ids.toString());
         assertFalse(ids.stream().anyMatch(id -> id.startsWith("vm_node.")), ids.toString());
         RoleDefinition projectEditor = roles.stream().filter(role -> role.id().equals("project.editor")).findFirst().orElseThrow();
-        assertEquals(Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE), projectEditor.grantableOn());
+        assertEquals(Set.of(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE), projectEditor.grantableOn());
 
         // a role homed above the resource, and a system role, are refused by the service
         Project project = project(application());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
-        Resource onOrganization = new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID);
+        Resource onOrganization = new Resource(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID);
         Subject subject = user(member(TEST_ORG_ID, "tier"));
-        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.ORGANIZATION_ADMIN_ROLE, onProject))));
-        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.SYSTEM_SUPPORT_ROLE, onOrganization))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzConstants.ORGANIZATION_ADMIN_ROLE, onProject))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzConstants.SYSTEM_SUPPORT_ROLE, onOrganization))));
 
         // and by the engine for a writer that skips the service
         String user = DomainUtil.authzMember(subject.id(), TEST_ORG_ID);
-        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, user,
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.ORGANIZATION_ADMIN_ROLE, user,
                                                                               DomainUtil.authzObject(TEST_ORG_ID, onProject))));
-        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.SYSTEM_SUPPORT_ROLE, user,
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.SYSTEM_SUPPORT_ROLE, user,
                                                                               DomainUtil.authzObject(TEST_ORG_ID, onOrganization))));
     }
 
@@ -182,7 +183,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         Project project = project(application);
         OrganizationParticipantIdentity member = member(TEST_ORG_ID, "permission");
         Subject subject = user(member);
-        Resource onApplication = new Resource(AuthzUtil.APPLICATION_TYPE, application.getId());
+        Resource onApplication = new Resource(AuthzConstants.APPLICATION_TYPE, application.getId());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
 
         Grant grant = await(runAsOrganization(() -> permissions.grant(subject, "project.editor", onApplication)));
@@ -192,12 +193,12 @@ public class PermissionServiceTests extends KinoticTestBase {
         // organization's administrator binding reaches it from the organization
         List<Grant> reaching = await(runAsOrganization(() -> permissions.findGrants(onProject)));
         assertTrue(reaching.contains(grant), reaching.toString());
-        assertTrue(reaching.stream().allMatch(listed -> listed.equals(grant) || AuthzUtil.ORGANIZATION_TYPE.equals(listed.resource().type())),
+        assertTrue(reaching.stream().allMatch(listed -> listed.equals(grant) || AuthzConstants.ORGANIZATION_TYPE.equals(listed.resource().type())),
                    reaching.toString());
-        AccessExplanation edits = await(runAsOrganization(() -> permissions.explain(subject, AuthzUtil.CAN_EDIT, onProject)));
+        AccessExplanation edits = await(runAsOrganization(() -> permissions.explain(subject, AuthzConstants.CAN_EDIT, onProject)));
         assertTrue(edits.allowed());
         assertEquals(List.of(grant), edits.through());
-        AccessExplanation deletes = await(runAsOrganization(() -> permissions.explain(subject, AuthzUtil.CAN_DELETE, onProject)));
+        AccessExplanation deletes = await(runAsOrganization(() -> permissions.explain(subject, AuthzConstants.CAN_DELETE, onProject)));
         assertFalse(deletes.allowed());
         assertTrue(deletes.through().isEmpty());
 
@@ -225,7 +226,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
         Grant grant = await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.GROUP, group.getId()), "project.viewer", onProject)));
         assertTrue(held(member, "project_can_read", onProject), "a member reads what the group was granted");
-        AccessExplanation reads = await(runAsOrganization(() -> permissions.explain(user(member), AuthzUtil.CAN_READ, onProject)));
+        AccessExplanation reads = await(runAsOrganization(() -> permissions.explain(user(member), AuthzConstants.CAN_READ, onProject)));
         assertTrue(reads.allowed());
         assertEquals(List.of(grant), reads.through());
 
@@ -254,7 +255,7 @@ public class PermissionServiceTests extends KinoticTestBase {
                                                                                    List.of());
         // the listing accepts the engine's cache window, so a grant just made may take a moment to show
         assertTrue(awaitUntil(() -> List.of(granted.getId()).equals(
-                           await(runAs(caller, () -> permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ))))),
+                           await(runAs(caller, () -> permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ))))),
                    "the caller never listed the project it was granted");
     }
 

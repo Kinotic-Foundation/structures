@@ -22,6 +22,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.internal.api.repositories.PendingSignUpRepository;
 import org.kinotic.domain.internal.api.services.EmailService;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
@@ -154,9 +155,9 @@ public class DefaultSignUpService implements SignUpService {
                                                                      // admin role on it, which reaches everything inside it
                                                                      return organizationService.save(savedOrg)
                                                                                                .compose(v -> relationships.bind(AuthzStoreService.SYSTEM,
-                                                                                                                                AuthzUtil.ORGANIZATION_ADMIN_ROLE,
+                                                                                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE,
                                                                                                                                 DomainUtil.authzMember(founder.getId(), savedOrg.getId()),
-                                                                                                                                AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, savedOrg.getId())))
+                                                                                                                                AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, savedOrg.getId())))
                                                                                                .map(DomainUtil.createParticipant(founder, membership));
                                                                  })
                                                                  // a founder whose membership or organization could not be

@@ -15,6 +15,7 @@ import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
 import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
@@ -130,17 +131,17 @@ public class ProjectDeployIdentityService {
 
     // Each role is bound under a binding id of the machine's own, so issuing credentials again binds each role once
     private Future<Void> bind(String machineId, MachineType machineType, Project project) {
-        String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, machineId);
-        String projectObject = AuthzUtil.object(AuthzUtil.PROJECT_TYPE,
-                                                DomainUtil.authzId(AuthzUtil.PROJECT_TYPE, project.getOrganizationId(), project.getId()));
+        String machine = AuthzUtil.object(AuthzConstants.USER_TYPE, machineId);
+        String projectObject = AuthzUtil.object(AuthzConstants.PROJECT_TYPE,
+                                                DomainUtil.authzId(AuthzConstants.PROJECT_TYPE, project.getOrganizationId(), project.getId()));
         String application = DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId());
         List<Map.Entry<String, String>> grants = new ArrayList<>();
-        grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.PROJECT_TYPE, AuthzUtil.EDITOR), projectObject));
+        grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.PROJECT_TYPE, AuthzConstants.EDITOR), projectObject));
         if (machineType == MachineType.APP_RUNTIME) {
-            grants.add(Map.entry(AuthzUtil.APPLICATION_RUNTIME_ROLE, application));
-            grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.ADMIN), application));
+            grants.add(Map.entry(AuthzConstants.APPLICATION_RUNTIME_ROLE, application));
+            grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.ADMIN), application));
         } else {
-            grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), application));
+            grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), application));
         }
         Future<Void> ret = Future.succeededFuture();
         for (Map.Entry<String, String> grant : grants) {

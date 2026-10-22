@@ -18,7 +18,7 @@ import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
 import org.kinotic.domain.api.utils.DomainUtil;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.repositories.ProjectRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.services.ApplicationService;
@@ -103,10 +103,10 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     // definition it reads, so a grant anywhere inside an application makes the application reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_READ),
-                          permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
+        return Future.all(permissions.listAccessible(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_READ),
+                          permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
                                      .compose(ids -> projectRepository.findApplicationIdsOf(ids, organizationId)),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
+                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
                                      .compose(ids -> entityDefinitionRepository.findApplicationIdsOf(ids, organizationId)))
                      .map(visible -> {
                          Set<String> ret = new HashSet<>();

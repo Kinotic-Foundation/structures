@@ -10,7 +10,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 /**
  * Public service for managing {@link EntityDefinition} lifecycle: creation, publication,
@@ -18,11 +18,11 @@ import org.kinotic.idl.api.utils.AuthzUtil;
  * and project-scoped queries are inherited with automatic organization enforcement.
  */
 @Publish
-@AuthzResource(value = EntityDefinitionService.RESOURCE_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
+@AuthzResource(value = EntityDefinitionService.RESOURCE_TYPE, parent = AuthzConstants.APPLICATION_TYPE)
 public interface EntityDefinitionService extends ProjectScopedCrudService<EntityDefinition, String> {
 
     /** The resource type an entity definition is in the system's authorization model. */
-    String RESOURCE_TYPE = AuthzUtil.ENTITY_DEFINITION_TYPE;
+    String RESOURCE_TYPE = AuthzConstants.ENTITY_DEFINITION_TYPE;
 
     /**
      * Returns the entity definition with the given id when the caller may read it.
@@ -61,7 +61,7 @@ public interface EntityDefinitionService extends ProjectScopedCrudService<Entity
      * @param entityDefinitionId the id of the definition to publish
      * @return a {@link Future} that completes when the definition has been published
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT)
     Future<Void> publish(String entityDefinitionId);
 
     /**
@@ -79,7 +79,7 @@ public interface EntityDefinitionService extends ProjectScopedCrudService<Entity
      * @param entityDefinitionId the id of the definition to un-publish
      * @return a {@link Future} that completes when the definition has been un-published
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_DELETE)
+    @AuthzCheck(permission = AuthzConstants.CAN_DELETE)
     Future<Void> unPublish(String entityDefinitionId);
 
     /**

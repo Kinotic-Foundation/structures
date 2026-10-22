@@ -4,14 +4,14 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.system.api.model.cluster.KinoticClusterInfo;
 
 /**
  * Provides information about the ignite Kinotic cluster.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
+@AuthzResource(value = AuthzConstants.SYSTEM_TYPE, resourceId = AuthzConstants.SYSTEM_OBJECT_ID)
 public interface KinoticClusterInfoService {
     
     /**
@@ -19,7 +19,7 @@ public interface KinoticClusterInfoService {
      * 
      * @return the information about the ignite structures cluster
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_CLUSTER)
     Future<KinoticClusterInfo> getClusterInfo();
 
 }

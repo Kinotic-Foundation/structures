@@ -13,6 +13,7 @@ import org.kinotic.domain.api.model.security.ZoneRules;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.ZoneRulesService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultZoneRulesService implements ZoneRulesService {
 
-    private static final String CAN_REGISTER_SERVICES = AuthzUtil.permissionName(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_REGISTER_SERVICES);
+    private static final String CAN_REGISTER_SERVICES = AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES);
 
     private final ZonePartitioningService zonePartitioningService;
     private final AuthzStoreService stores;
@@ -45,7 +46,7 @@ public class DefaultZoneRulesService implements ZoneRulesService {
                                 .compose(modelId -> relationships.listObjects(AuthzStoreService.SYSTEM, modelId,
                                                                               DomainUtil.authzUser(participant),
                                                                               CAN_REGISTER_SERVICES,
-                                                                              AuthzUtil.APPLICATION_TYPE,
+                                                                              AuthzConstants.APPLICATION_TYPE,
                                                                               Consistency.MINIMIZE_LATENCY))
                                 .map(applications -> applications.stream()
                                                                  .map(AuthzUtil::idOf)

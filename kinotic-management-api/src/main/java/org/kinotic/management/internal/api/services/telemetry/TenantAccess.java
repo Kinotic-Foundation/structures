@@ -13,6 +13,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.telemetry.TelemetryTenant;
 import org.springframework.stereotype.Component;
@@ -33,7 +34,7 @@ public class TenantAccess {
 
     // the permission a system grant must carry to read any tenant: the one the telemetry services require
     // of an organization's members, held on the system, which every organization is on
-    private static final String READS_TELEMETRY = AuthzUtil.permissionName(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.CAN_READ_TELEMETRY);
+    private static final String READS_TELEMETRY = AuthzUtil.permissionName(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.CAN_READ_TELEMETRY);
 
     private final SecurityContext securityContext;
     private final AuthzStoreService stores;
@@ -65,7 +66,7 @@ public class TenantAccess {
         Future<String> ret;
         if (participant instanceof SystemParticipant) {
             RelationshipTuple reads = new RelationshipTuple(DomainUtil.authzUser(participant), READS_TELEMETRY,
-                                                            AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID));
+                                                            AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID));
             ret = stores.modelId(SYSTEM)
                         .compose(modelId -> relationships.check(SYSTEM, modelId, reads, Consistency.MINIMIZE_LATENCY))
                         .map(allowed -> {

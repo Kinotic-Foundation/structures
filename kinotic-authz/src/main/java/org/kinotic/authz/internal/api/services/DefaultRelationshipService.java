@@ -24,6 +24,7 @@ import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.RelationshipService;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
@@ -134,7 +135,7 @@ public class DefaultRelationshipService implements RelationshipService {
                 for (RelationshipTuple tuple : held.<List<RelationshipTuple>>resultAt(i)) {
                     // a role's permissions are the tuples it holds for everyone; a binding or anything else
                     // attached to the role object is not a permission and is left alone
-                    if (AuthzUtil.EVERYONE.equals(tuple.user())) {
+                    if (AuthzConstants.EVERYONE.equals(tuple.user())) {
                         bundled.add(tuple.relation());
                         if (!desired.contains(tuple.relation())) {
                             deletes.add(tuple);
@@ -143,7 +144,7 @@ public class DefaultRelationshipService implements RelationshipService {
                 }
                 for (String permission : desired) {
                     if (!bundled.contains(permission)) {
-                        writes.add(new RelationshipTuple(AuthzUtil.EVERYONE, permission, role));
+                        writes.add(new RelationshipTuple(AuthzConstants.EVERYONE, permission, role));
                     }
                 }
             }
@@ -166,9 +167,9 @@ public class DefaultRelationshipService implements RelationshipService {
     // its home and the binding by the object's type, so the engine refuses a role the object's type may not grant
     private static List<RelationshipTuple> binding(String bindingId, String roleId, String member, String object) {
         String binding = AuthzUtil.bindingObject(object, bindingId);
-        return List.of(new RelationshipTuple(AuthzUtil.roleObject(roleId), AuthzUtil.ROLE_RELATION, binding),
-                       new RelationshipTuple(member, AuthzUtil.MEMBER_RELATION, binding),
-                       new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object));
+        return List.of(new RelationshipTuple(AuthzUtil.roleObject(roleId), AuthzConstants.ROLE_RELATION, binding),
+                       new RelationshipTuple(member, AuthzConstants.MEMBER_RELATION, binding),
+                       new RelationshipTuple(binding, AuthzConstants.ROLE_BINDING_RELATION, object));
     }
 
     @Override
@@ -176,7 +177,7 @@ public class DefaultRelationshipService implements RelationshipService {
         String binding = AuthzUtil.bindingObject(object, bindingId);
         return read(store, binding).compose(held -> {
             List<RelationshipTuple> tuples = new ArrayList<>(held);
-            tuples.add(new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object));
+            tuples.add(new RelationshipTuple(binding, AuthzConstants.ROLE_BINDING_RELATION, object));
             return remove(store, tuples);
         });
     }
@@ -184,7 +185,7 @@ public class DefaultRelationshipService implements RelationshipService {
     @Override
     public Future<Void> revoke(String store, String bindingId, String object) {
         String binding = AuthzUtil.bindingObject(object, bindingId);
-        return holds(store, new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object)).compose(made -> {
+        return holds(store, new RelationshipTuple(binding, AuthzConstants.ROLE_BINDING_RELATION, object)).compose(made -> {
             if (!made) {
                 throw new IllegalArgumentException("No grant " + bindingId + " was made on " + object);
             }
@@ -198,7 +199,7 @@ public class DefaultRelationshipService implements RelationshipService {
         return read(store, object).compose(held -> {
             List<Future<Grant>> bindings = new ArrayList<>();
             for (RelationshipTuple tuple : held) {
-                if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())) {
+                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
                     bindings.add(grantOf(store, tuple.user(), resource));
                 }
             }
@@ -212,9 +213,9 @@ public class DefaultRelationshipService implements RelationshipService {
             String roleId = null;
             Subject subject = null;
             for (RelationshipTuple tuple : held) {
-                if (AuthzUtil.ROLE_RELATION.equals(tuple.relation())) {
+                if (AuthzConstants.ROLE_RELATION.equals(tuple.relation())) {
                     roleId = AuthzUtil.idOf(tuple.user());
-                } else if (AuthzUtil.MEMBER_RELATION.equals(tuple.relation())) {
+                } else if (AuthzConstants.MEMBER_RELATION.equals(tuple.relation())) {
                     subject = subjectOf(tuple.user());
                 }
             }
@@ -225,9 +226,9 @@ public class DefaultRelationshipService implements RelationshipService {
     private static Subject subjectOf(String user) {
         Subject ret = null;
         String type = AuthzUtil.typeOf(user);
-        if (AuthzUtil.USER_TYPE.equals(type)) {
+        if (AuthzConstants.USER_TYPE.equals(type)) {
             ret = new Subject(SubjectType.USER, AuthzUtil.idOf(user));
-        } else if (AuthzUtil.GROUP_TYPE.equals(type) && user.endsWith("#" + AuthzUtil.MEMBER_RELATION)) {
+        } else if (AuthzConstants.GROUP_TYPE.equals(type) && user.endsWith("#" + AuthzConstants.MEMBER_RELATION)) {
             ret = new Subject(SubjectType.GROUP, AuthzUtil.idOf(user));
         }
         return ret;
@@ -235,15 +236,15 @@ public class DefaultRelationshipService implements RelationshipService {
 
     @Override
     public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
-        Future<Boolean> bundled = holds(store, new RelationshipTuple(AuthzUtil.EVERYONE, permission,
+        Future<Boolean> bundled = holds(store, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
                                                                      AuthzUtil.roleObject(grant.roleId())));
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);
         } else if (grant.subject().type() == SubjectType.GROUP && subject.type() == SubjectType.USER) {
-            RelationshipTuple membership = new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id()),
-                                                                 AuthzUtil.MEMBER_RELATION,
-                                                                 AuthzUtil.object(AuthzUtil.GROUP_TYPE, grant.subject().id()));
+            RelationshipTuple membership = new RelationshipTuple(AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id()),
+                                                                 AuthzConstants.MEMBER_RELATION,
+                                                                 AuthzUtil.object(AuthzConstants.GROUP_TYPE, grant.subject().id()));
             // an admin asks after changing a group, so the answer must not predate the change
             member = check(store, modelId, membership, Consistency.HIGHER_CONSISTENCY);
         } else {

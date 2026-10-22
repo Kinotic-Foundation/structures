@@ -5,7 +5,7 @@ import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzRole;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.system.api.model.workload.VmNode;
 import org.kinotic.system.api.model.workload.VmNodeStatusType;
 import org.kinotic.system.api.model.workload.VmNodeRegistration;
@@ -27,9 +27,9 @@ import java.util.List;
  * For querying nodes (findById, findAll, search) use {@link VmNodeService} directly.
  */
 @Publish
-@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.SYSTEM_TYPE,
-               roles = {@AuthzRole(id = VmNodeOrchestrationService.REGISTRAR_ROLE, permissions = AuthzUtil.CAN_REGISTER_NODE),
-                        @AuthzRole(id = VmNodeOrchestrationService.AGENT_ROLE, permissions = {AuthzUtil.CAN_REPORT, AuthzUtil.CAN_READ})})
+@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzConstants.SYSTEM_TYPE,
+               roles = {@AuthzRole(id = VmNodeOrchestrationService.REGISTRAR_ROLE, permissions = AuthzConstants.CAN_REGISTER_NODE),
+                        @AuthzRole(id = VmNodeOrchestrationService.AGENT_ROLE, permissions = {AuthzConstants.CAN_REPORT, AuthzConstants.CAN_READ})})
 public interface VmNodeOrchestrationService {
 
     /** The role a system machine registers nodes with, granted on the system. */
@@ -47,7 +47,7 @@ public interface VmNodeOrchestrationService {
      * @param registration the node registration info
      * @return a future that will complete with the registered node
      */
-    @AuthzCheck(resource = AuthzUtil.SYSTEM_TYPE, permission = AuthzUtil.CAN_REGISTER_NODE)
+    @AuthzCheck(resource = AuthzConstants.SYSTEM_TYPE, permission = AuthzConstants.CAN_REGISTER_NODE)
     Future<VmNode> registerNode(VmNodeRegistration registration);
 
     /**
@@ -64,7 +64,7 @@ public interface VmNodeOrchestrationService {
      * @param problems what the node can no longer guarantee, empty when it is fit
      * @return a future that will complete with the updated node, or fail if the node is not registered
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_REPORT, resourceId = "{nodeId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_REPORT, resourceId = "{nodeId}")
     Future<VmNode> heartbeat(String nodeId, List<String> problems);
 
     /**
@@ -81,7 +81,7 @@ public interface VmNodeOrchestrationService {
      * @param reports one report per workload
      * @return a future that will complete when the reports have been applied
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_REPORT, resourceId = "{nodeId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_REPORT, resourceId = "{nodeId}")
     Future<Void> reportWorkloadStatus(String nodeId, List<WorkloadStatusReport> reports);
 
     /**
@@ -94,7 +94,7 @@ public interface VmNodeOrchestrationService {
      * @return a future that will complete when the removal has been asked for, or fail if the node is
      *         not registered or still runs workloads
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_REPORT, resourceId = "{nodeId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_REPORT, resourceId = "{nodeId}")
     Future<Void> deregisterNode(String nodeId);
 
     /**
@@ -104,7 +104,7 @@ public interface VmNodeOrchestrationService {
      * @param nodeId the id of the node to check
      * @return a future that completes when the check has been applied
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{nodeId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT, resourceId = "{nodeId}")
     Future<Void> verifyNode(String nodeId);
 
     /**

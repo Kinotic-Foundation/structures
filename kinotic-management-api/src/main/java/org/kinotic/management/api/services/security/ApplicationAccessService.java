@@ -9,7 +9,7 @@ import org.kinotic.authz.api.model.Subject;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 
 import java.util.List;
 
@@ -22,7 +22,7 @@ import java.util.List;
  * or machines.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.APPLICATION_TYPE, parent = AuthzUtil.ORGANIZATION_TYPE)
+@AuthzResource(value = AuthzConstants.APPLICATION_TYPE, parent = AuthzConstants.ORGANIZATION_TYPE)
 public interface ApplicationAccessService {
 
     /**
@@ -32,7 +32,7 @@ public interface ApplicationAccessService {
      *
      * @param applicationId the application
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles(String applicationId);
 
     /**
@@ -44,7 +44,7 @@ public interface ApplicationAccessService {
      * @param resource      the application itself, one of its tenants, one of its entity definitions or a
      *                      definition within a tenant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants(String applicationId, Resource resource);
 
     /**
@@ -62,7 +62,7 @@ public interface ApplicationAccessService {
      *                      definitions or a definition within a tenant
      * @return the grant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_ACCESS)
     Future<Grant> grant(String applicationId, Subject subject, String roleId, Resource resource);
 
     /**
@@ -72,7 +72,7 @@ public interface ApplicationAccessService {
      * @param resource      where the grant was made
      * @param grantId       the grant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_MANAGE_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_MANAGE_ACCESS)
     Future<Void> revoke(String applicationId, Resource resource, String grantId);
 
     /**
@@ -85,7 +85,7 @@ public interface ApplicationAccessService {
      * @param resource      the application itself, one of its tenants, one of its entity definitions or a
      *                      definition within a tenant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
+    @AuthzCheck(permission = AuthzConstants.CAN_READ_ACCESS)
     Future<AccessExplanation> explain(String applicationId, Subject subject, String permission, Resource resource);
 
 }

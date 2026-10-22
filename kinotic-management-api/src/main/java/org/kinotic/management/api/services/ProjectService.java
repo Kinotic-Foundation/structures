@@ -10,7 +10,7 @@ import org.kinotic.domain.api.services.ApplicationScopedCrudService;
 import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
-import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
@@ -24,11 +24,11 @@ import java.util.List;
  */
 @Publish
 @McpTool
-@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
+@AuthzResource(value = ProjectService.RESOURCE_TYPE, parent = AuthzConstants.APPLICATION_TYPE)
 public interface ProjectService extends ApplicationScopedCrudService<Project, String> {
 
     /** The resource type a project is in the authorization model. */
-    String RESOURCE_TYPE = AuthzUtil.PROJECT_TYPE;
+    String RESOURCE_TYPE = AuthzConstants.PROJECT_TYPE;
 
     /**
      * Returns the project with the given id when the caller may see it: a project the caller may read, or one
@@ -171,7 +171,7 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
      * @return a {@link Future} emitting the updated project
      * @throws IllegalStateException when the project is not awaiting an initialization retry
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT)
     @McpTool(openWorldHint = true)
     Future<Project> retryRepoInitialization(String projectId);
 

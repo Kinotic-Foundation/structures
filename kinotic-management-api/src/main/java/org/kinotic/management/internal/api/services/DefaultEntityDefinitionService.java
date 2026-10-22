@@ -16,6 +16,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.internal.api.services.AbstractProjectScopedService;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.domain.api.config.DomainPersistenceProperties;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.config.EntityDefinitionProperties;
 import org.kinotic.management.api.config.ManagementApiProperties;
@@ -198,7 +199,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     public Future<EntityDefinition> findById(String id) {
         return super.findById(id).compose(entityDefinition -> entityDefinition == null
                 ? Future.succeededFuture(null)
-                : permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
+                : permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
                              .map(ids -> ids.contains(id) ? entityDefinition : null));
     }
 
