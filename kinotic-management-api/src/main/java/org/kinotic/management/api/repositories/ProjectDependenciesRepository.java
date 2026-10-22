@@ -29,13 +29,14 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
     }
 
     /**
-     * Lists the trees of every organization.
+     * Lists the trees of every organization, each carrying its id, organization, application and
+     * package URLs; its positions in the package list are empty.
      *
      * @param pageable the page to return; sorted by {@code organizationId} then {@code id}, since an id
      *                 names one project only within its organization
      */
     public Future<Page<ProjectDependencies>> findAllOfEveryOrganization(CursorPageable pageable) {
-        return findAll(pageable, null);
+        return findAll(pageable, b -> b.source(s -> s.filter(f -> f.includes("id", "organizationId", "applicationId", PACKAGES_FIELD))));
     }
 
     /**

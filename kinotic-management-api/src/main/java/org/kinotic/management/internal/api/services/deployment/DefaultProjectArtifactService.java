@@ -15,7 +15,6 @@ import org.kinotic.management.api.model.deployment.ProjectDeployment;
 import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.repositories.ProjectDependenciesRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
-import org.kinotic.management.api.repositories.VulnerabilityAlertRepository;
 import org.kinotic.management.api.services.deployment.ProjectArtifactService;
 import org.kinotic.management.api.services.vulnerability.VulnerabilityScanner;
 import org.springframework.stereotype.Component;
@@ -32,7 +31,6 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
 
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final ProjectDependenciesRepository projectDependenciesRepository;
-    private final VulnerabilityAlertRepository vulnerabilityAlertRepository;
     private final VulnerabilityScanner vulnerabilityScanner;
     private final SecurityContext securityContext;
 
@@ -46,17 +44,16 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
         return loadOwned(projectId, participant)
                 .compose(deployment -> {
                     // the SBOM lists the dependencies it was generated from, so a report of other
-                    // dependencies drops it and its alerts, and the deployment generates it again
+                    // dependencies drops it and the deployment generates it again
                     boolean sameDependencies = deployment.getArtifacts() != null
                             && Objects.equals(deployment.getArtifacts().dependencyHash(), artifacts.dependencyHash());
-                    // dropped before the new artifacts are recorded, since recordSbom accepts the
-                    // new SBOM only once they are
-                    Future<Void> dropped = sameDependencies || deployment.getArtifacts() == null
-                            ? Future.succeededFuture()
-                            : projectDependenciesRepository.deleteByIdSync(projectId, participant.getOrganizationId())
-                                                           .compose(v -> vulnerabilityAlertRepository.deleteAllForProject(projectId, participant.getOrganizationId()));
-                    return dropped.compose(v -> projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
-                                                                                            sameDependencies && deployment.isSbomGenerated()));
+                    Future<Void> recorded = projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
+                                                                                        sameDependencies && deployment.isSbomGenerated());
+                    // deleted once the new artifacts are recorded, since recordSbom then refuses an SBOM of the
+                    // old dependencies; the alerts stay, so the next SBOM keeps their acknowledgements
+                    return sameDependencies || deployment.getArtifacts() == null
+                            ? recorded
+                            : recorded.compose(v -> projectDependenciesRepository.deleteByIdSync(projectId, participant.getOrganizationId()));
                 });
     }
 
