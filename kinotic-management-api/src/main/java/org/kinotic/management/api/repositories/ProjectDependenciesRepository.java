@@ -29,20 +29,21 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
     }
 
     /**
-     * Lists the trees of every organization, ordered by id.
+     * Lists the trees of every organization.
      *
-     * @param pageable the page to return; sorted by {@code id}
+     * @param pageable the page to return; sorted by {@code organizationId} then {@code id}, since an id
+     *                 names one project only within its organization
      */
     public Future<Page<ProjectDependencies>> findAll(CursorPageable pageable) {
         return findAll(pageable, null);
     }
 
     /**
-     * Lists the projects of every organization whose tree lists the package version, ordered by id.
-     * Each tree carries only its id, organization and application; its package lists are empty.
+     * Lists the projects of every organization whose tree lists the package version. Each tree
+     * carries only its id, organization and application; its package lists are empty.
      *
      * @param purl     a package URL with its version, as {@link ProjectDependencies#getPackages()} lists it
-     * @param pageable the page to return; sorted by {@code id}
+     * @param pageable the page to return; sorted by {@code organizationId} then {@code id}
      */
     public Future<Page<ProjectDependencies>> findAllHolding(String purl, CursorPageable pageable) {
         Validate.notBlank(purl, "purl cannot be blank");
