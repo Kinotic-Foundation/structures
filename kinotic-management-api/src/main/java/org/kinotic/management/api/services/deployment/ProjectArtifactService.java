@@ -39,7 +39,7 @@ public interface ProjectArtifactService {
      * @return a future completing once the tree is stored, the deployment record says the
      *         project has an SBOM of its dependencies, and the tree's check against the
      *         vulnerability advisories has ended, raising an alert for each advisory that affects
-     *         it; a check that fails is logged and repeated by the daily scan of every project
+     *         it; the call succeeds whether or not that check does
      */
     Future<Void> recordSbom(String projectId, String dependencyHash, ProjectDependencies dependencies);
 

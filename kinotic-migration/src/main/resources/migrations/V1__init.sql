@@ -115,8 +115,6 @@ CREATE TABLE IF NOT EXISTS kinotic_vulnerability_advisory (
     summary TEXT,
     kind KEYWORD,
     severity KEYWORD,
-    cvss KEYWORD NOT INDEXED,
-    published DATE,
     modified DATE,
     withdrawn DATE,
     packages KEYWORD,
@@ -126,8 +124,7 @@ CREATE TABLE IF NOT EXISTS kinotic_vulnerability_advisory (
 -- How far the advisories of each package ecosystem have been read from OSV; id is the ecosystem.
 CREATE TABLE IF NOT EXISTS kinotic_vulnerability_feed (
     id KEYWORD,
-    syncedThrough DATE,
-    checked DATE
+    syncedThrough DATE
 );
 
 -- The advisories affecting each project's SBOM, one row per project and advisory while the advisory
