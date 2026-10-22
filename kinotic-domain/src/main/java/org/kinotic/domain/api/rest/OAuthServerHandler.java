@@ -75,6 +75,7 @@ public abstract class OAuthServerHandler implements SuppliesGatewayRoutes {
         extensionGrants.forEach(grant -> grantTypes.add(grant.grantType()));
         JsonObject metadata = new JsonObject()
                 .put("issuer", issuer)
+                .put("authorization_response_iss_parameter_supported", true)
                 .put("authorization_endpoint", issuer + "/api/auth/oauth/authorize")
                 .put("token_endpoint", issuer + "/api/auth/oauth/token")
                 // lets a host check for support before sending the user somewhere that would reject

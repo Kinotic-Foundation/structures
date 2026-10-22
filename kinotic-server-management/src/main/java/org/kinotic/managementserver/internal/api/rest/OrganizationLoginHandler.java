@@ -38,7 +38,6 @@ import org.kinotic.managementserver.api.config.TurnstileProperties;
 import org.kinotic.managementserver.internal.api.services.TurnstileVerifier;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -274,7 +273,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private void handleStart(RoutingContext ctx) {
         String orgId = ctx.pathParam("orgId");
         String configId = ctx.pathParam("configId");
-        String origin = SessionBinding.origin(ctx) != null ? SessionBinding.origin(ctx) : portalOrigin();
+        String origin = SessionBinding.origin(ctx) != null ? SessionBinding.origin(ctx) : domainProperties.getDomain().portalOrigin();
         endOffer(ctx);
 
         oidcConfigurationService.findOffered(configId, orgId, null)
@@ -408,12 +407,6 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private static Future<Participant> refusingDisabled(Future<Participant> participant) {
         return participant.recover(err -> Future.failedFuture(err instanceof UserDisabledException
                 ? new OidcCallbackException(OidcErrorCodes.USER_DISABLED) : err));
-    }
-
-    // the origin of the portal's pages, which a start reached by a link belongs to
-    private String portalOrigin() {
-        URI portal = URI.create(domainProperties.getDomain().getPortalBaseUrl());
-        return portal.getScheme() + "://" + portal.getAuthority();
     }
 
 }

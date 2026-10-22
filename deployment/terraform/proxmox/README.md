@@ -177,7 +177,7 @@ uploaded them.
    { terraform output -raw vm_manager_env; echo KINOTIC_NODE_ID=dev-node-1; } | ssh kinotic@<node ip> 'sudo tee /etc/kinotic/vm-manager.env >/dev/null'
    ```
 
-   The migration runs with the `production` profile, which seeds no identities, so
+   The migration runs with the `dev-server` profile, which seeds no identities, so
    `bootstrap-identities.sh` creates the first system user and a SYSTEM machine for each node.
    Each machine's credentials go straight into its node's `vm-manager.secrets.env`, which starts
    its vm-manager; the system user's password goes to a temporary file whose path it prints.

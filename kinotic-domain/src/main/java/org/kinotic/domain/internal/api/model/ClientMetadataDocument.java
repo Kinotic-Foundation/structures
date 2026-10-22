@@ -35,9 +35,13 @@ public class ClientMetadataDocument {
     @JsonProperty("redirect_uris")
     private List<String> redirectUris;
 
-    /** Must be {@code none} when present — a document-identified client can hold no shared secret. */
+    /** The token endpoint authentication method the client prefers. */
     @JsonProperty("token_endpoint_auth_method")
     private String tokenEndpointAuthMethod;
+
+    /** Every token endpoint authentication method the client can use, when it can use more than one. */
+    @JsonProperty("token_endpoint_auth_methods_supported")
+    private List<String> tokenEndpointAuthMethodsSupported;
 
     /** Read only so a document that carries a secret can be rejected. */
     @JsonProperty("client_secret")

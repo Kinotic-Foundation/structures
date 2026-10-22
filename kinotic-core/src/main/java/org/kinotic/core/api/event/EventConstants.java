@@ -116,17 +116,6 @@ public class EventConstants {
     public static final String REPLY_DESTINATION_SCHEME = "reply";
 
     /**
-     * Event data format that is pretty much a stomp frame.
-     * The difference being the Destination is in place of the COMMAND portion. And there is no Destination header. Everything else is the same.
-     */
-    public static final byte RAW_EVENT_FORMAT_STOMPISH = 0x01;
-
-    /**
-     * Event data format that can be used for raw UTF-8 data
-     */
-    public static final byte RAW_EVENT_FORMAT_UTF8 = 0x02;
-
-    /**
      * The traceparent HTTP header field identifies the incoming request in a tracing system. It has four fields:
      *
      *     version

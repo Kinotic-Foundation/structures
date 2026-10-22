@@ -5,7 +5,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
@@ -50,9 +49,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
-     * pending sign-up, and emails a verification link to the verification page of the UI that sent the request
-     * when {@code kinotic.domain.cors.allowedOriginPattern} names its origin other than through {@code *}, and to the
-     * portal's otherwise.
+     * pending sign-up, and emails a verification link with the default verification email template.
      * The org name and password are collected later, at {@link #handleLocalComplete}.
      */
     private void handleLocalSignUp(RoutingContext ctx) {
@@ -61,7 +58,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             String email = body.getString("email");
             String displayName = body.getString("displayName");
 
-            signUpService.initiateLocalSignUp(email, displayName, SessionBinding.origin(ctx))
+            signUpService.initiateLocalSignUp(email, displayName, null)
                     .onSuccess(v -> ctx.response()
                             .setStatusCode(200)
                             .putHeader("Content-Type", "application/json")
@@ -139,7 +136,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      * already exists for this identity or its verified email, with {@code user_exists} when someone signs in as it
      * and {@code user_pending} when it is a member an administrator added that nobody signs in as yet, otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
-     * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.
+     * org-naming page of the UI the sign-up returns to, which posts back to {@link #handleSocialCompleteOrg}.
      */
     @Override
     public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
@@ -203,7 +200,10 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               .onFailure(ex -> authEndpointSupport.respondError(ctx, 400, ex.getMessage()));
     }
 
-    /** Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token. */
+    /**
+     * Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token, or of this
+     * server's UI when {@code origin} is null.
+     */
     private void redirectToCompleteOrg(RoutingContext ctx, String origin, String token) {
         authEndpointSupport.redirectToPage(ctx, origin, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
     }

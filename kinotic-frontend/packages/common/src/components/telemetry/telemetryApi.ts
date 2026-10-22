@@ -9,6 +9,8 @@ import type { TraceSummary } from './TraceSummary'
 /** The spans of an application's, or a whole organization's, services, as Tempo derives them into metrics. */
 const SPAN_METRIC_CALLS = 'traces_spanmetrics_calls_total'
 const SPAN_METRIC_LATENCY = 'traces_spanmetrics_latency_bucket'
+/** The span metrics of the calls a service handles, leaving out the calls it makes, such as to Elasticsearch. */
+const SERVER_SPANS = 'span_kind="SPAN_KIND_SERVER"'
 
 /** How many points a range query aims to return, whatever its range. */
 const POINTS_PER_RANGE = 120
@@ -73,18 +75,18 @@ function selector(applicationId: string | null, extra: string[] = []): string {
 }
 
 /**
- * The RED queries — rate, errors, duration — of an application's services, or of every
- * service in the organization when no application is named, from the span metrics Tempo
- * derives from the traces the node ships.
+ * The RED queries — rate, errors, duration — of the calls an application's services handle,
+ * or every service in the organization when no application is named, from the span metrics
+ * Tempo derives from the traces the node ships.
  */
 export function redQueries(applicationId: string | null, range: TimeRange): { requests: string; errors: string; latencyP95: string } {
     const window = rateWindow(range)
-    const calls = `rate(${SPAN_METRIC_CALLS}${selector(applicationId)}[${window}])`
-    const failedCalls = `rate(${SPAN_METRIC_CALLS}${selector(applicationId, ['status_code="STATUS_CODE_ERROR"'])}[${window}])`
+    const calls = `rate(${SPAN_METRIC_CALLS}${selector(applicationId, [SERVER_SPANS])}[${window}])`
+    const failedCalls = `rate(${SPAN_METRIC_CALLS}${selector(applicationId, [SERVER_SPANS, 'status_code="STATUS_CODE_ERROR"'])}[${window}])`
     return {
         requests: `sum by (service) (${calls})`,
         errors: `sum by (service) (${failedCalls}) / sum by (service) (${calls})`,
-        latencyP95: `histogram_quantile(0.95, sum by (le, service) (rate(${SPAN_METRIC_LATENCY}${selector(applicationId)}[${window}])))`
+        latencyP95: `histogram_quantile(0.95, sum by (le, service) (rate(${SPAN_METRIC_LATENCY}${selector(applicationId, [SERVER_SPANS])}[${window}])))`
     }
 }
 

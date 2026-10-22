@@ -6,6 +6,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
@@ -183,7 +184,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
         String formToken = ctx.request().getFormAttribute("token");
         String token = formToken != null && !formToken.isBlank() ? formToken : ctx.request().getParam("token");
         if (token == null || token.isBlank()) {
-            redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);
+            redirectInviteError(ctx, SessionBinding.origin(ctx), OidcErrorCodes.INVITE_INVALID, null);
             return;
         }
 
@@ -194,7 +195,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   log.warn("Invite OIDC start failed for config {}: {}", configId, err.getMessage());
                   String code = err instanceof OidcCallbackException oce
                           ? oce.getErrorCode() : OidcErrorCodes.INVITE_INVALID;
-                  redirectInviteError(ctx, code, token);
+                  redirectInviteError(ctx, SessionBinding.origin(ctx), code, token);
               });
     }
 
@@ -206,7 +207,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     /** A callback that failed validation keeps the invitation, so the invitee can try another method. */
     @Override
     public void fail(RoutingContext ctx, PendingFlow flow, Throwable failure) {
-        redirectInviteError(ctx, authEndpointSupport.callbackErrorCode(failure), flow.inviteToken());
+        redirectInviteError(ctx, flow.origin(), authEndpointSupport.callbackErrorCode(failure), flow.inviteToken());
     }
 
     /**
@@ -230,11 +231,11 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
         String sub = OAuth2Util.stringClaim(claims, "sub");
         String email = OAuth2Util.stringClaim(claims, "email");
         if (sub == null || email == null) {
-            redirectInviteError(ctx, OidcErrorCodes.INVALID_TOKEN, token);
+            redirectInviteError(ctx, result.origin(), OidcErrorCodes.INVALID_TOKEN, token);
             return;
         }
         if (!OAuth2Util.isEmailVerified(claims, result.config().getProvider())) {
-            redirectInviteError(ctx, OidcErrorCodes.EMAIL_NOT_VERIFIED, token);
+            redirectInviteError(ctx, result.origin(), OidcErrorCodes.EMAIL_NOT_VERIFIED, token);
             return;
         }
 
@@ -244,15 +245,15 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   if (err instanceof InviteEmailMismatchException) {
                       // The invite is NOT consumed on mismatch — keep the token so the
                       // invitee can retry with another provider or a password.
-                      redirectInviteError(ctx, OidcErrorCodes.EMAIL_MISMATCH, token);
+                      redirectInviteError(ctx, result.origin(), OidcErrorCodes.EMAIL_MISMATCH, token);
                   } else if (err instanceof ExistingUserException) {
                       // nor here: the organization user's holder accepts with its password
-                      redirectInviteError(ctx, OidcErrorCodes.USER_EXISTS, token);
+                      redirectInviteError(ctx, result.origin(), OidcErrorCodes.USER_EXISTS, token);
                   } else if (err instanceof UserDisabledException) {
-                      redirectInviteError(ctx, OidcErrorCodes.USER_DISABLED, token);
+                      redirectInviteError(ctx, result.origin(), OidcErrorCodes.USER_DISABLED, token);
                   } else {
                       log.warn("Invite acceptance failed: {}", err.getMessage());
-                      redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);
+                      redirectInviteError(ctx, result.origin(), OidcErrorCodes.INVITE_INVALID, null);
                   }
               });
     }
@@ -287,16 +288,16 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     }
 
     /**
-     * {@code 302 Location: <this server's UI>/invite/accept?error=<code>}. A non-null token is
-     * kept in the URL so the page can reload the invitation and let the invitee try
-     * another method.
+     * {@code 302 Location: <origin>/invite/accept?error=<code>}, the accept page of the page at {@code origin}
+     * that started the acceptance, or of this server's UI when {@code origin} is null. A non-null token is
+     * kept in the URL so the page can reload the invitation and let the invitee try another method.
      */
-    private void redirectInviteError(RoutingContext ctx, String errorCode, String token) {
+    private void redirectInviteError(RoutingContext ctx, String origin, String errorCode, String token) {
         String path = INVITE_ACCEPT_PATH + "?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8);
         if (token != null) {
             path += "&token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
         }
-        authEndpointSupport.redirectToUi(ctx, path);
+        authEndpointSupport.redirectToPage(ctx, origin, path);
     }
 
     /**
