@@ -193,7 +193,11 @@ nothing. The rules that matter:
   `vertx_eventbus_*`, `vertx_pool_*`) arrive through Micrometer's global registry, which the agent
   bridges onto the OTLP exporter when `OTEL_INSTRUMENTATION_MICROMETER_ENABLED` is `true` — so they
   are only exported with the agent attached and that flag set. `vertx_http_server_active_ws_connections`
-  counts the STOMP connections on `/api/v1`, the servers' only WebSocket endpoint.
+  counts the STOMP connections on `/api/v1`, the servers' only WebSocket endpoint. Vert.x's request
+  counters and response timers (`vertx_http_{server,client}_requests_total`,
+  `vertx_http_client_responses_total`, `vertx_http_{server,client}_response_time_seconds_*`) are
+  dropped: query `http_server_request_duration_seconds_*` and `http_client_request_duration_seconds_*`,
+  which the agent records for the same requests.
 - **Tempo's metrics-generator** writes its own series to Mimir — `traces_spanmetrics_calls_total`
   and `traces_spanmetrics_latency_bucket`, labelled `service`, `span_name`, `span_kind`,
   `status_code`, and `peer_service` on HTTP client spans to a named backend. These only exist

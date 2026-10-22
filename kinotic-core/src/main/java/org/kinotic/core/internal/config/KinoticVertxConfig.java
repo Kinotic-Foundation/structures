@@ -1,6 +1,8 @@
 package org.kinotic.core.internal.config;
 
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -22,6 +24,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.Set;
+
 import static java.util.concurrent.TimeUnit.MINUTES;
 
 
@@ -30,6 +34,14 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  */
 @Configuration
 public class KinoticVertxConfig {
+
+    // Vert.x's request counters and timers, which the agent's http.server.request.duration and
+    // http.client.request.duration already record with the same method and status code
+    private static final Set<String> AGENT_DUPLICATED_METERS = Set.of("vertx.http.server.requests",
+                                                                      "vertx.http.server.response.time",
+                                                                      "vertx.http.client.requests",
+                                                                      "vertx.http.client.responses",
+                                                                      "vertx.http.client.response.time");
 
     @Bean
     public KinoticIgniteClusterManager clusterManager(Ignite ignite, ZonePartitioningService zonePartitioningService){
@@ -71,7 +83,11 @@ public class KinoticVertxConfig {
 
         // With OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true the agent bridges Micrometer's global registry
         // onto the OTLP exporter, so Vert.x's meters need no exporter of their own. With no agent attached
-        // the registry has no backends.
+        // the registry has no backends. Vert.x registers on a composite in front of the global registry so
+        // the deny filter stays scoped to Vert.x's meters.
+        CompositeMeterRegistry meterRegistry = new CompositeMeterRegistry();
+        meterRegistry.config().meterFilter(MeterFilter.deny(id -> AGENT_DUPLICATED_METERS.contains(id.getName())));
+        meterRegistry.add(Metrics.globalRegistry);
         VertxOptions options = new VertxOptions()
                 .setMetricsOptions(new MicrometerMetricsOptions().setEnabled(true));
 
@@ -87,7 +103,7 @@ public class KinoticVertxConfig {
         }
 
         Vertx vertx = Vertx.builder()
-                           .withMetrics(new MicrometerMetricsFactory(Metrics.globalRegistry))
+                           .withMetrics(new MicrometerMetricsFactory(meterRegistry))
                            .with(options.setEventBusOptions(eventBusOptions))
                            .withClusterManager(clusterManager)
                            .buildClustered()
