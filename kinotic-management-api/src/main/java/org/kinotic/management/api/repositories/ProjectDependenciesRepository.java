@@ -4,13 +4,16 @@ import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.CursorPageable;
 import org.kinotic.core.api.crud.Page;
+import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.internal.api.repositories.AbstractApplicationScopedRepository;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Stores each project's {@link ProjectDependencies}, one document per project keyed by the project
@@ -23,6 +26,8 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
 
     // The most versions of one package one listing returns; a package with more is listed page by page
     private static final int VERSIONS_PAGE_SIZE = 1_000;
+
+    private static final int IDS_PER_SEARCH = 1_000;
 
     public ProjectDependenciesRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_project_dependencies", ProjectDependencies.class, crudServiceTemplate);
@@ -37,6 +42,35 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
      */
     public Future<Page<ProjectDependencies>> findAllOfEveryOrganization(CursorPageable pageable) {
         return findAll(pageable, b -> b.source(s -> s.filter(f -> f.includes("id", "organizationId", "applicationId", PACKAGES_FIELD))));
+    }
+
+    /**
+     * Finds which of the projects, of any organization, have a tree. Each tree found carries only its
+     * id and organization.
+     *
+     * @param projectIdsByOrganization the ids of the projects to look for, by organization id
+     * @return a future emitting the trees found, in no particular order
+     */
+    public Future<List<ProjectDependencies>> findAllExisting(Map<String, ? extends Collection<String>> projectIdsByOrganization) {
+        Validate.notNull(projectIdsByOrganization, "projectIdsByOrganization cannot be null");
+        List<String> documentIds = new ArrayList<>();
+        projectIdsByOrganization.forEach((orgId, ids) -> ids.forEach(id -> documentIds.add(composeDocumentId(id, orgId))));
+        List<Future<Page<ProjectDependencies>>> searches = new ArrayList<>();
+        for (int start = 0; start < documentIds.size(); start += IDS_PER_SEARCH) {
+            List<String> chunk = documentIds.subList(start, Math.min(start + IDS_PER_SEARCH, documentIds.size()));
+            searches.add(findAll(Pageable.ofSize(chunk.size()),
+                                 b -> b.query(q -> q.ids(i -> i.values(chunk)))
+                                       .source(src -> src.filter(f -> f.includes("id", "organizationId")))));
+        }
+        return Future.all(searches)
+                     .map(found -> {
+                         List<ProjectDependencies> ret = new ArrayList<>();
+                         for (int i = 0; i < found.size(); i++) {
+                             Page<ProjectDependencies> page = found.resultAt(i);
+                             ret.addAll(page.getContent());
+                         }
+                         return ret;
+                     });
     }
 
     /**

@@ -18,7 +18,7 @@ import { OwnedOidcConfigurationService, type IOwnedOidcConfigurationService } fr
 import { MachineService, type IMachineService } from '@/api/services/security/IMachineService'
 import { GitHubAppInstallationService, type IGitHubAppInstallationService } from '@/api/services/IGitHubAppInstallationService'
 import { JobMonitoringService, type IJobMonitoringService } from '@/api/services/IJobMonitoringService'
-import { VulnerabilityAlertService, type IVulnerabilityAlertService } from '@/api/services/vulnerability/IVulnerabilityAlertService'
+import { VulnerabilityAlertService, type IVulnerabilityAlertService } from '@/api/services/IVulnerabilityAlertService'
 
 export interface IManagementApiExtension {
     applications: IApplicationService

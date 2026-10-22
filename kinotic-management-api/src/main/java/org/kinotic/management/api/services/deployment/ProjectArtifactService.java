@@ -37,8 +37,9 @@ public interface ProjectArtifactService {
      *                       application whatever ids it carries; no package may be listed twice,
      *                       and every position must name one of its packages
      * @return a future completing once the tree is stored, the deployment record says the
-     *         project has an SBOM of its dependencies, and the tree has been checked against the
-     *         vulnerability advisories, raising an alert for each advisory that affects it
+     *         project has an SBOM of its dependencies, and the tree's check against the
+     *         vulnerability advisories has ended, raising an alert for each advisory that affects
+     *         it; a check that fails is logged and repeated by the daily scan of every project
      */
     Future<Void> recordSbom(String projectId, String dependencyHash, ProjectDependencies dependencies);
 

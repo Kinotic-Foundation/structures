@@ -148,7 +148,7 @@ export * from '@/api/services/security/IProfileService'
 export * from '@/api/services/security/IOwnedOidcConfigurationService'
 export * from '@/api/services/security/IMachineService'
 export * from '@/api/services/IGitHubAppInstallationService'
-export * from '@/api/services/vulnerability/IVulnerabilityAlertService'
+export * from '@/api/services/IVulnerabilityAlertService'
 
 // Plugin
 export * from '@/api/ManagementApiPlugin'

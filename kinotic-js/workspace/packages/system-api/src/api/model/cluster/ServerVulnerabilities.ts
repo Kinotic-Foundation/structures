@@ -11,7 +11,7 @@ export class ServerVulnerabilities {
     public version: string | null = null
     /** The ids of the nodes running the build. */
     public nodeIds: string[] = []
-    /** How many libraries the build runs; none when its nodes run from classes rather than a packaged jar, which lists no libraries. */
+    /** How many libraries the build runs; none when its nodes' classpath holds no library list, such as when an IDE runs them from classes. */
     public componentCount: number = 0
     /** The advisories affecting the build's libraries, the most severe first. */
     public findings: VulnerabilityFinding[] = []

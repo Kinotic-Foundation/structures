@@ -106,7 +106,7 @@
         <Message v-if="vulnerabilityError" severity="warn" :closable="false" class="m-5">{{ vulnerabilityError }}</Message>
         <div v-else-if="servers === null" class="py-6 text-center text-sm text-muted-color">Checking the servers' libraries…</div>
         <template v-else>
-          <div v-for="server in servers" :key="`${server.serverName}@${server.version}`"
+          <div v-for="server in servers" :key="server.nodeIds[0]"
                class="border-b border-surface-200 last:border-b-0 dark:border-surface-700">
             <div class="flex flex-wrap items-center gap-2 px-5 py-3 text-sm">
               <span class="font-semibold text-surface-950 dark:text-surface-0">{{ server.serverName || UNKNOWN_VERSION }}</span>
@@ -118,7 +118,7 @@
             <p v-if="server.error" class="px-5 pb-3 text-sm text-muted-color">This build's libraries could not be checked: {{ server.error }}</p>
             <VulnerabilityFindingsTable v-else-if="server.componentCount" :items="server.findings.map(finding => ({ finding }))"
                                         data-key="finding.advisoryId" empty-hint="No advisory affects this build's libraries." />
-            <p v-else class="px-5 pb-3 text-sm text-muted-color">This build runs from classes rather than a packaged jar, so it lists no libraries to check.</p>
+            <p v-else class="px-5 pb-3 text-sm text-muted-color">This build was started without the library list a server build packages, so there are no libraries to check.</p>
           </div>
         </template>
       </DashboardSection>

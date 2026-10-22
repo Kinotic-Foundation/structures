@@ -13,8 +13,8 @@ import java.util.List;
 /**
  * Lists the libraries the server a node runs was built with: the package URL of each, such as
  * {@code pkg:maven/io.vertx/vertx-core@5.1.6}, as the build recorded them in {@link #RESOURCE}.
- * Run on a node through Ignite compute; a node running from classes rather than a packaged jar lists
- * none.
+ * Run on a node through Ignite compute; a node whose classpath holds no {@link #RESOURCE}, such as
+ * one an IDE runs from classes, lists none.
  */
 public class ServerComponentsTask implements IgniteCallable<List<String>> {
 

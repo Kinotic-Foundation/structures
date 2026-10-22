@@ -36,8 +36,8 @@ public class ServerVulnerabilities {
     private List<String> nodeIds = new ArrayList<>();
 
     /**
-     * How many libraries the build runs; none when its nodes run from classes rather than a packaged
-     * jar, which lists no libraries.
+     * How many libraries the build runs; none when its nodes' classpath holds no library list, such
+     * as when an IDE runs them from classes.
      */
     private int componentCount;
 
