@@ -15,4 +15,6 @@ export class ServerVulnerabilities {
     public componentCount: number = 0
     /** The advisories affecting the build's libraries, the most severe first. */
     public findings: VulnerabilityFinding[] = []
+    /** Why the build's libraries could not be checked, or null when they were; a build that could not be checked has no findings. */
+    public error: string | null = null
 }

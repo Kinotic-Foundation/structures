@@ -46,4 +46,10 @@ public class ServerVulnerabilities {
      */
     private List<VulnerabilityFinding> findings = new ArrayList<>();
 
+    /**
+     * Why the build's libraries could not be checked, or {@code null} when they were; a build that
+     * could not be checked has no findings.
+     */
+    private String error;
+
 }

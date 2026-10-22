@@ -146,6 +146,13 @@ public class CrudServiceTemplate {
     }
 
     /**
+     * As {@link #bulk(List)}, and waits for the operations to be visible in search results.
+     */
+    public Future<Void> bulkSync(List<BulkOperation> operations) {
+        return bulk(operations, Refresh.WaitFor);
+    }
+
+    /**
      * Builds a bool query whose {@code filter} clauses are the supplied {@code filters}.
      * Convenience for callers that compose specialized queries from one or more term
      * filters. Requires at least one non-null filter.

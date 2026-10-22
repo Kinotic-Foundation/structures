@@ -115,7 +115,8 @@
               <Tag v-if="server.findings.length" :value="`${countSevere(server.findings)} critical or high`"
                    :severity="countSevere(server.findings) ? 'danger' : 'secondary'" />
             </div>
-            <VulnerabilityFindingsTable v-if="server.componentCount" :items="server.findings.map(finding => ({ finding }))"
+            <p v-if="server.error" class="px-5 pb-3 text-sm text-muted-color">This build's libraries could not be checked: {{ server.error }}</p>
+            <VulnerabilityFindingsTable v-else-if="server.componentCount" :items="server.findings.map(finding => ({ finding }))"
                                         data-key="finding.advisoryId" empty-hint="No advisory affects this build's libraries." />
             <p v-else class="px-5 pb-3 text-sm text-muted-color">This build runs from classes rather than a packaged jar, so it lists no libraries to check.</p>
           </div>
