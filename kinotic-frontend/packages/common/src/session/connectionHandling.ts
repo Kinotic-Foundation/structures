@@ -48,8 +48,12 @@ export function installConnectionHandler(router: Router,
 
     Kinotic.eventBus.connectionEnded.subscribe((reason: Error | null) => {
         if (Kinotic.eventBus.isConnectionActive()) {
-            // the client is reconnecting on its own, and the session cookie outlives the connection
-            CONNECTION_STATE.reachable = false
+            // The client is reconnecting on its own, and the session cookie outlives the connection. Only a drop of
+            // the authenticated connection counts: a disconnect() from login() or logout() of a connection that
+            // already dropped reports no end that would mark the server reachable again.
+            if (sessionState.isAuthenticated()) {
+                CONNECTION_STATE.reachable = false
+            }
         } else {
             // The client stopped retrying on the server's answer or on its own request, so the app is not
             // waiting on the server any more: the toast and the login page are the message rather than the overlay.

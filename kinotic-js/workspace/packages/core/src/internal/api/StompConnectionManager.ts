@@ -333,24 +333,11 @@ export class StompConnectionManager {
             }
         }
 
-        // If max connections are set, then make sure we have not exceeded that threshold
+        // counted here; the close of the attempt that reaches maxConnectionAttempts ends the connection
         if(options?.maxConnectionAttempts){
             this.connectionAttempts++
-
-            if(this.connectionAttempts > options.maxConnectionAttempts){
-                this.maxConnectionAttemptsReached = true
-                // failConnection rejects a still-pending activate() with this reason
-                await this.failConnection(activation, new Error(
-                    'Max number of reconnection attempts reached',
-                    { cause: this.lastWebsocketError ?? undefined }
-                ))
-                return
-            }else{
-                await this.connectionJitterDelay(activation);
-            }
-        }else{
-            await this.connectionJitterDelay(activation);
         }
+        await this.connectionJitterDelay(activation)
         // a deactivate() during the delay ends the attempt before it produces anything
         if (activation.ended) {
             return
