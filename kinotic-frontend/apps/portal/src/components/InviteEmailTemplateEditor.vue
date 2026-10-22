@@ -6,11 +6,11 @@
 
     <FeatureEmptyState
       v-else-if="!customizing"
-      badge="default"
+      badge="built-in"
       :icon="Mail"
       :tint="TINTS.sky"
       title="Make the invitation yours"
-      description="This application sends the invitation email each invitation names, which is the Kinotic default when it names none. Customize it to control what invitees receive."
+      description="This application sends Kinotic's built-in invitation email. Customize it to control what invitees receive."
       :points="[
         'Write your own subject, message and call to action',
         'Personalize it with the inviter, organization and application names',
@@ -85,7 +85,7 @@
         <div class="flex items-center justify-end gap-2 border-t border-surface-200 bg-surface-50 px-5 py-3 dark:border-surface-700 dark:bg-surface-900/40">
           <Button
             v-if="savedTemplateId"
-            label="Revert to default"
+            label="Revert to built-in"
             severity="danger"
             outlined
             @click="confirmRevert"
@@ -145,7 +145,7 @@ import { USER_STATE } from '@/states/IUserState'
 
 /**
  * Editor for an application's customized invitation email. Without a saved template the
- * application uses the email each invitation names; saving validates the Handlebars sources on the
+ * application uses the built-in email; saving validates the Handlebars sources on the
  * server, and reverting deletes the template.
  */
 const props = defineProps<{
@@ -280,8 +280,8 @@ async function save() {
 
 function confirmRevert() {
   confirm.require({
-    header: 'Revert to the default email',
-    message: 'Delete this template? Invitations for this application go back to the default email.',
+    header: 'Revert to built-in email',
+    message: 'Delete this template? Invitations for this application go back to the built-in email.',
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Revert', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -298,7 +298,7 @@ async function revert() {
     htmlBody.value = ''
     textBody.value = ''
     customizing.value = false
-    toast.add({ severity: 'success', summary: 'Reverted to the default email', life: 4000 })
+    toast.add({ severity: 'success', summary: 'Reverted to the built-in email', life: 4000 })
   } catch (err) {
     showErrorToast(toast, 'Failed to revert', err, { life: 8000 })
   }
