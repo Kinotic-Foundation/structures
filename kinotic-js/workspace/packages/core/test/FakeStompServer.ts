@@ -23,6 +23,8 @@ export class FakeStompServer {
     public onSend: ((frame: FakeFrame, socket: FakeSocket) => void) | null = null
     /** When true, CONNECT is never answered. */
     public silent: boolean = false
+    /** When true, every new socket errors and closes before it opens, as one to an unreachable server does. */
+    public unreachable: boolean = false
     /** When false, CONNECTED carries no connected-info header. */
     public connectedInfo: boolean = true
     /** Milliseconds a new socket stays CONNECTING before it opens. */
@@ -59,7 +61,10 @@ export class FakeSocket implements IWebSocket {
 
     constructor(private readonly server: FakeStompServer, public readonly replyToId: string) {
         setTimeout(() => {
-            if (this.readyState === 0) {
+            if (this.readyState === 0 && server.unreachable) {
+                this.onerror?.({})
+                this.finish(1006, 'unreachable', 0)
+            } else if (this.readyState === 0) {
                 this.readyState = 1
                 this.onopen?.({})
             }
