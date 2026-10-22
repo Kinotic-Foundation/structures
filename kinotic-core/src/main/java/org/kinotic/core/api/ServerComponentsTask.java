@@ -25,6 +25,13 @@ public class ServerComponentsTask implements IgniteCallable<List<String>> {
 
     @Override
     public List<String> call() throws IOException {
+        return readComponents();
+    }
+
+    /**
+     * @return the package URLs {@link #RESOURCE} lists on this node's classpath, empty when it holds none
+     */
+    public static List<String> readComponents() throws IOException {
         List<String> ret = new ArrayList<>();
         try (InputStream listing = ServerComponentsTask.class.getClassLoader().getResourceAsStream(RESOURCE)) {
             if (listing != null) {

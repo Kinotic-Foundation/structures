@@ -1,14 +1,11 @@
 package org.kinotic.system.internal.api.services;
 
-import java.util.List;
-
 /**
- * One build of a Kinotic server, as the nodes running it report it. A snapshot version names every
- * build made from it, so the libraries tell two builds of one version apart.
+ * One build of a Kinotic server, as the attributes of the nodes running it name it.
  *
- * @param serverName the server's name
- * @param version    the server's version
- * @param components the package URLs of the libraries the build runs, or {@code null} when they could
- *                   not be read
+ * @param serverName     the server's name
+ * @param version        the server's version
+ * @param componentsHash the hash of the libraries the build runs, or {@code null} when its nodes hold no
+ *                       library list
  */
-record ServerBuild(String serverName, String version, List<String> components) {}
+record ServerBuild(String serverName, String version, String componentsHash) {}

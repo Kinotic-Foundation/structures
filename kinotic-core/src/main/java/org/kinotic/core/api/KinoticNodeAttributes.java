@@ -17,6 +17,12 @@ public final class KinoticNodeAttributes {
     public static final String VERSION = "kinotic.version";
 
     /**
+     * A hash of the libraries the node's server was built with, as {@link ServerComponentsTask} lists them, so the
+     * nodes of one build carry the same hash; absent when the node's classpath holds no library list.
+     */
+    public static final String COMPONENTS_HASH = "kinotic.componentsHash";
+
+    /**
      * The OpenTelemetry service name that labels the logs, traces and metrics of the server the node runs; absent
      * when the deployment configures none.
      */

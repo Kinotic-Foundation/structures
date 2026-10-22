@@ -18,6 +18,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKuber
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.kinotic.core.api.KinoticNodeAttributes;
+import org.kinotic.core.api.ServerComponentsTask;
 import org.kinotic.core.api.config.KinoticProperties;
 import org.kinotic.core.api.config.IgniteClusterDiscoveryType;
 import org.kinotic.core.api.config.IgniteProperties;
@@ -28,11 +29,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -166,6 +173,10 @@ public class KinoticIgniteConfig {
         if (version != null) {
             attributes.put(KinoticNodeAttributes.VERSION, version);
         }
+        String componentsHash = componentsHash();
+        if (componentsHash != null) {
+            attributes.put(KinoticNodeAttributes.COMPONENTS_HASH, componentsHash);
+        }
         attributes.putAll(telemetryAttributes());
         cfg.setUserAttributes(attributes);
 
@@ -174,6 +185,25 @@ public class KinoticIgniteConfig {
         cfg.setAsyncContinuationExecutor(Runnable::run);
 
         return cfg;
+    }
+
+    // The SHA-256 of the server's library list, or null when the classpath holds none
+    private static String componentsHash() {
+        String ret = null;
+        try {
+            List<String> components = ServerComponentsTask.readComponents();
+            if (!components.isEmpty()) {
+                byte[] digest = MessageDigest.getInstance("SHA-256")
+                                             .digest(String.join("\n", components).getBytes(StandardCharsets.UTF_8));
+                ret = HexFormat.of().formatHex(digest);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read " + ServerComponentsTask.RESOURCE, e);
+        } catch (NoSuchAlgorithmException e) {
+            // every JDK provides SHA-256
+            throw new IllegalStateException(e);
+        }
+        return ret;
     }
 
     @Bean
