@@ -14,9 +14,7 @@ import org.kinotic.management.api.model.PendingInviteSummary;
  * call, and a supplied {@code applicationId} must belong to that organization. The organization's members are
  * {@link OrganizationMember}s; an application's members are its {@link ApplicationParticipantIdentity}s.
  * Invitations are scoped: {@code applicationId} null addresses the organization's, set addresses that
- * application's. A method that emails an invitation sends the invitation
- * {@link org.kinotic.domain.api.model.SystemEmailTemplate} its {@code emailTemplateId} names, or the default one
- * when it is null; the email's accept link opens {@code /invite/accept?token=} on that template's UI.
+ * application's.
  */
 @Publish
 public interface MemberService {
@@ -50,35 +48,32 @@ public interface MemberService {
      * accepted. Fails for an address that is already a member, one an invitation is already pending for, or an
      * address with no organization user when no invitation is sent and the organization has no provider of its own.
      *
-     * @param email           the address the person signs in with
-     * @param displayName     optional display name
-     * @param sendInvitation  whether to email an invitation
-     * @param emailTemplateId the invitation email template to send, or {@code null} for the default
+     * @param email          the address the person signs in with
+     * @param displayName    optional display name
+     * @param sendInvitation whether to email an invitation
      * @return the member as listed, pending until they first sign in; for an address that already has an organization user,
      *         a pending member with no id yet, which the list shows once the invitation is accepted
      */
-    Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation, String emailTemplateId);
+    Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation);
 
     /**
      * Emails an invitation to a pending member of the caller's organization: the one they have, again, or a new
      * one for a member added without. Fails for an address that is not a pending member's.
      *
-     * @param email           the pending member's address
-     * @param emailTemplateId the invitation email template to send, or {@code null} for the default
+     * @param email the pending member's address
      */
-    Future<Void> sendInvitation(String email, String emailTemplateId);
+    Future<Void> sendInvitation(String email);
 
     /**
      * Invites someone into one of the caller's organization's applications by email. Sends the invitation email
      * and returns the pending invitation, whose acceptance creates the application's user. Fails if the email
      * already has a user in the application or an invitation is already pending for it.
      *
-     * @param email           where to send the invitation
-     * @param displayName     optional display name for the invitee
-     * @param applicationId   the application to invite into, one of the caller's organization's
-     * @param emailTemplateId the invitation email template to send, or {@code null} for the default
+     * @param email         where to send the invitation
+     * @param displayName   optional display name for the invitee
+     * @param applicationId the application to invite into, one of the caller's organization's
      */
-    Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId, String emailTemplateId);
+    Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId);
 
     /**
      * Enables or disables a member of the caller's organization or of one of its applications: an organization

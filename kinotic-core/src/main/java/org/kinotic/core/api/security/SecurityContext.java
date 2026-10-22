@@ -70,6 +70,18 @@ public class SecurityContext {
     }
 
     /**
+     * Requires that no {@link Participant} is bound to the current Vert.x context: the call being served was sent for
+     * no participant, as {@link #callWithoutParticipant(Supplier)} sends one.
+     *
+     * @throws AuthorizationException if a participant is bound to the current Vert.x context
+     */
+    public void requireNoParticipant() {
+        if (currentParticipant() != null) {
+            throw new AuthorizationException("Access denied");
+        }
+    }
+
+    /**
      * Sets the {@link Participant} on the given Vert.x context.
      */
     public void setParticipant(Context context, Participant participant) {

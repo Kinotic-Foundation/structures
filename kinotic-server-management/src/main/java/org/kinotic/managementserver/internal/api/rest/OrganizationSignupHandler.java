@@ -49,8 +49,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
-     * pending sign-up, and emails a verification link with the verification email template the optional
-     * {@code emailTemplateId} names, or the default one.
+     * pending sign-up, and emails a verification link with the default verification email template.
      * The org name and password are collected later, at {@link #handleLocalComplete}.
      */
     private void handleLocalSignUp(RoutingContext ctx) {
@@ -58,9 +57,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             JsonObject body = ctx.body().asJsonObject();
             String email = body.getString("email");
             String displayName = body.getString("displayName");
-            String emailTemplateId = body.getString("emailTemplateId");
 
-            signUpService.initiateLocalSignUp(email, displayName, emailTemplateId)
+            signUpService.initiateLocalSignUp(email, displayName, null)
                     .onSuccess(v -> ctx.response()
                             .setStatusCode(200)
                             .putHeader("Content-Type", "application/json")

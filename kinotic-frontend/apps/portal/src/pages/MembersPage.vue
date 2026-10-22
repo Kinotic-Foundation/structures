@@ -348,10 +348,10 @@ async function submitMember() {
   try {
     const displayName = memberDisplayName.value.trim() || null
     if (props.applicationId !== null) {
-      await Kinotic.members.inviteMember(email, displayName, props.applicationId, null)
+      await Kinotic.members.inviteMember(email, displayName, props.applicationId)
       toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
     } else {
-      const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value, null)
+      const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value)
       // an address that already had an organization user is invited to accept, whatever the switch said
       const detail = added.id === null
           ? `${email} already signs in to Kinotic organizations, so an invitation was emailed for them to accept`
@@ -376,7 +376,7 @@ async function submitMember() {
 }
 
 function sendInvitationTo(item: MemberRow) {
-  run(() => Kinotic.members.sendInvitation(item.email, null), 'Invitation sent', 'Failed to send invitation')
+  run(() => Kinotic.members.sendInvitation(item.email), 'Invitation sent', 'Failed to send invitation')
 }
 
 function rowActions(item: MemberRow): MenuItem[] {

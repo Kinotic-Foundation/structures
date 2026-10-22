@@ -16,9 +16,7 @@ import { PendingInviteSummary } from '@/api/model/security/PendingInviteSummary'
  * Member management for the caller's organization and its applications. The organization's members are
  * {@link OrganizationMember}s and an application's members are its {@link ApplicationParticipantIdentity}s.
  * Invitations are scoped by applicationId — null addresses the organization's, set addresses that application's —
- * and the backend derives the organization from the authenticated participant, so it is never a parameter. A method
- * that emails an invitation sends the INVITATION platform email template its emailTemplateId names, or the default
- * one when it is null; the email's accept link opens /invite/accept on that template's UI.
+ * and the backend derives the organization from the authenticated participant, so it is never a parameter.
  */
 export interface IMemberService {
 
@@ -51,20 +49,20 @@ export interface IMemberService {
      * sent and the organization has no provider of its own. Returns the member as listed, pending until they first
      * sign in; for an address that already had an organization user, a pending member with no id yet.
      */
-    addMember(email: string, displayName: string | null, sendInvitation: boolean, emailTemplateId: string | null): Promise<OrganizationMember>
+    addMember(email: string, displayName: string | null, sendInvitation: boolean): Promise<OrganizationMember>
 
     /**
      * Emails an invitation to a pending member of the organization: the one they have, again, or a new one for a
      * member added without. Rejects an address that is not a pending member's.
      */
-    sendInvitation(email: string, emailTemplateId: string | null): Promise<void>
+    sendInvitation(email: string): Promise<void>
 
     /**
      * Invites someone into one of the organization's applications by email. Sends the invitation email and returns
      * the pending invitation, whose acceptance creates the application's user. Rejects when the email already has a
      * user in the application or an invitation is already pending for it.
      */
-    inviteMember(email: string, displayName: string | null, applicationId: string, emailTemplateId: string | null): Promise<PendingInviteSummary>
+    inviteMember(email: string, displayName: string | null, applicationId: string): Promise<PendingInviteSummary>
 
     /**
      * Enables or disables a member of the caller's organization or a user of one of its applications. Disabling gates future
@@ -122,16 +120,16 @@ export class MemberService implements IMemberService {
             (next: Pageable) => this.serviceProxy.invoke('searchApplicationUsers', [searchText, applicationId, next]))
     }
 
-    public addMember(email: string, displayName: string | null, sendInvitation: boolean, emailTemplateId: string | null): Promise<OrganizationMember> {
-        return this.serviceProxy.invoke('addMember', [email, displayName, sendInvitation, emailTemplateId])
+    public addMember(email: string, displayName: string | null, sendInvitation: boolean): Promise<OrganizationMember> {
+        return this.serviceProxy.invoke('addMember', [email, displayName, sendInvitation])
     }
 
-    public sendInvitation(email: string, emailTemplateId: string | null): Promise<void> {
-        return this.serviceProxy.invoke('sendInvitation', [email, emailTemplateId])
+    public sendInvitation(email: string): Promise<void> {
+        return this.serviceProxy.invoke('sendInvitation', [email])
     }
 
-    public inviteMember(email: string, displayName: string | null, applicationId: string, emailTemplateId: string | null): Promise<PendingInviteSummary> {
-        return this.serviceProxy.invoke('inviteMember', [email, displayName, applicationId, emailTemplateId])
+    public inviteMember(email: string, displayName: string | null, applicationId: string): Promise<PendingInviteSummary> {
+        return this.serviceProxy.invoke('inviteMember', [email, displayName, applicationId])
     }
 
     public setMemberEnabled(userId: string, enabled: boolean): Promise<void> {
