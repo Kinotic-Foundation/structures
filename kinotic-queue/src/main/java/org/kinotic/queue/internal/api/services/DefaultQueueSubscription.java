@@ -82,8 +82,11 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
             DefaultQueueSubscription ret = new DefaultQueueSubscription(context, client, queue, consumerName,
                                                                         fetchOffsets, committedNextOffsets);
             context.runOnContext(v -> {
-                ret.pullAll();
-                ret.refreshTimer = context.owner().setPeriodic(refreshInterval.toMillis(), t -> ret.refreshCommitted());
+                // The caller may have closed the subscription already
+                if (!ret.isEnded()) {
+                    ret.pullAll();
+                    ret.refreshTimer = context.owner().setPeriodic(refreshInterval.toMillis(), t -> ret.refreshCommitted());
+                }
             });
             return ret;
         });
@@ -127,7 +130,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
     public Future<Void> close() {
         end();
         if (refreshTimer >= 0) {
-            context().owner().cancelTimer(refreshTimer);
+            getContext().owner().cancelTimer(refreshTimer);
         }
         return Future.succeededFuture();
     }

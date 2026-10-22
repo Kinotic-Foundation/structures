@@ -1,5 +1,6 @@
 package org.kinotic.queue.internal.log;
 
+import lombok.Getter;
 import org.kinotic.queue.api.config.QueueProperties;
 
 import java.io.IOException;
@@ -33,7 +34,16 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     private final Path directory;
     private final int shardCount;
     private final boolean syncWrites;
+    /**
+     * How long a position lasts unused: the queue's retention period.
+     */
+    @Getter
     private final Duration expiry;
+    /**
+     * {@link #refreshInterval(Duration)} for this queue's retention period.
+     */
+    @Getter
+    private final Duration refreshInterval;
     // Counts the changes of the positions stored for each shard, so a change can be noticed without comparing positions
     private final long[] versions;
     // Next offset and last use of each shard, one after the other, by name
@@ -60,6 +70,7 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
         this.shardCount = shardCount;
         this.syncWrites = properties.isSyncWrites();
         this.expiry = properties.getRetentionPeriod();
+        this.refreshInterval = refreshInterval(expiry);
         this.versions = new long[shardCount];
     }
 
@@ -73,19 +84,12 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     }
 
     /**
-     * @return {@link #refreshInterval(Duration)} for this queue's retention period
-     */
-    public Duration refreshInterval() {
-        return refreshInterval(expiry);
-    }
-
-    /**
      * @return the next offset to deliver to the consumer on the shard; zero when the consumer has never committed
      * on it, or its position there expired, since a commit always stores an offset of at least one
      */
     public synchronized long findNextOffset(String consumerName, int shard) {
         long[] stored = load(consumerName);
-        return isLive(stored, shard) ? stored[2 * shard] : 0;
+        return isLive(stored, shard, expiredBefore()) ? stored[2 * shard] : 0;
     }
 
     /**
@@ -93,9 +97,10 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
      */
     public synchronized Map<String, ConsumerPosition> findAll(int shard) {
         loadAll();
+        long expiredBefore = expiredBefore();
         Map<String, ConsumerPosition> ret = new HashMap<>();
         positions.forEach((consumerName, stored) -> {
-            if (isLive(stored, shard)) {
+            if (isLive(stored, shard, expiredBefore)) {
                 ret.put(consumerName, new ConsumerPosition(stored[2 * shard], stored[2 * shard + 1]));
             }
         });
@@ -111,29 +116,36 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
 
     /**
      * Stores the next offset to deliver to the consumer on one shard, as used now, unless a later one is stored. Saving
-     * the stored offset again only marks it used.
+     * the stored offset again only marks it used, once it was last used more than half a refresh interval ago.
      */
     public synchronized void save(String consumerName, int shard, long nextOffset) {
+        long now = System.currentTimeMillis();
         long[] stored = load(consumerName);
-        long current = isLive(stored, shard) ? stored[2 * shard] : 0;
-        // Zero is the position of a consumer that never committed, which is not stored
-        if (nextOffset > 0 && nextOffset >= current) {
-            write(consumerName, shard, nextOffset, System.currentTimeMillis());
+        long current = isLive(stored, shard, now - expiry.toMillis()) ? stored[2 * shard] : 0;
+        // Zero is the position of a consumer that never committed, which is not stored. Marking a position used costs a
+        // forced write and a resend of the shard's positions, so a recent use is not marked again
+        if (nextOffset > current
+                || (nextOffset == current && current > 0 && stored[2 * shard + 1] < now - refreshInterval.toMillis() / 2)) {
+            write(consumerName, shard, nextOffset, now);
         }
     }
 
     /**
      * Merges positions another copy of the shard holds: each keeps the later offset and the later use. An expired
-     * position is ignored.
+     * position, received or stored, is ignored.
      */
     public synchronized void saveAll(int shard, Map<String, ConsumerPosition> received) {
         long expiredBefore = expiredBefore();
         received.forEach((consumerName, position) -> {
             long[] stored = load(consumerName);
+            // An expired position not deleted yet must not raise a consumer that started over
+            boolean live = isLive(stored, shard, expiredBefore);
+            long storedOffset = live ? stored[2 * shard] : 0;
+            long storedLastUsed = live ? stored[2 * shard + 1] : 0;
             if (position.lastUsedMillis() >= expiredBefore
-                    && (position.nextOffset() > stored[2 * shard] || position.lastUsedMillis() > stored[2 * shard + 1])) {
-                write(consumerName, shard, Math.max(position.nextOffset(), stored[2 * shard]),
-                      Math.max(position.lastUsedMillis(), stored[2 * shard + 1]));
+                    && (position.nextOffset() > storedOffset || position.lastUsedMillis() > storedLastUsed)) {
+                write(consumerName, shard, Math.max(position.nextOffset(), storedOffset),
+                      Math.max(position.lastUsedMillis(), storedLastUsed));
             }
         });
     }
@@ -142,18 +154,25 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
      * Deletes the expired positions, and the files of consumers left with none.
      */
     public synchronized void deleteExpired() {
+        // A closed repository's directory may already hold the files of a queue created later with the same name
+        if (closed) {
+            return;
+        }
         loadAll();
         long expiredBefore = expiredBefore();
         List<String> gone = new ArrayList<>();
         positions.forEach((consumerName, stored) -> {
-            boolean any = false;
+            boolean anyLive = false;
             for (int shard = 0; shard < shardCount; shard++) {
-                if (stored[2 * shard] > 0 && stored[2 * shard + 1] < expiredBefore) {
-                    write(consumerName, shard, 0, 0);
-                }
-                any |= stored[2 * shard] > 0;
+                anyLive |= isLive(stored, shard, expiredBefore);
             }
-            if (!any) {
+            if (anyLive) {
+                for (int shard = 0; shard < shardCount; shard++) {
+                    if (stored[2 * shard] > 0 && !isLive(stored, shard, expiredBefore)) {
+                        write(consumerName, shard, 0, 0);
+                    }
+                }
+            } else {
                 gone.add(consumerName);
             }
         });
@@ -191,8 +210,8 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
         return System.currentTimeMillis() - expiry.toMillis();
     }
 
-    private boolean isLive(long[] stored, int shard) {
-        return stored[2 * shard] > 0 && stored[2 * shard + 1] >= expiredBefore();
+    private static boolean isLive(long[] stored, int shard, long expiredBefore) {
+        return stored[2 * shard] > 0 && stored[2 * shard + 1] >= expiredBefore;
     }
 
     private void write(String consumerName, int shard, long nextOffset, long lastUsedMillis) {

@@ -4,6 +4,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.internal.cluster.QueueFailure;
 
@@ -32,6 +34,10 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
      */
     static final long FAILURE_REPORT_MS = 30_000;
 
+    /**
+     * The context the stream runs on.
+     */
+    @Getter(AccessLevel.PROTECTED)
     private final Context context;
     private final String description;
     private final boolean[] pulling;
@@ -125,13 +131,6 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
 
     protected final void push(T item) {
         pending.add(item);
-    }
-
-    /**
-     * @return the context the stream runs on
-     */
-    protected final Context context() {
-        return context;
     }
 
     protected final int pendingCount() {

@@ -62,6 +62,19 @@ public class ConsumerOffsetRepositoryTests {
     }
 
     @Test
+    public void anExpiredPositionNotDeletedYetDoesNotRaiseAPositionReceivedFromAnotherCopy() throws Exception {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+            positions.save("billing", 0, 100);
+            Thread.sleep(1_200);
+
+            // The consumer started over and committed below its expired position
+            positions.saveAll(0, Map.of("billing", new ConsumerPosition(85, System.currentTimeMillis())));
+
+            assertEquals(85, positions.findNextOffset("billing", 0));
+        }
+    }
+
+    @Test
     public void expiredPositionsAreDeletedWithTheFilesOfConsumersLeftWithNone() throws Exception {
         try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 2, ONE_SECOND)) {
             positions.save("billing", 0, 10);

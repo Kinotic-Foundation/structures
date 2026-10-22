@@ -43,6 +43,9 @@ final class WorkDispatcher {
 
     // Bounds the records past the low watermark, which the owner tracks in memory and redelivers after a change of owner
     private static final int MAX_IN_FLIGHT = 1_000;
+    // A dispatcher with nothing in flight is dropped after this long without a request, or half the retention period
+    // when that is shorter, so a group gone that long starts over once its stored position expires
+    private static final long IDLE_MS = 5 * 60_000;
 
     private final Vertx vertx;
     private final String queue;
@@ -53,6 +56,9 @@ final class WorkDispatcher {
     private final LongSupplier committedOffset;
     private final Supplier<Future<Void>> replicateOffsets;
     private final Function<ShardEntry, Future<Void>> deadLetter;
+    private final long refreshMillis;
+    private final long idleMillis;
+    private final long expiryMillis;
     private final TreeMap<Long, Lease> leased = new TreeMap<>();
     // Records waiting to be leased again, with how many times they have been leased
     private final TreeMap<Long, Integer> released = new TreeMap<>();
@@ -90,6 +96,9 @@ final class WorkDispatcher {
         this.committedOffset = committedOffset;
         this.replicateOffsets = replicateOffsets;
         this.deadLetter = deadLetter;
+        this.refreshMillis = groupOffsets.getRefreshInterval().toMillis();
+        this.idleMillis = Math.min(IDLE_MS, 2 * refreshMillis);
+        this.expiryMillis = groupOffsets.getExpiry().toMillis();
         this.lowWatermark = lowWatermark;
         this.nextToLease = lowWatermark;
     }
@@ -134,7 +143,7 @@ final class WorkDispatcher {
     Future<LeaseResponse> lease(String workerId, int max, long leaseMillis) {
         lastRequest = System.currentTimeMillis();
         // A group whose workers wait on a shard with no new records makes no progress, so its position is used again
-        if (lowWatermark > 0 && lastRequest - lastSaved >= groupOffsets.refreshInterval().toMillis()) {
+        if (lowWatermark > 0 && lastRequest - lastSaved >= refreshMillis) {
             saveLowWatermark();
         }
         Future<LeaseResponse> ret;
@@ -205,13 +214,18 @@ final class WorkDispatcher {
     }
 
     /**
+     * @param now the current time, in epoch milliseconds
      * @return whether no worker of the group holds or waits for a record of the shard, no record is on its way to the
-     * dead-letter queue, and no request came since {@code since}, in epoch milliseconds. The group's position is then
-     * stored up to the first record it has not finished; the records it finished past that are leased again once the
-     * group's dispatcher is opened again.
+     * dead-letter queue, and no request came for five minutes or half the retention period, whichever is shorter, or
+     * for the whole retention period while records wait to be leased again. The group's position is then stored up to
+     * the first record it has not finished; the records it finished past that are leased again once the group's
+     * dispatcher is opened again.
      */
-    boolean isIdleSince(long since) {
-        return lastRequest < since && leased.isEmpty() && pendingLeases.isEmpty() && deadLettering == 0;
+    boolean isIdle(long now) {
+        // Released records keep their delivery counts until the group's position expires, so a record that fails every
+        // worker still reaches the dead-letter queue
+        long idleFor = released.isEmpty() ? idleMillis : expiryMillis;
+        return lastRequest < now - idleFor && leased.isEmpty() && pendingLeases.isEmpty() && deadLettering == 0;
     }
 
     void stop() {
