@@ -424,10 +424,9 @@ locals {
       mounts        = []
       entrypoint    = local.images.cnb.entrypoint
       image_env     = local.images.cnb.env
-      # No fixture migration applies: no test users, no console samples. The dev-server profile applies the
-      # development server's own seeds, the email templates of the UIs it serves
+      # The production profile applies no fixture migration: no test users, no console samples
       env = {
-        SPRING_PROFILES_ACTIVE           = "production,dev-server"
+        SPRING_PROFILES_ACTIVE           = "production"
         KINOTIC_MIGRATION_ELASTIC_SCHEME = "http"
         KINOTIC_MIGRATION_ELASTIC_HOST   = local.es_ips[0]
         KINOTIC_MIGRATION_ELASTIC_PORT   = "9200"
