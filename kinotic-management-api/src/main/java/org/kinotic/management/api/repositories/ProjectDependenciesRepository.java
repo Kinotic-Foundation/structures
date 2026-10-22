@@ -26,9 +26,24 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
     // The most versions of one package one listing returns; a package with more is listed page by page
     private static final int VERSIONS_PAGE_SIZE = 1_000;
 
-
     public ProjectDependenciesRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_project_dependencies", ProjectDependencies.class, crudServiceTemplate);
+    }
+
+    /**
+     * Deletes the project's tree when it lists the dependencies with the hash, waiting for the
+     * deletion to be visible in search results.
+     */
+    public Future<Void> deleteIfGeneratedFrom(String projectId, String orgId, String dependencyHash) {
+        Validate.notBlank(projectId, "projectId cannot be blank");
+        Validate.notBlank(orgId, "orgId cannot be blank");
+        Validate.notBlank(dependencyHash, "dependencyHash cannot be blank");
+        return crudServiceTemplate.deleteByQuery(indexName, b -> b.routing(orgId)
+                                                                 .refresh(true)
+                                                                 .query(composeOrgFilter(orgId,
+                                                                                         termFilter("id", projectId),
+                                                                                         termFilter("dependencyHash", dependencyHash))))
+                                  .mapEmpty();
     }
 
     /**

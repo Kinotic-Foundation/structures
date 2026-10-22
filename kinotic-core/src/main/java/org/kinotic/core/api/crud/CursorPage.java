@@ -76,23 +76,25 @@ public class CursorPage<T> extends Page<T> {
     }
 
     // Each page is read from the callback of the one before rather than composed into its future, so
-    // a listing of any length nests no futures and its completion unwinds no stack of them
+    // a listing of any length nests no futures and its completion unwinds no stack of them. The
+    // listing runs inside compose, so one that throws fails done rather than throwing into onSuccess
     private static <T> void readPage(Function<CursorPageable, Future<Page<T>>> listing,
                                      int pageSize,
                                      Sort sort,
                                      Function<List<T>, Future<Void>> action,
                                      String cursor,
                                      Promise<Void> done) {
-        listing.apply(Pageable.create(cursor, pageSize, sort))
-               .compose(page -> action.apply(page.getContent()).map(page))
-               .onSuccess(page -> {
-                   String next = page instanceof CursorPage<T> cursorPage ? cursorPage.getCursor() : null;
-                   if (page.getContent().size() < pageSize || next == null) {
-                       done.complete();
-                   } else {
-                       readPage(listing, pageSize, sort, action, next, done);
-                   }
-               })
-               .onFailure(done::fail);
+        Future.<Void>succeededFuture()
+              .compose(v -> listing.apply(Pageable.create(cursor, pageSize, sort)))
+              .compose(page -> action.apply(page.getContent()).map(page))
+              .onSuccess(page -> {
+                  String next = page instanceof CursorPage<T> cursorPage ? cursorPage.getCursor() : null;
+                  if (page.getContent().size() < pageSize || next == null) {
+                      done.complete();
+                  } else {
+                      readPage(listing, pageSize, sort, action, next, done);
+                  }
+              })
+              .onFailure(done::fail);
     }
 }

@@ -76,23 +76,30 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
                                     NOT_LAST_REPORTED, dependencyHash, projectId);
                     dependencies.setId(projectId)
                                 .setOrganizationId(organizationId)
-                                .setApplicationId(deployment.getApplicationId());
+                                .setApplicationId(deployment.getApplicationId())
+                                .setDependencyHash(dependencyHash);
                     // visible before the scan, so an advisory scan running alongside it finds the tree
                     return projectDependenciesRepository.saveSync(dependencies, organizationId)
                             // checked again once stored, since a recordArtifacts of other dependencies can land
-                            // after the check above; the tree it leaves stays unmarked until the next SBOM replaces it
+                            // after the check above and its tree delete before this save; the tree is then
+                            // deleted again, unless an SBOM of the newer dependencies has replaced it
                             .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId, dependencyHash))
-                            // the SBOM stands once stored; alerts a failed scan leaves behind are corrected by the
-                            // next scan of every project
-                            .compose(recorded -> {
-                                Validate.isTrue(recorded, NOT_LAST_REPORTED, dependencyHash, projectId);
-                                return vulnerabilityScanner.scanProject(dependencies)
-                                                           .recover(error -> {
-                                                               log.error("Could not scan the SBOM of project {} for vulnerabilities", projectId, error);
-                                                               return Future.succeededFuture();
-                                                           });
-                            });
+                            .compose(recorded -> recorded
+                                    ? scanProject(dependencies)
+                                    : projectDependenciesRepository.deleteIfGeneratedFrom(projectId, organizationId, dependencyHash)
+                                                                   .compose(v -> Future.failedFuture(new IllegalArgumentException(
+                                                                           NOT_LAST_REPORTED.formatted(dependencyHash, projectId)))));
                 });
+    }
+
+    // The SBOM stands once stored; alerts a failed scan leaves behind are corrected by the next scan
+    // of every project
+    private Future<Void> scanProject(ProjectDependencies dependencies) {
+        return vulnerabilityScanner.scanProject(dependencies)
+                                   .recover(error -> {
+                                       log.error("Could not scan the SBOM of project {} for vulnerabilities", dependencies.getId(), error);
+                                       return Future.succeededFuture();
+                                   });
     }
 
     /** Loads the deployment of a project of the participant's organization; another organization's is indistinguishable from none. */

@@ -34,7 +34,9 @@
                   detail="reached by production dependencies" />
         <StatCard :icon="Wrench" :tint="TINTS.purple" label="Development" :value="countOf(PackageScope.DEVELOPMENT)"
                   detail="only used to build and test" />
-        <StatCard :icon="ShieldAlert" :tint="alerts.length ? TINTS.red : TINTS.green" label="Vulnerabilities" :value="alerts.length"
+        <StatCard v-if="alertsError" :icon="ShieldAlert" :tint="TINTS.purple" label="Vulnerabilities" value="—"
+                  detail="could not be checked" />
+        <StatCard v-else :icon="ShieldAlert" :tint="alerts.length ? TINTS.red : TINTS.green" label="Vulnerabilities" :value="alerts.length"
                   :detail="`${countSevere(alerts.map(alert => alert.finding))} critical or high`" />
       </div>
 
@@ -105,7 +107,7 @@ import type { PageState } from 'primevue/paginator'
 import SelectButton from 'primevue/selectbutton'
 import Tag from 'primevue/tag'
 import { GitCommitHorizontal, ListTree, Package, Server, ShieldAlert, Wrench } from '@lucide/vue'
-import { countSevere, DashboardSection, errorMessage, PageHeader, shortSha, StatCard, TablePaginator, TINTS, EmptyChartCharacter, VulnerabilityFindingsTable } from '@kinotic-ai/frontend-common'
+import { countSevere, DashboardSection, errorMessage, packageOf, PageHeader, shortSha, StatCard, TablePaginator, TINTS, EmptyChartCharacter, VulnerabilityFindingsTable } from '@kinotic-ai/frontend-common'
 import { Kinotic } from '@kinotic-ai/core'
 import type { ProjectDependencies, ProjectDeployment, VulnerabilityAlert } from '@kinotic-ai/management-api'
 
@@ -166,7 +168,7 @@ const rows = computed<PackageRow[]>(() => {
     ret = tree.packages
       .map((purl, position) => ({
         purl,
-        ...nameAndVersionOf(purl),
+        ...packageOf(purl),
         scope: development.has(position) ? PackageScope.DEVELOPMENT : optional.has(position) ? PackageScope.OPTIONAL : PackageScope.RUNTIME,
         direct: direct.has(position),
       }))
@@ -225,16 +227,6 @@ function countOf(packageScope: PackageScope): number {
 function onPage(state: PageState): void {
   first.value = state.first
   pageSize.value = state.rows
-}
-
-// pkg:npm/<name>@<version> with each part percent-encoded, so the one literal @ ends the name
-function nameAndVersionOf(purl: string): { name: string, version: string } {
-  const body = purl.slice(PURL_PREFIX.length)
-  const at = body.indexOf('@')
-  return {
-    name: body.slice(0, at).split('/').map(decodeURIComponent).join('/'),
-    version: decodeURIComponent(body.slice(at + 1)),
-  }
 }
 
 // CycloneDX has no development scope: a development package is excluded, the scope of what is not

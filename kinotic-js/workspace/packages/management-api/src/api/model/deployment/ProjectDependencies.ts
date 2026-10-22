@@ -18,6 +18,12 @@ export class ProjectDependencies {
     public applicationId!: string
 
     /**
+     * The fingerprint of the dependencies the tree lists, as the sync workload reported it in
+     * ProjectArtifacts.dependencyHash.
+     */
+    public dependencyHash: string | null = null
+
+    /**
      * Every package version the lockfile installs, as a package URL, e.g.
      * pkg:npm/%40isaacs/cliui@8.0.2.
      */
