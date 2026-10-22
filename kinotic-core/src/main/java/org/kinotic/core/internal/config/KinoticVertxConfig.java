@@ -71,18 +71,6 @@ public class KinoticVertxConfig {
             "vertx.pool.usage",
             "vertx.pool.completed");
 
-    // Vert.x registers on this composite in front of the global registry, so the deny filter stays scoped to
-    // Vert.x's meters. It is one per JVM because the global registry holds a strong reference to each composite
-    // added in front of it, and vertx-micrometer shares a gauge's value only among the Vertx instances of one
-    // registry, so a second Vertx in the JVM (one per Spring context in tests) updates the gauges already
-    // registered in the global registry.
-    private static final CompositeMeterRegistry VERTX_METER_REGISTRY = new CompositeMeterRegistry();
-
-    static {
-        VERTX_METER_REGISTRY.config().meterFilter(MeterFilter.deny(id -> DENIED_METERS.contains(id.getName())));
-        VERTX_METER_REGISTRY.add(Metrics.globalRegistry);
-    }
-
     @Bean
     public KinoticIgniteClusterManager clusterManager(Ignite ignite, ZonePartitioningService zonePartitioningService){
         // make sure clustering is enabled
@@ -123,7 +111,11 @@ public class KinoticVertxConfig {
 
         // With OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true the agent bridges Micrometer's global registry
         // onto the OTLP exporter, so Vert.x's meters need no exporter of their own. With no agent attached
-        // the registry has no backends.
+        // the registry has no backends. Vert.x registers on a composite in front of the global registry so
+        // the deny filter stays scoped to Vert.x's meters.
+        CompositeMeterRegistry meterRegistry = new CompositeMeterRegistry();
+        meterRegistry.config().meterFilter(MeterFilter.deny(id -> DENIED_METERS.contains(id.getName())));
+        meterRegistry.add(Metrics.globalRegistry);
         VertxOptions options = new VertxOptions()
                 .setMetricsOptions(new MicrometerMetricsOptions().setEnabled(true));
 
@@ -139,7 +131,7 @@ public class KinoticVertxConfig {
         }
 
         Vertx vertx = Vertx.builder()
-                           .withMetrics(new MicrometerMetricsFactory(VERTX_METER_REGISTRY))
+                           .withMetrics(new MicrometerMetricsFactory(meterRegistry))
                            .with(options.setEventBusOptions(eventBusOptions))
                            .withClusterManager(clusterManager)
                            .buildClustered()
