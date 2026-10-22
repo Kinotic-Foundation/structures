@@ -1,7 +1,7 @@
 package org.kinotic.domain.api.model;
 
 /**
- * The Handlebars sources of an email that replaces a built-in one, rendered with the variables of its
+ * The Handlebars sources of an email, rendered with the variables of its
  * {@link EmailTemplateKind}.
  */
 public interface EmailTemplate {

@@ -32,6 +32,6 @@ public interface OriginEmailTemplateService {
      */
     Future<OriginEmailTemplate> save(OriginEmailTemplate template);
 
-    /** Deletes the template {@code id}, so its UI sends the built-in email again; nothing happens for an unknown id. */
+    /** Deletes the template {@code id}, so its UI sends the portal's instead; nothing happens for an unknown id. */
     Future<Void> deleteById(String id);
 }

@@ -24,6 +24,7 @@ import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.EmailTemplateKind;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.OriginEmailTemplate;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
 import org.kinotic.domain.internal.api.repositories.OriginEmailTemplateRepository;
@@ -32,8 +33,10 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -49,7 +52,6 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class EmailService {
 
-    private static final String VERIFICATION_SUBJECT = "Verify your Kinotic email";
     private static final String VERIFICATION_PATH = "/signup/verify?token=";
     private static final String INVITE_PATH = "/invite/accept?token=";
     private static final String ORGANIZATIONS_SUBJECT = "Your organizations on Kinotic";
@@ -64,10 +66,6 @@ public class EmailService {
             new Handlebars(new ClassPathTemplateLoader("/templates/email", ".txt"))
                     .with(EscapingStrategy.NOOP);
 
-    private static final Template VERIFICATION_HTML = compileTemplate(HTML_TEMPLATES, "verification-email");
-    private static final Template VERIFICATION_TEXT = compileTemplate(TEXT_TEMPLATES, "verification-email");
-    private static final Template INVITE_HTML = compileTemplate(HTML_TEMPLATES, "invite-email");
-    private static final Template INVITE_TEXT = compileTemplate(TEXT_TEMPLATES, "invite-email");
     private static final Template ORGANIZATIONS_HTML = compileTemplate(HTML_TEMPLATES, "organizations-email");
     private static final Template ORGANIZATIONS_TEXT = compileTemplate(TEXT_TEMPLATES, "organizations-email");
 
@@ -81,7 +79,7 @@ public class EmailService {
     /**
      * Sends a verification email to the given address, rendered with the {@link EmailTemplateKind#VERIFICATION}
      * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with the
-     * built-in template otherwise.
+     * portal's otherwise.
      *
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
@@ -106,13 +104,7 @@ public class EmailService {
                                                "verificationUrl", verificationUrl);
 
         return findOriginTemplate(origin, EmailTemplateKind.VERIFICATION)
-                .compose(template -> template != null
-                        ? send(email, displayName, template, variables)
-                        : send(email,
-                               displayName,
-                               VERIFICATION_SUBJECT,
-                               render(VERIFICATION_HTML, variables),
-                               render(VERIFICATION_TEXT, variables)));
+                .compose(template -> send(email, displayName, template, variables));
     }
 
     /**
@@ -120,7 +112,7 @@ public class EmailService {
      * application invite is rendered with the application's {@link InviteEmailTemplate}
      * when one exists; any other is rendered with the {@link EmailTemplateKind#INVITATION}
      * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with
-     * the built-in template otherwise.
+     * the portal's otherwise.
      *
      * @param invite           the saved invitation (token, recipient, scope, inviter attribution)
      * @param organizationName display name of the inviting organization
@@ -152,19 +144,11 @@ public class EmailService {
         variables.put("acceptUrl", acceptUrl);
         variables.put("expiresInDays", expiresInDays);
 
-        String defaultSubject = invite.getApplicationId() != null
-                ? "You're invited to join " + invite.getApplicationId()
-                : "You're invited to join " + organizationName + " on Kinotic";
-
         return findInviteTemplate(invite, origin)
-                .compose(template -> template != null
-                        ? send(invite.getEmail(), toName, template, variables)
-                        : send(invite.getEmail(), toName, defaultSubject,
-                               render(INVITE_HTML, variables),
-                               render(INVITE_TEXT, variables)));
+                .compose(template -> send(invite.getEmail(), toName, template, variables));
     }
 
-    // an application's own template wins over the inviting UI's, which wins over the built-in
+    // an application's own template wins over the inviting UI's, which wins over the portal's
     private Future<EmailTemplate> findInviteTemplate(PendingInvite invite, String origin) {
         Future<InviteEmailTemplate> applicationTemplate = invite.getApplicationId() != null
                 ? inviteEmailTemplateRepository.findByApplication(invite.getApplicationId(), invite.getOrganizationId())
@@ -251,11 +235,23 @@ public class EmailService {
         }
     }
 
-    // the template of kind the UI at origin sends in place of the built-in, or null for none or no origin
+    // the template of kind the UI at origin sends, or the portal's when that UI has none of its own or no UI is named
     private Future<EmailTemplate> findOriginTemplate(String origin, EmailTemplateKind kind) {
-        return origin != null
-                ? originEmailTemplateRepository.findByOriginAndKind(origin, kind).map(EmailTemplate.class::cast)
+        URI portal = URI.create(portalBaseUrl());
+        String portalOrigin = (portal.getScheme() + "://" + portal.getAuthority()).toLowerCase(Locale.ROOT);
+        Future<OriginEmailTemplate> own = origin != null && !origin.equals(portalOrigin)
+                ? originEmailTemplateRepository.findByOriginAndKind(origin, kind)
                 : Future.succeededFuture();
+        return own.compose(found -> found != null
+                        ? Future.succeededFuture(found)
+                        : originEmailTemplateRepository.findByOriginAndKind(portalOrigin, kind))
+                  .map(found -> {
+                      // the seed migration gives every environment's portal origin one of each kind, so only a
+                      // template deleted on the console or a portalBaseUrl the seeds do not name gets here
+                      Validate.validState(found != null, "No %s email template for the portal's origin %s",
+                                          kind, portalOrigin);
+                      return found;
+                  });
     }
 
     /**

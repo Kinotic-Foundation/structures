@@ -9,8 +9,8 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * The email of one {@link EmailTemplateKind} sent for a flow started from the UI at {@link #origin}, in place of the
- * built-in one, so a UI built on Kinotic sends emails in its own name. At most one per origin and kind. Subject and
+ * The email of one {@link EmailTemplateKind} sent for a flow started from the UI at {@link #origin}, so each UI sends
+ * emails in its own name; a UI with none of its own sends the portal's. At most one per origin and kind. Subject and
  * bodies are Handlebars sources rendered with the kind's variables. An application's own
  * {@link InviteEmailTemplate} takes precedence for its invitations.
  */

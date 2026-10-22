@@ -53,8 +53,8 @@ import { markRaw, type Component } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { ArrowRight, ArrowUpRight, Check, MailCheck, Sparkles, Unplug } from '@lucide/vue'
 
-/** Why the feature shows its empty state: not built yet, not set up yet, or running on its built-in default. */
-export type FeatureEmptyStateBadge = 'coming-soon' | 'not-connected' | 'built-in'
+/** Why the feature shows its empty state: not built yet, not set up yet, or running on its default. */
+export type FeatureEmptyStateBadge = 'coming-soon' | 'not-connected' | 'default'
 
 /**
  * The empty state of a feature that can't be used yet: a faded preview of its screen, given in
@@ -80,8 +80,8 @@ const BADGES: Record<FeatureEmptyStateBadge, { label: string, icon: Component, c
     icon: markRaw(Sparkles),
     classes: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
   },
-  'built-in': {
-    label: 'Using the built-in email',
+  'default': {
+    label: 'Using the default email',
     icon: markRaw(MailCheck),
     classes: 'border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300'
   },

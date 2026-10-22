@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <PageHeader title="Email templates"
-                description="The emails a UI built on Kinotic sends in its own name, in place of Kinotic's built-in ones." />
+                description="The emails each UI sends in its own name. A UI with none of its own sends the portal's." />
 
     <CrudTable
       ref="crudTable"
@@ -9,7 +9,7 @@
       :data-source="dataSource"
       :search="tableSearch"
       create-new-button-text="Add template"
-      empty-state-text="No email templates; every UI sends Kinotic's built-in emails"
+      empty-state-text="No email templates; add the portal's, which every UI without its own sends"
       :row-actions="rowActions"
       @update:search="tableSearch = $event"
       @add-item="openDrawer(null)"
@@ -99,7 +99,7 @@ function rowActions(row: TemplateRow): MenuItem[] {
 function confirmDelete(row: TemplateRow): void {
   confirm.require({
     header: 'Delete template',
-    message: `Delete the ${row.kind.toLowerCase()} email of ${row.origin}? That UI sends Kinotic's built-in email again.`,
+    message: `Delete the ${row.kind.toLowerCase()} email of ${row.origin}? That UI sends the portal's instead.`,
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Delete', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },

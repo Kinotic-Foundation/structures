@@ -9,8 +9,8 @@ import java.util.Date;
 
 /**
  * An application's customized invitation email — at most one per application. Subject and
- * bodies are Handlebars sources rendered with the same variables as the built-in
- * invitation template; when an application has no row here, the built-in is used.
+ * bodies are Handlebars sources rendered with the {@link EmailTemplateKind#INVITATION} variables; when an
+ * application has no row here, the inviting UI's {@link OriginEmailTemplate} is used.
  */
 @Getter
 @Setter
