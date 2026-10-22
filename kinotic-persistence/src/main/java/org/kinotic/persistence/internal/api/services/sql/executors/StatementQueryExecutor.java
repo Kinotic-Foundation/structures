@@ -26,20 +26,17 @@ import java.util.Map;
 public class StatementQueryExecutor extends AbstractQueryExecutor {
 
     private final Statement statement;
-    private final String permission;
     private final EntityStatementResolver entityStatementResolver;
     private final StatementExecutor<Statement, ?> statementExecutor;
     private final JsonMapper jsonMapper;
 
     public StatementQueryExecutor(EntityDescriptor entityDescriptor,
                                   Statement statement,
-                                  String permission,
                                   EntityStatementResolver entityStatementResolver,
                                   StatementExecutor<Statement, ?> statementExecutor,
                                   JsonMapper jsonMapper) {
         super(entityDescriptor);
         this.statement = statement;
-        this.permission = permission;
         this.entityStatementResolver = entityStatementResolver;
         this.statementExecutor = statementExecutor;
         this.jsonMapper = jsonMapper;
@@ -57,11 +54,6 @@ public class StatementQueryExecutor extends AbstractQueryExecutor {
     @Override
     public <T> Future<Page<T>> executePage(QueryContext context, Pageable pageable, Class<T> type) {
         return Future.failedFuture(new IllegalArgumentException("A named query that writes returns a count, not a page"));
-    }
-
-    @Override
-    public String permission() {
-        return permission;
     }
 
     /**

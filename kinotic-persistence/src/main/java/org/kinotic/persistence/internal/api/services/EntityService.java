@@ -163,15 +163,6 @@ public interface EntityService {
                                        EntityContext context);
 
     /**
-     * Finds the permission a caller needs on this entity definition to run a named query.
-     *
-     * @param queryName the name of {@link FunctionDefinition} that defines the query
-     * @return {@link Future} with the short permission name, such as {@code can_read}; fails when the definition
-     *         holds no such query
-     */
-    Future<String> findNamedQueryPermission(String queryName);
-
-    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *

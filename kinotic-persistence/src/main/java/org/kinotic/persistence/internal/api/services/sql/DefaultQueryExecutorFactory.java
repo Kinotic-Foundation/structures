@@ -1,7 +1,6 @@
 package org.kinotic.persistence.internal.api.services.sql;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.config.DomainPersistenceProperties;
 import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
@@ -9,7 +8,6 @@ import org.kinotic.domain.api.model.persistence.idl.decorators.QueryDecorator;
 import org.kinotic.domain.api.services.EntityStatementResolver;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.idl.api.schema.FunctionDefinition;
-import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.persistence.api.model.NamedQueryOperation;
 import org.kinotic.persistence.api.services.security.AuthorizationService;
 import org.kinotic.persistence.api.services.security.AuthorizationServiceFactory;
@@ -89,7 +87,9 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     private QueryExecutor createQueryExecutorForStatement(EntityDescriptor entityDescriptor,
                                                           String queryName,
                                                           String statements) {
-        Statement statement = entityStatementResolver.resolve(parse(statements, queryName), entityDescriptor).getFirst();
+        Statement statement = entityStatementResolver.resolve(List.of(migrationParser.parseStatement(statements, "Named query " + queryName)),
+                                                              entityDescriptor)
+                                                     .getFirst();
         return switch (statement) {
             case SelectStatement select -> new SelectQueryExecutor(entityDescriptor, queryName, select, crudServiceTemplate,
                                                                    readPreProcessor, readPostProcessor);
@@ -97,9 +97,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                                             elasticVertxClient,
                                                                             ElasticsearchSqlWriter.write(aggregate),
                                                                             domainPersistenceProperties);
-            case InsertStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_CREATE);
-            case UpdateStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_EDIT);
-            case DeleteStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_DELETE);
+            case InsertStatement _, UpdateStatement _, DeleteStatement _ -> write(entityDescriptor, statement);
             default -> throw new IllegalArgumentException("Named query " + queryName
                                                                   + ": a named query is a SELECT, INSERT, UPDATE or DELETE, so "
                                                                   + statement.getClass().getSimpleName().replace("Statement", "")
@@ -107,21 +105,13 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
         };
     }
 
-    private List<Statement> parse(String statements, String queryName) {
-        // a named query is one statement, usually written without the terminator the grammar requires
-        String sql = statements.strip();
-        List<Statement> ret = migrationParser.parse(sql.endsWith(";") ? sql : sql + ";", queryName).statements();
-        Validate.isTrue(ret.size() == 1, "Named query %s must be one statement", queryName);
-        return ret;
-    }
-
     @SuppressWarnings("unchecked")
-    private QueryExecutor write(EntityDescriptor entityDescriptor, Statement statement, String permission) {
+    private QueryExecutor write(EntityDescriptor entityDescriptor, Statement statement) {
         StatementExecutor<Statement, ?> executor = (StatementExecutor<Statement, ?>) statementExecutors
                 .stream()
                 .filter(candidate -> candidate.supports(statement))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No executor found for statement: " + statement.getClass().getSimpleName()));
-        return new StatementQueryExecutor(entityDescriptor, statement, permission, entityStatementResolver, executor, jsonMapper);
+        return new StatementQueryExecutor(entityDescriptor, statement, entityStatementResolver, executor, jsonMapper);
     }
 }

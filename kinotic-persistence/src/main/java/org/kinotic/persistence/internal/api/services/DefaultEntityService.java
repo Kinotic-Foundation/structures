@@ -281,11 +281,6 @@ public class DefaultEntityService implements EntityService {
                                                    .compose(v -> doFindByIds(composedIds, type, context)));
     }
 
-    @Override
-    public Future<String> findNamedQueryPermission(String queryName) {
-        return namedQueriesService.findPermission(entityDescriptor, queryName);
-    }
-
     @WithSpan
     @Override
     public <T> Future<List<T>> namedQuery(String queryName,

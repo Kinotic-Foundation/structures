@@ -11,7 +11,8 @@ import java.util.List;
  * Decides the permission a request needs for a function whose permission depends on its arguments, as a named
  * query's depends on whether its statement reads or writes. A function's check names its resolver with
  * {@code @AuthzCheck(permissionResolver = ...)}, and the {@link RequestAuthorizer} checks the resolved permission
- * on the object the check names. A resolver is a bean of the node serving the function.
+ * on the object the check names. Every server authorizes the requests it receives for any service, so a resolver
+ * is a bean of a module every server loads.
  */
 public interface RequestPermissionResolver extends AuthzPermissionResolver {
 
