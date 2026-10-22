@@ -191,7 +191,9 @@ nothing. The rules that matter:
   bare `jvm_memory_used` and leaves every stock dashboard empty.
 - **Vert.x metrics** (`vertx_http_server_active_connections`, `vertx_http_server_active_ws_connections`,
   `vertx_eventbus_*`, `vertx_pool_*`) arrive through Micrometer's global registry, which the agent
-  bridges onto the OTLP exporter — so they are only exported when the agent is attached.
+  bridges onto the OTLP exporter when `OTEL_INSTRUMENTATION_MICROMETER_ENABLED` is `true` — so they
+  are only exported with the agent attached and that flag set. `vertx_http_server_active_ws_connections`
+  counts the STOMP connections on `/api/v1`, the servers' only WebSocket endpoint.
 - **Tempo's metrics-generator** writes its own series to Mimir — `traces_spanmetrics_calls_total`
   and `traces_spanmetrics_latency_bucket`, labelled `service`, `span_name`, `span_kind`,
   `status_code`, and `peer_service` on HTTP client spans to a named backend. These only exist
