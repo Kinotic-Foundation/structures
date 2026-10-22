@@ -1,5 +1,6 @@
 package org.kinotic.domain.internal.api.repositories;
 
+import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
@@ -93,6 +94,21 @@ public abstract class AbstractRepository<T extends Identifiable<String>> {
     protected Future<Void> deleteByIdSync(String id, Consumer<DeleteRequest.Builder> builderConsumer) {
         return crudServiceTemplate.deleteByIdSync(indexName, id, builderConsumer)
                                   .mapEmpty();
+    }
+
+    /**
+     * Deletes a single-use document, visible to search on completion. Of concurrent calls for one id exactly one
+     * completes with true, so the caller that gets true is the one that consumed it.
+     *
+     * @param id of the document to consume
+     * @return a {@link Future} that will complete with true when this call deleted the document, and false when
+     * there was no document to delete
+     */
+    public Future<Boolean> consumeByIdSync(String id) {
+        // Elasticsearch deletes a document in one operation on its primary shard, so of two deletes of one id
+        // the second finds it gone and reports not_found
+        return crudServiceTemplate.deleteByIdSync(indexName, id, null)
+                                  .map(response -> response.result() == Result.Deleted);
     }
 
     public Future<Page<T>> findAll(Pageable pageable) {

@@ -85,19 +85,21 @@ public class DefaultDeviceCodeGrantService implements DeviceCodeGrantService {
                     .map(new DeviceCodePollResult(PollStatus.EXPIRED, null, null));
         }
         if (grant.getIdentityId() != null) {
-            // Approved — hand back the approver in the scope it approved from, and consume the grant so it
-            // cannot be replayed. An approver that may no longer act there, disabled or no longer a member, fails it.
-            return identityService.resolveParticipant(grant.getIdentityId(), grant.getOrganizationId(), grant.getApplicationId())
-                    .compose(approver -> deviceCodeGrantRepository.deleteById(grant.getId())
-                            .map(approver == null
-                                    ? new DeviceCodePollResult(PollStatus.INVALID, null, null)
-                                    : new DeviceCodePollResult(PollStatus.APPROVED, approver, grant.getDeviceName())));
+            // Approved — consume the grant so it cannot be replayed, then hand back the approver in the scope it
+            // approved from. A poll that finds the grant consumed lost it to a concurrent poll, and an approver
+            // that may no longer act there, disabled or no longer a member, fails it.
+            return deviceCodeGrantRepository.consumeByIdSync(grant.getId())
+                    .compose(consumed -> consumed
+                            ? identityService.resolveParticipant(grant.getIdentityId(), grant.getOrganizationId(), grant.getApplicationId())
+                                             .map(approver -> approver == null
+                                                     ? new DeviceCodePollResult(PollStatus.INVALID, null, null)
+                                                     : new DeviceCodePollResult(PollStatus.APPROVED, approver, grant.getDeviceName()))
+                            : Future.succeededFuture(new DeviceCodePollResult(PollStatus.INVALID, null, null)));
         }
         if (polledTooSoon(grant, now)) {
             return Future.succeededFuture(new DeviceCodePollResult(PollStatus.SLOW_DOWN, null, null));
         }
-        grant.setLastPolledAt(now);
-        return deviceCodeGrantRepository.saveSync(grant)
+        return deviceCodeGrantRepository.recordPoll(grant.getId(), now)
                 .map(new DeviceCodePollResult(PollStatus.AUTHORIZATION_PENDING, null, null));
     }
 
@@ -120,11 +122,13 @@ public class DefaultDeviceCodeGrantService implements DeviceCodeGrantService {
                         return Future.failedFuture(
                                 new IllegalArgumentException("Device authorization request has already been approved"));
                     }
-                    grant.setIdentityId(approver.getId())
-                         .setOrganizationId(scope.organizationId())
-                         .setApplicationId(scope.applicationId());
-                    return deviceCodeGrantRepository.saveSync(grant)
-                                                    .mapEmpty();
+                    // bound in the shard operation, so of two approvals racing for one grant the second fails as
+                    // the already-approved case the check above catches when they are further apart
+                    return deviceCodeGrantRepository.approve(grant.getId(), approver.getId(), scope)
+                                                    .compose(bound -> bound
+                                                            ? Future.<Void>succeededFuture()
+                                                            : Future.failedFuture(new IllegalArgumentException(
+                                                                    "Device authorization request has already been approved")));
                 });
     }
 
