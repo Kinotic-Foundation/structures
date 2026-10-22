@@ -21,8 +21,8 @@ importers:
         specifier: ^5.0.0-beta.61
         version: 5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.26)
       '@kinotic-ai/persistence':
-        specifier: ^5.0.0-beta.12
-        version: 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.26)
+        specifier: ^5.0.0-beta.16
+        version: 5.0.0-beta.16(@kinotic-ai/core@5.0.0-beta.26)
       vue:
         specifier: ^3.5.41
         version: 3.5.41(typescript@5.9.3)
@@ -482,6 +482,11 @@ packages:
     resolution: {integrity: sha512-F3dzUtFt1oGu58yPWrfPydLKu6gU90LS5Uwbz5uWqQqGYjJF6I7WmdYyBOaqBTLxD6YKIoKbpudovy5C6vEELQ==}
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.17
+
+  '@kinotic-ai/persistence@5.0.0-beta.16':
+    resolution: {integrity: sha512-yc2mKCB0CmZz4sviw9M5L0hY6w9SRq+z6YaMmVplwHcAFNkQZKcoZsI+MBOD7ZMfZvqGmeRmjr/Q93P89CEvCA==}
+    peerDependencies:
+      '@kinotic-ai/core': ^5.0.0-beta.26
 
   '@kinotic-ai/spawn@5.0.0-beta.1':
     resolution: {integrity: sha512-54l4rcIo3Z6kYxWCqfpagNm4KZXvDbOdlK6D9Kg9XdImH731nEhiws6OJ/EDHFnEU0ykUJU0vekmaw2Khs/EDw==}
@@ -2630,6 +2635,12 @@ snapshots:
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.26
       '@kinotic-ai/idl': 5.0.0-beta.1
+      rxjs: 7.8.2
+
+  '@kinotic-ai/persistence@5.0.0-beta.16(@kinotic-ai/core@5.0.0-beta.26)':
+    dependencies:
+      '@kinotic-ai/core': 5.0.0-beta.26
+      '@kinotic-ai/idl': 5.0.0-beta.5
       rxjs: 7.8.2
 
   '@kinotic-ai/spawn@5.0.0-beta.1':
