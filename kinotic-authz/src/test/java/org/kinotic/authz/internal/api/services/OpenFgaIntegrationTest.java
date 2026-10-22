@@ -13,7 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.config.KinoticAuthzProperties;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
+import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.model.Resource;
+import org.kinotic.authz.api.model.Subject;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -282,6 +286,11 @@ class OpenFgaIntegrationTest {
         assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:shipping-checks"), Consistency.HIGHER_CONSISTENCY)));
         assertEquals(List.of("project:billing-checks"),
                      await(relationshipService.listObjects(SYSTEM, modelId, "user:sally-checks", "project_can_read", "project", Consistency.HIGHER_CONSISTENCY)));
+        // the grant of a role bundling only editing explains reading, which editing implies
+        Grant editing = new Grant("sally_edits_billing_checks", "project.editor_checks", new Subject(SubjectType.USER, "sally-checks"),
+                                  new Resource("project", "billing-checks"));
+        assertTrue(await(relationshipService.explains(SYSTEM, modelId, editing, editing.subject(), "project_can_read")));
+        assertFalse(await(relationshipService.explains(SYSTEM, modelId, editing, editing.subject(), "project_can_delete")));
 
         await(relationshipService.write(SYSTEM, List.of(), List.of(
                 new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"))));
@@ -386,6 +395,37 @@ class OpenFgaIntegrationTest {
         // a binding already gone leaves nothing to remove
         await(relationshipService.unbind(SYSTEM, bindingId, "project:billing-unbind"));
         await(relationshipService.remove(SYSTEM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
+    }
+
+    @Test
+    void aRemovedObjectAndARemovedSubjectLeaveNothingOfThemselves() throws Exception {
+        AuthzModel model = generator.systemModel(List.of(projectService()));
+        String modelId = await(storeService.ensureModel(SYSTEM, model));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
+        await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("application:crm-gone", "application", "project:billing-gone"),
+                                                         new RelationshipTuple("application:crm-gone", "application", "project:payroll-gone"),
+                                                         new RelationshipTuple("user:sally-gone", "member", "group:devs-gone"))));
+        await(relationshipService.bind(SYSTEM, "project.editor", "user:sally-gone", "project:billing-gone"));
+        String kept = await(relationshipService.bind(SYSTEM, "project.editor", "user:marcus-gone", "project:billing-gone"));
+        await(relationshipService.bind(SYSTEM, "project.editor", "group:devs-gone#member", "project:payroll-gone"));
+
+        // the subject leaves its groups and its grants, and the grants of others stay
+        await(relationshipService.removeSubject(SYSTEM, "user:sally-gone"));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-gone", "project_can_edit", "project:payroll-gone"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.readByUser(SYSTEM, "user:sally-gone", "project_role_binding")).isEmpty());
+        assertTrue(await(relationshipService.findGrants(SYSTEM, "project:billing-gone")).stream().allMatch(grant -> grant.id().equals(kept)));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+
+        // the object loses its place and every grant made on it
+        await(relationshipService.removeObject(SYSTEM, "project:billing-gone"));
+        assertTrue(await(relationshipService.read(SYSTEM, "project:billing-gone")).isEmpty());
+        assertTrue(await(relationshipService.read(SYSTEM, AuthzUtil.bindingObject("project:billing-gone", kept))).isEmpty());
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-gone", "project_can_edit", "project:billing-gone"), Consistency.HIGHER_CONSISTENCY)));
+
+        // a store that does not exist holds nothing of anyone
+        await(relationshipService.removeSubject("application:acme.no-such-application-gone", "user:sally-gone"));
+        await(relationshipService.removeObject(SYSTEM, "project:payroll-gone"));
     }
 
     @Test

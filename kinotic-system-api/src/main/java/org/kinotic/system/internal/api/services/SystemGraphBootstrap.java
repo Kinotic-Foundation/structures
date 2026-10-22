@@ -21,15 +21,16 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places the system's staff and nodes in the authorization graph when the system has no administrator, once
- * the server is up and the system store runs a model: every node on the system, every enabled system
- * machine as a registrar of nodes, and every enabled system user as the system's administrator. A
- * system a migration seeds has system users, a vm-manager and nodes but no tuples, and this gives it the ones it
- * needs to be run; a system with an administrator, whatever else was granted or revoked since, is left as it is.
+ * Places the system's staff and nodes in the authorization graph when the system has no administrator, once the
+ * server is up and the system store runs a model: every node on the system, every enabled system machine as a
+ * registrar of nodes, and every enabled system user as the system's administrator. A system a migration seeds has
+ * system users, a vm-manager and nodes but no tuples, and this gives it the ones it needs to be run; a system with
+ * an administrator, whatever else was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -37,6 +38,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class SystemGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
+    // a staff member who could not be bound is tried again by a later sweep, after a delay that doubles with each sweep
+    // that leaves one, since a model the system store runs at startup may lack the types the sweep writes
+    private static final long MAX_RETRY_MILLIS = 60_000;
     // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
     private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
@@ -54,11 +58,11 @@ public class SystemGraphBootstrap {
 
     private void run() {
         stores.modelId(SYSTEM)
-              .compose(modelId -> administered())
-              .compose(administered -> administered ? Future.succeededFuture(0) : placeStaff())
-              .onSuccess(bound -> {
-                  if (bound > 0) {
-                      log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
+              .compose(modelId -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT))
+              .onSuccess(grants -> {
+                  // the administrators are bound last, so a sweep cut short before them is made again
+                  if (grants.stream().noneMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId()))) {
+                      place(RETRY_MILLIS);
                   }
               })
               // the reconciler writes the system model shortly after the servers start, so a store that runs
@@ -69,15 +73,25 @@ public class SystemGraphBootstrap {
               });
     }
 
-    private Future<Boolean> administered() {
-        return relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId())));
+    // The first administrator ends the sweep for every later start, so a sweep that fails part way is made again here,
+    // without asking the store, until it places everything; every binding has an id of its own, so one made twice is held once
+    private void place(long failedDelay) {
+        AtomicInteger failed = new AtomicInteger();
+        placeStaff(failed).onSuccess(bound -> {
+                              log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
+                              if (failed.get() > 0) {
+                                  log.warn("{} system user(s) and machine(s) could not be bound; the system staff sweep is made again", failed.get());
+                                  vertx.setTimer(failedDelay, t -> place(Math.min(failedDelay * 2, MAX_RETRY_MILLIS)));
+                              }
+                          })
+                          .onFailure(e -> {
+                              log.warn("The system staff sweep is made again: {}", e.getMessage());
+                              vertx.setTimer(RETRY_MILLIS, t -> place(failedDelay));
+                          });
     }
 
-    private Future<Integer> placeStaff() {
+    private Future<Integer> placeStaff(AtomicInteger failed) {
         Pageable page = Pageable.create(0, PAGE_SIZE, null);
-        // an administrator ends the sweep for every server, so the nodes and machines are placed before it: a sweep
-        // cut short before the administrator leaves none, and the next sweep places everything again
         return nodes.findAll(page)
                     .compose(found -> relationships.ensure(SYSTEM, found.getContent().stream()
                                                                          .map(node -> DomainUtil.containment(SYSTEM_OBJECT,
@@ -88,22 +102,31 @@ public class SystemGraphBootstrap {
                                                           .filter(MachineParticipantIdentity::isEnabled)
                                                           .map(machine -> AuthzUtil.object(AuthzConstants.USER_TYPE, machine.getId()))
                                                           .toList(),
-                                                  VmNodeOrchestrationService.REGISTRAR_ROLE))
+                                                  VmNodeOrchestrationService.REGISTRAR_ROLE,
+                                                  failed))
                     .compose(bound -> identities.findSystemUsers(page)
                                                 .compose(users -> bindEach(users.getContent().stream()
                                                                                 .filter(SystemParticipantIdentity::isEnabled)
                                                                                 .map(user -> AuthzUtil.object(AuthzConstants.USER_TYPE, user.getId()))
                                                                                 .toList(),
-                                                                           AuthzConstants.SYSTEM_ADMIN_ROLE))
+                                                                           AuthzConstants.SYSTEM_ADMIN_ROLE,
+                                                                           failed))
                                                 .map(more -> bound + more));
     }
 
-    // Each user is bound under an id of its own, so every server sweeping at once binds it once
-    private Future<Integer> bindEach(List<String> users, String roleId) {
+    // Each user is bound under an id of its own, so every server sweeping at once binds it once; one that fails
+    // leaves the others to be bound
+    private Future<Integer> bindEach(List<String> users, String roleId, AtomicInteger failed) {
         Future<Integer> ret = Future.succeededFuture(0);
         for (String user : users) {
             String bindingId = roleId + "-of-" + AuthzUtil.idOf(user);
-            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT).map(count + 1));
+            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT)
+                                                    .map(count + 1)
+                                                    .recover(e -> {
+                                                        log.warn("{} could not be bound as {}: {}", user, roleId, e.getMessage());
+                                                        failed.incrementAndGet();
+                                                        return Future.succeededFuture(count);
+                                                    }));
         }
         return ret;
     }

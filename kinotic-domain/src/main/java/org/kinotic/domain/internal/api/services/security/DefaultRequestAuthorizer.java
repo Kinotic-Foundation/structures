@@ -314,6 +314,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         ParticipantScope scope = participant.getScope();
         Future<Void> ret;
         try {
+            requireWithinCeiling(participant, check.getPermissionResource(), permission.getPermission());
             Resource checked = scopeLevelOf(check, scope);
             String resourceId = authzIdOf(checked.type(), resolve(checked.id(), spec, scope, arguments), scope);
             if (!AuthzUtil.isObjectId(resourceId)) {
@@ -341,6 +342,15 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
             ret = Future.failedFuture(e);
         }
         return ret;
+    }
+
+    // A delegate exercises its owner's permissions within its type's ceiling, so a client the owner authorized reaches
+    // only what that type of client needs; a delegate naming no type of a known ceiling is refused everything
+    private void requireWithinCeiling(Participant participant, String type, String permission) {
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            throw securityExceptions.notAuthorized("{} of {} is beyond what a {} delegate may exercise", permission, type,
+                                                   participant.getMetadata().get(DomainUtil.DELEGATE_TYPE_METADATA_KEY));
+        }
     }
 
     // A refusal names the permission, and why the request needs it when a resolver decided it

@@ -138,6 +138,26 @@ public interface RelationshipService {
     Future<Void> unbind(String store, String bindingId, String object);
 
     /**
+     * Takes a resource out of a store: every grant made on it, and every relationship on it, such as its place
+     * under its parent and its members. A resource created again under the same id starts with no grant.
+     *
+     * @param store  the store, named as its record is
+     * @param object the resource, in {@code type:id} form
+     * @return completes when the store holds nothing of the resource
+     */
+    Future<Void> removeObject(String store, String object);
+
+    /**
+     * Takes a user out of a store: every grant made to it, and every relationship it holds, such as its
+     * memberships. A user created again under the same id starts with no grant.
+     *
+     * @param store the store, named as its record is
+     * @param user  the user, in {@code type:id} form
+     * @return completes when the store holds nothing of the user, at once for a store that does not exist
+     */
+    Future<Void> removeSubject(String store, String user);
+
+    /**
      * Revokes a grant where it was made: the binding is removed as {@link #unbind} removes it, once the store
      * confirms it is attached to the object, so a grant's id guessed from elsewhere unbinds nothing.
      *
@@ -160,11 +180,11 @@ public interface RelationshipService {
     Future<List<Grant>> findGrants(String store, String object);
 
     /**
-     * Whether a grant gives a subject a permission: the grant's role bundles the permission, and the grant was
-     * made to the subject, or to a group the subject is a member of.
+     * Whether a grant gives a subject a permission: the grant's role bundles the permission or one implying it,
+     * and the grant was made to the subject, or to a group the subject is a member of.
      *
      * @param store      the store, named as its record is
-     * @param modelId    the model version to evaluate a group's membership against
+     * @param modelId    the model version to evaluate the role and a group's membership against
      * @param grant      the grant
      * @param subject    the user or group asked about
      * @param permission the model name of the permission, such as {@code project_can_edit}

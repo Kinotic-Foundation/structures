@@ -21,6 +21,7 @@ import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
@@ -51,8 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies a request is authorized as the gateway and the MCP endpoint authorize it, against the contracts the
  * directory holds and the system store: Sally, an editor of project A, edits A and is refused on B, with the
- * positional body a STOMP request carries and the named one a tool call carries; a delegate of hers acts as
- * her; a member with no grant is refused the organization's members and its viewer is not; a check naming an
+ * positional body a STOMP request carries and the named one a tool call carries; a CLI delegate of hers acts as
+ * her within the CLI's ceiling; a member with no grant is refused the organization's members and its viewer is not; a check naming an
  * application the member's scope lacks is made on the organization; a function with no check passes on its
  * zone; and the organization a migration seeds is administered by its creator.
  */
@@ -163,15 +164,18 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     }
 
     @Test
-    public void aDelegateActsWithItsOwnersAuthority() throws Exception {
+    public void aDelegateActsWithItsOwnersAuthorityWithinItsCeiling() throws Exception {
         Project a = project(application());
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "project.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "project.admin",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
-        Participant delegate = participant("cli-" + suffix(), Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, sally.getId()));
+        Participant delegate = participant("cli-" + suffix(), Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, sally.getId(),
+                                                                     DomainUtil.DELEGATE_TYPE_METADATA_KEY, DelegateType.CLI.name()));
 
         authorize(PROJECT_SERVICE, "save", delegate, List.of(a));
         assertRefused(PROJECT_SERVICE, "save", participant("cli-" + suffix(), Map.of()), List.of(a), "project_can_edit");
+        // sally may delete A, which is beyond what the CLI exercises of hers
+        assertRefused(PROJECT_SERVICE, "deleteById", delegate, List.of(a.getId()), "can_delete");
     }
 
     @Test
@@ -209,7 +213,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.SYSTEM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
                    "the creator was never bound as the administrator");
 
-        // every server that started swept the organization, and found it administered after the first
+        // every server that started swept the organization and bound its creator under the same binding
         Subject creator = new Subject(SubjectType.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
         long creatorBindings = await(relationships.findGrants(AuthzStoreService.SYSTEM, organization))
                 .stream()

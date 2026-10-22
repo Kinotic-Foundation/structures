@@ -99,7 +99,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         typeDefinitions.add(typeDefinition(USER, Map.of()));
         typeDefinitions.add(typeDefinition(GROUP, Map.of(MEMBER, direct(List.of(USER, GROUP + "#" + MEMBER)))));
         for (ResourceType type : new TreeMap<>(types).values()) {
-            typeDefinitions.add(roleType(type.name, permissionsOf(carried.get(type.name), types)));
+            typeDefinitions.add(roleType(type.name, carried.get(type.name), types));
             typeDefinitions.add(roleBindingType(storeType, type.name, bindable.get(type.name), permissionsOf(carried.get(type.name), types)));
             typeDefinitions.add(resourceType(type, types, carried.get(type.name)));
         }
@@ -172,10 +172,10 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     }
 
     /**
-     * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting and managing access, an admin
+     * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting and deciding who may act, an admin
      * of everything on it and inside it, and the roles its services declare; and for a system store the
      * application developer, everything inside an application but the application's own, the system maintainer,
-     * the system's own permissions and the reading ones of everything on it, and the system support, the
+     * the system's own permissions but those deciding who may act, and the reading ones of everything on it, and the system support, the
      * reading permissions of the system and of everything on it. A role that would bundle nothing is not a
      * role.
      */
@@ -187,15 +187,20 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             Set<String> own = modelNames(type, type.permissions.keySet());
             Set<String> editing = new TreeSet<>(own);
             editing.remove(AuthzUtil.permissionName(type.name, AuthzConstants.CAN_DELETE));
-            // managing access would let an editor grant itself any role, the type's admin included
-            editing.remove(AuthzUtil.permissionName(type.name, AuthzConstants.CAN_MANAGE_ACCESS));
+            // deciding who may act is an administrator's: managing access would let an editor grant itself any role,
+            // and managing machines would let it sign in as one holding more than it does
+            editing.removeAll(modelNames(type, type.permissions.keySet().stream().filter(AuthzConstants.AUTHORITY_PERMISSIONS::contains).toList()));
             role(ret, AuthzUtil.roleId(type.name, AuthzConstants.VIEWER), reading(type));
             role(ret, AuthzUtil.roleId(type.name, AuthzConstants.EDITOR), editing);
             role(ret, AuthzUtil.roleId(type.name, AuthzConstants.ADMIN), inside(type, types, carried, true, false));
         }
         if (storeType == AuthzStoreType.SYSTEM) {
             ResourceType system = types.get(AuthzConstants.SYSTEM_TYPE);
-            Set<String> maintaining = modelNames(system, system.permissions.keySet());
+            // the maintainer runs the system but never decides who may act on it, which would let it make itself
+            // an administrator
+            Set<String> maintaining = modelNames(system, system.permissions.keySet().stream()
+                                                                   .filter(permission -> !AuthzConstants.AUTHORITY_PERMISSIONS.contains(permission))
+                                                                   .toList());
             maintaining.addAll(inside(system, types, carried, false, true));
             role(ret, AuthzConstants.APPLICATION_DEVELOPER_ROLE, inside(types.get(APPLICATION), types, carried, false, false));
             role(ret, AuthzConstants.SYSTEM_MAINTAINER_ROLE, maintaining);
@@ -397,14 +402,28 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     /**
      * A role homed at a type is a bundle of the permissions of that type and of the types it carries: for each,
-     * the role holds it for everyone or for nobody, which the binding then narrows to its members. The engine
-     * refuses a role bundling a permission from above its home.
+     * the role holds it for everyone or for nobody, which the binding then narrows to its members, and it holds
+     * every permission a permission it bundles implies. The engine refuses a role bundling a permission from
+     * above its home.
      */
-    private static ObjectNode roleType(String home, Set<String> permissions) {
+    private static ObjectNode roleType(String home, Set<String> carriedTypes, Map<String, ResourceType> types) {
         Map<String, ObjectNode> relations = new LinkedHashMap<>();
         relations.put(GRANT, direct(List.of(USER + ":*")));
-        for (String permission : permissions) {
-            relations.put(permission, direct(List.of(USER + ":*")));
+        for (String carried : carriedTypes) {
+            ResourceType about = types.get(carried);
+            for (Map.Entry<String, Set<String>> permission : new TreeMap<>(about.permissions).entrySet()) {
+                ObjectNode bundled = direct(List.of(USER + ":*"));
+                List<ObjectNode> sources = implying(about, permission.getKey());
+                ObjectNode relation = bundled;
+                if (!sources.isEmpty()) {
+                    // the subject types move from the union's child to the relation, where typeDefinition reads them
+                    ArrayNode directTypes = (ArrayNode) bundled.remove("directly_related_user_types");
+                    sources.addFirst(bundled);
+                    relation = union(sources);
+                    relation.set("directly_related_user_types", directTypes);
+                }
+                relations.put(AuthzUtil.permissionName(about.name, permission.getKey()), relation);
+            }
         }
         return typeDefinition(AuthzUtil.roleType(home), relations);
     }
@@ -448,11 +467,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                 String name = AuthzUtil.permissionName(about.name, permission.getKey());
                 List<ObjectNode> sources = new ArrayList<>();
                 sources.add(tupleToUserset(ROLE_BINDING, name));
-                for (Map.Entry<String, Set<String>> other : new TreeMap<>(about.permissions).entrySet()) {
-                    if (other.getValue().contains(permission.getKey())) {
-                        sources.add(computed(AuthzUtil.permissionName(about.name, other.getKey())));
-                    }
-                }
+                sources.addAll(implying(about, permission.getKey()));
                 if (type.parent != null) {
                     sources.add(tupleToUserset(type.parent, name));
                 }
@@ -479,16 +494,23 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             String name = AuthzUtil.permissionName(definition.name, permission.getKey());
             List<ObjectNode> sources = new ArrayList<>();
             sources.add(tupleToUserset(ROLE_BINDING, name));
-            for (Map.Entry<String, Set<String>> other : new TreeMap<>(definition.permissions).entrySet()) {
-                if (other.getValue().contains(permission.getKey())) {
-                    sources.add(computed(AuthzUtil.permissionName(definition.name, other.getKey())));
-                }
-            }
+            sources.addAll(implying(definition, permission.getKey()));
             sources.add(tupleToUserset(DEFINITION, name));
             sources.add(intersection(List.of(tupleToUserset(TENANT, name), computed(PLACED))));
             relations.put(name, union(sources));
         }
         return typeDefinition(TENANT_DEFINITION, relations);
+    }
+
+    // The permissions of a type that imply one of its permissions, each as a relation of the same object
+    private static List<ObjectNode> implying(ResourceType type, String permission) {
+        List<ObjectNode> ret = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> other : new TreeMap<>(type.permissions).entrySet()) {
+            if (other.getValue().contains(permission)) {
+                ret.add(computed(AuthzUtil.permissionName(type.name, other.getKey())));
+            }
+        }
+        return ret;
     }
 
     private static ObjectNode typeDefinition(String name, Map<String, ObjectNode> relations) {

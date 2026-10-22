@@ -18,6 +18,7 @@ import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityExceptionFactory;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
@@ -65,7 +66,7 @@ import static org.mockito.Mockito.when;
  * caller's tenant with the object's two edges supplied, on the definition itself for a user without a tenant, and
  * in the system's store for an organization member; an application or a project named within the caller's
  * organization, which a system participant cannot name; a
- * delegate checked as its owner; a function its contract marks unchecked passing without the engine; and the
+ * delegate checked as its owner, within its type's ceiling and refused beyond it or with no known type; a function its contract marks unchecked passing without the engine; and the
  * refusals: a denied check, a request naming no object, a body no id can be read from or whose object the check
  * reads names a property twice, and the requests no
  * contract covers, of a service the directory holds no definition for, a function the definition leaves out or
@@ -125,7 +126,7 @@ class DefaultRequestAuthorizerTest {
         // the rows of an entity definition, checked on the definition each request names
         ServiceDefinition entities = new ServiceDefinition().setNamespace("org.kinotic.persistence.api.services").setName("JsonEntitiesRepository");
         entities.addFunction(function("findById", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_read", false), "entityDefinitionId", "id"));
-        entities.addFunction(function("save", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_create", false), "entityDefinitionId", "entity"));
+        entities.addFunction(function("save", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_edit", false), "entityDefinitionId", "entity"));
         entities.addFunction(function("namedQuery", resolved(STATEMENT_RESOLVER), "entityDefinitionId", "queryName", "queryParameters"));
         entities.addFunction(function("namedQueryElsewhere", resolved("elsewhere"), "entityDefinitionId", "queryName", "queryParameters"));
         when(directory.findEntry(ENTITIES)).thenReturn(Future.succeededFuture(new ServiceDirectoryEntry().setId(ENTITIES).setServiceDefinition(entities)));
@@ -205,16 +206,24 @@ class DefaultRequestAuthorizerTest {
 
     @Test
     void aDelegateIsCheckedAsItsOwner() throws Exception {
-        Participant delegate = DefaultOrganizationParticipant.builder()
-                                                             .id("cli-session")
-                                                             .organizationId("acme")
-                                                             .metadata(Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, "sally"))
-                                                             .roles(List.of())
-                                                             .build();
-
-        authorize("save", delegate, EventConstants.CONTENT_TYPE_JSON, "[{\"id\":\"proj-a\"}]");
+        authorize("save", delegate(DelegateType.CLI.name()), EventConstants.CONTENT_TYPE_JSON, "[{\"id\":\"proj-a\"}]");
 
         assertEquals("user:sally@acme", checked(Consistency.MINIMIZE_LATENCY).user());
+    }
+
+    @Test
+    void aDelegateIsRefusedWhatItsTypeMayNotExerciseWithoutTheEngine() {
+        AuthorizationException refused = refused("deploy", delegate(DelegateType.CLI.name()), EventConstants.CONTENT_TYPE_JSON, "[\"proj-a\"]");
+
+        assertTrue(refused.getMessage().contains("can_deploy"), refused.getMessage());
+        verify(relationships, never()).check(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aDelegateOfNoKnownTypeIsRefused() {
+        refused("save", delegate("SCRIPT"), EventConstants.CONTENT_TYPE_JSON, "[{\"id\":\"proj-a\"}]");
+
+        verify(relationships, never()).check(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -339,7 +348,7 @@ class DefaultRequestAuthorizerTest {
                              EventConstants.CONTENT_TYPE_JSON, bytes("[\"acme.crm.person\",{}]"))
                   .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-        assertEquals(new RelationshipTuple("user:sally@acme", "entity_definition_can_create", "entity_definition:acme.crm.person"),
+        assertEquals(new RelationshipTuple("user:sally@acme", "entity_definition_can_edit", "entity_definition:acme.crm.person"),
                      checked(Consistency.MINIMIZE_LATENCY));
         verify(relationships, never()).check(eq("acme.crm"), any(), any(), any(), any());
     }
@@ -460,6 +469,16 @@ class DefaultRequestAuthorizerTest {
     private void authorize(String function, Participant participant, String contentType, String body) throws Exception {
         authorizer.authorize(cri(function), participant, contentType, bytes(body))
                   .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+    }
+
+    private static Participant delegate(String delegateType) {
+        return DefaultOrganizationParticipant.builder()
+                                             .id("cli-session")
+                                             .organizationId("acme")
+                                             .metadata(Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, "sally",
+                                                              DomainUtil.DELEGATE_TYPE_METADATA_KEY, delegateType))
+                                             .roles(List.of())
+                                             .build();
     }
 
     private AuthorizationException refused(String function, Participant participant, String contentType, String body) {

@@ -24,7 +24,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.management.api.services.EntityDefinitionService;
-import org.kinotic.management.api.services.security.PermissionService;
+import org.kinotic.management.internal.api.services.security.DefaultPermissionService;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.cache.CacheEvictionEvent;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -47,7 +47,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     private final EntityDefinitionProperties entityDefinitionProperties;
     private final DomainPersistenceProperties domainPersistenceProperties;
     private final RelationshipService relationships;
-    private final PermissionService permissions;
+    private final DefaultPermissionService permissions;
 
     public DefaultEntityDefinitionService(ApplicationEventPublisher eventPublisher,
                                           CrudServiceTemplate crudServiceTemplate,
@@ -57,7 +57,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
                                           DomainPersistenceProperties domainPersistenceProperties,
                                           SecurityContext securityContext,
                                           RelationshipService relationships,
-                                          PermissionService permissions) {
+                                          DefaultPermissionService permissions) {
         super(entityDefinitionRepository, securityContext);
         this.relationships = relationships;
         this.permissions = permissions;
@@ -134,16 +134,36 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
 
     // The definition's place in the graph, written once the record is, so a write that fails leaves a
     // definition nobody can reach rather than one nobody stores: in the system's store, where the
-    // organization's members hold it, and in the application's, where its rows are reached through it
+    // organization's members hold it, and in the application's, where its rows are reached through it. What a
+    // deleted definition of the same id left on itself, when the removal after its record's deletion failed, is
+    // removed first, so the definition starts with no grant made on it
     private Future<EntityDefinition> contained(EntityDefinition entityDefinition) {
-        return relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
-                            .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
-                            .map(entityDefinition);
+        String object = containment(entityDefinition).object();
+        return relationships.removeObject(AuthzStoreService.SYSTEM, object)
+                .compose(v -> relationships.removeObject(storeOf(entityDefinition), object))
+                .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition))))
+                .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
+                .map(entityDefinition);
     }
 
+    // The definition leaves both stores with every grant made on it and on its rows within each tenant placed in the
+    // application's store, so one created again under its id starts with none
     private Future<Void> removed(EntityDefinition entityDefinition) {
-        return relationships.remove(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
-                            .compose(v -> relationships.remove(storeOf(entityDefinition), List.of(containment(entityDefinition))));
+        String object = containment(entityDefinition).object();
+        String store = storeOf(entityDefinition);
+        return relationships.removeObject(AuthzStoreService.SYSTEM, object)
+                            .compose(v -> relationships.removeObject(store, object))
+                            // the rows within a tenant are reached by tenant, so each tenant placed in the store is read
+                            .compose(v -> relationships.readByUser(store, AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, store), AuthzConstants.TENANT_TYPE))
+                            .compose(placed -> {
+                                Future<Void> ret = Future.succeededFuture();
+                                for (RelationshipTuple tenant : placed) {
+                                    String within = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE,
+                                                                     AuthzUtil.tenantDefinitionId(entityDefinition.getId(), AuthzUtil.idOf(tenant.object())));
+                                    ret = ret.compose(w -> relationships.removeObject(store, within));
+                                }
+                                return ret;
+                            });
     }
 
     private static String storeOf(EntityDefinition entityDefinition) {
@@ -199,8 +219,8 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     public Future<EntityDefinition> findById(String id) {
         return super.findById(id).compose(entityDefinition -> entityDefinition == null
                 ? Future.succeededFuture(null)
-                : permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                             .map(ids -> ids.contains(id) ? entityDefinition : null));
+                : permissions.holds(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ, id)
+                             .map(held -> held ? entityDefinition : null));
     }
 
     @WithSpan

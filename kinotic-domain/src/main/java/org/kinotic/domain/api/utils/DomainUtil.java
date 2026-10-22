@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.OrganizationScoped;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
@@ -40,6 +41,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -94,8 +96,33 @@ public class DomainUtil {
      */
     public static final String ON_BEHALF_OF_METADATA_KEY = "onBehalfOf";
 
+    /**
+     * The participant metadata key naming a delegate's {@link DelegateType}, which bounds the owner's permissions it exercises.
+     */
+    public static final String DELEGATE_TYPE_METADATA_KEY = "delegateType";
+
     // The authorization types whose ids are unique only within an organization, qualified by it in the stores
     private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzConstants.APPLICATION_TYPE, AuthzConstants.PROJECT_TYPE);
+
+    /**
+     * Whether a participant may exercise a permission its grants give it: a delegate may only within the ceiling of
+     * its {@link DelegateType}, and a delegate naming no known type may exercise none; any other participant may.
+     *
+     * @param participant the participant making a call
+     * @param type        the resource type the permission is about, such as {@code project}
+     * @param permission  the permission's short name, such as {@code can_edit}
+     * @return true when the participant may exercise the permission
+     */
+    public static boolean withinDelegateCeiling(Participant participant, String type, String permission) {
+        Map<String, String> metadata = participant.getMetadata() != null ? participant.getMetadata() : Map.of();
+        boolean ret = true;
+        if (metadata.containsKey(ON_BEHALF_OF_METADATA_KEY)) {
+            String delegateType = metadata.get(DELEGATE_TYPE_METADATA_KEY);
+            ret = Arrays.stream(DelegateType.values())
+                        .anyMatch(known -> known.name().equals(delegateType) && known.permits(type, permission));
+        }
+        return ret;
+    }
 
     /**
      * The user a participant acts as in the authorization stores, in {@code user:id} form. An organization user acts
@@ -728,6 +755,7 @@ public class DomainUtil {
             }
             case DelegatingParticipantIdentity delegate -> {
                 metadata.put(ON_BEHALF_OF_METADATA_KEY, delegate.getOwnerId());
+                metadata.put(DELEGATE_TYPE_METADATA_KEY, delegate.getDelegateType().name());
                 metadata.put("displayName",
                              delegate.getDisplayName() != null ? delegate.getDisplayName() : delegate.getId());
             }

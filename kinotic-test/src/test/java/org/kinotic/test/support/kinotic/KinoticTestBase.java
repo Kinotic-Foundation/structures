@@ -139,9 +139,8 @@ public abstract class KinoticTestBase {
             // the first context of a run publishes every contract in one write and the reconciler then takes the
             // model they imply; a check for a permission the store's model lacks fails rather than refuses
             assertTrue(awaitUntil(this::systemModelCurrent), "the system store never ran the model of the system's services");
-            // OrganizationGraphBootstrap leaves an organization that has an administrator as it is, so the test
-            // participant is bound only once the bootstrap has bound the seeded creator
-            assertTrue(awaitUntil(this::administered), "the organization graph bootstrap never bound the test organization's creator");
+            // OrganizationGraphBootstrap places the seeded organization on the system, which the tests' checks reach it through
+            assertTrue(awaitUntil(this::placed), "the organization graph bootstrap never placed the test organization");
             assertTrue(awaitUntil(this::bound), "the system store never accepted the test participant's administrator binding");
             testParticipantAdministers = true;
         }
@@ -154,10 +153,10 @@ public abstract class KinoticTestBase {
         return !services.isEmpty() && observed != null && observed.hash().equals(modelGenerator.systemModel(services).hash());
     }
 
-    private boolean administered() throws Exception {
-        return await(relationshipService.findGrants(AuthzStoreService.SYSTEM, AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID)))
-                .stream()
-                .anyMatch(grant -> AuthzConstants.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && !TEST_PARTICIPANT_ADMIN_BINDING.equals(grant.id()));
+    private boolean placed() throws Exception {
+        String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID);
+        return await(relationshipService.read(AuthzStoreService.SYSTEM, organization))
+                .contains(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), organization));
     }
 
     private boolean bound() {

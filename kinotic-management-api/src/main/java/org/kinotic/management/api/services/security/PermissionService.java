@@ -151,7 +151,8 @@ public interface PermissionService {
     Future<List<Grant>> findGrants(Resource resource);
 
     /**
-     * The resources of a type the caller holds a permission on, through any grant that reaches them.
+     * The resources of a type the caller holds a permission on, through any grant that reaches them; none for a
+     * delegate whose type's ceiling excludes the permission.
      *
      * @param type       the resource type
      * @param permission the permission's short name, such as {@code can_read}

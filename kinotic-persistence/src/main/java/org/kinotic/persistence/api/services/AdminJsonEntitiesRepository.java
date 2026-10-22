@@ -116,8 +116,8 @@ public interface AdminJsonEntitiesRepository {
 
     /**
      * Executes a named query.
-     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
-     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, {@code can_edit} for one
+     * that inserts or updates them, and {@code can_delete} for one that deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
@@ -135,8 +135,8 @@ public interface AdminJsonEntitiesRepository {
 
     /**
      * Executes a named query and returns a {@link Page} of results.
-     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
-     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, {@code can_edit} for one
+     * that inserts or updates them, and {@code can_delete} for one that deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query

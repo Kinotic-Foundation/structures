@@ -24,9 +24,9 @@ import java.util.List;
  * Created by Nic Padilla 🤪on 6/18/23.
  *
  * Every function is checked on the definition the request names, for the permission of its rows the function
- * needs: reading, listing, counting, querying and searching need {@code can_read}, saving
- * {@code can_create}, updating {@code can_edit} and deleting {@code can_delete}. Deleting implies updating,
- * and updating reading; creating stands alone. A tenant's user is checked on the
+ * needs: reading, listing, counting, querying and searching need {@code can_read}, saving and updating
+ * {@code can_edit}, since a save replaces a row of the same id, and deleting {@code can_delete}. Deleting implies
+ * updating, and updating reading. A tenant's user is checked on the
  * definition within its tenant, so a grant made on the tenant, on the definition, on the definition within the
  * tenant or on the application reaches it; a caller above every application is checked on the definition in
  * the system's store.
@@ -44,7 +44,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} that will complete when all entities have been saved
      */
-    @AuthzCheck(permission = AuthzConstants.CAN_CREATE, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT, resourceId = "{entityDefinitionId}")
     Future<Void> bulkSave(String entityDefinitionId, TokenBuffer entities, ScopedParticipant participant);
 
     /**
@@ -136,8 +136,8 @@ public interface JsonEntitiesRepository {
 
     /**
      * Executes a named query.
-     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
-     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, {@code can_edit} for one
+     * that inserts or updates them, and {@code can_delete} for one that deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
@@ -153,8 +153,8 @@ public interface JsonEntitiesRepository {
 
     /**
      * Executes a named query and returns a {@link Page} of results.
-     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
-     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, {@code can_edit} for one
+     * that inserts or updates them, and {@code can_delete} for one that deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
@@ -179,7 +179,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the saved entity
      */
-    @AuthzCheck(permission = AuthzConstants.CAN_CREATE, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzConstants.CAN_EDIT, resourceId = "{entityDefinitionId}")
     Future<TokenBuffer> save(String entityDefinitionId, TokenBuffer entity, ScopedParticipant participant);
 
     /**

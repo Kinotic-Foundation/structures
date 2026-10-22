@@ -88,25 +88,11 @@ public class ApplicationStoreProvisioner {
                             for (EntityDefinition definition : page) {
                                 String within = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE,
                                                                  AuthzUtil.tenantDefinitionId(definition.getId(), tenant.getId()));
-                                ret = ret.compose(v -> unbindAll(store, within));
+                                ret = ret.compose(v -> relationships.removeObject(store, within));
                             }
                             return ret;
                         })
-                .compose(v -> unbindAll(store, tenantObject))
-                .compose(v -> relationships.read(store, tenantObject))
-                .compose(held -> relationships.remove(store, held));
-    }
-
-    private Future<Void> unbindAll(String store, String object) {
-        return relationships.read(store, object).compose(held -> {
-            Future<Void> ret = Future.succeededFuture();
-            for (RelationshipTuple tuple : held) {
-                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
-                    ret = ret.compose(v -> relationships.unbind(store, AuthzUtil.idOf(tuple.user()), object));
-                }
-            }
-            return ret;
-        });
+                .compose(v -> relationships.removeObject(store, tenantObject));
     }
 
     /**

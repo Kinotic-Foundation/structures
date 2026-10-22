@@ -27,10 +27,9 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.services.EntityDefinitionService;
 import org.kinotic.management.api.services.ProjectRepoProvisioner;
 import org.kinotic.management.api.services.ProjectService;
-import org.kinotic.management.api.services.security.PermissionService;
+import org.kinotic.management.internal.api.services.security.DefaultPermissionService;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -44,7 +43,7 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
 
     private final ProjectRepository projectRepository;
     private final EntityDefinitionRepository entityDefinitionRepository;
-    private final PermissionService permissions;
+    private final DefaultPermissionService permissions;
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final ProjectDependenciesRepository projectDependenciesRepository;
     private final ProjectRepoProvisioner repoProvisioner;
@@ -52,7 +51,7 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
 
     public DefaultProjectService(ProjectRepository repository,
                                  EntityDefinitionRepository entityDefinitionRepository,
-                                 PermissionService permissions,
+                                 DefaultPermissionService permissions,
                                  SecurityContext securityContext,
                                  ProjectDeploymentRepository projectDeploymentRepository,
                                  ProjectDependenciesRepository projectDependenciesRepository,
@@ -99,21 +98,25 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     public Future<Project> findById(String id) {
         return super.findById(id).compose(project -> project == null
                 ? Future.succeededFuture(null)
-                : visibleIds().map(ids -> ids.contains(id) ? project : null));
+                : permissions.holds(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ, id)
+                             // a project the caller may not read is reached through an entity definition in it the caller reads
+                             .compose(held -> held ? Future.succeededFuture(true) : visibleIds().map(ids -> ids == null || ids.contains(id)))
+                             .map(visible -> visible ? project : null));
     }
 
-    // What the caller may see: the projects it reads, and those containing an entity definition it reads, so a
-    // grant on an entity definition makes its project reachable
+    // What the caller may see, null for every project of the organization: the projects it reads, and those
+    // containing an entity definition it reads, so a grant on an entity definition makes its project reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                                     .compose(ids -> entityDefinitionRepository.findProjectIdsOf(ids, organizationId)))
-                     .map(visible -> {
-                         Set<String> ret = new HashSet<>(visible.<Collection<String>>resultAt(0));
-                         ret.addAll(visible.<Collection<String>>resultAt(1));
-                         return ret;
-                     });
+        return permissions.findAccessibleIds(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ).compose(projects -> projects == null
+                ? Future.succeededFuture(null)
+                : permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
+                             .compose(ids -> entityDefinitionRepository.findProjectIdsOf(ids, organizationId))
+                             .map(containing -> {
+                                 Set<String> ret = new HashSet<>(projects);
+                                 ret.addAll(containing);
+                                 return ret;
+                             }));
     }
 
     @Override
@@ -149,13 +152,18 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     }
 
     // The project's place in the graph, written once the record is, so a write that fails leaves a project
-    // nobody can reach rather than one nobody stores
+    // nobody can reach rather than one nobody stores. What a deleted project of the same id left behind, when the
+    // removal after its record's deletion failed, is removed first, so the project starts with no grant
     private Future<Project> contained(Project project) {
-        return relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(project))).map(project);
+        RelationshipTuple containment = containment(project);
+        return relationships.removeObject(AuthzStoreService.SYSTEM, containment.object())
+                            .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment)))
+                            .map(project);
     }
 
+    // The project leaves the graph with every grant made on it, so one created again under its id starts with none
     private Future<Void> uncontained(Project project) {
-        return project == null ? Future.succeededFuture() : relationships.remove(AuthzStoreService.SYSTEM, List.of(containment(project)));
+        return project == null ? Future.succeededFuture() : relationships.removeObject(AuthzStoreService.SYSTEM, containment(project).object());
     }
 
     static RelationshipTuple containment(Project project) {

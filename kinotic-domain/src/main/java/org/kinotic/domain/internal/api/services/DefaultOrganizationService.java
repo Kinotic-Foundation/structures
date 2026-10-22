@@ -79,13 +79,32 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
         return super.createSync(entity).compose(this::contained);
     }
 
+    // The record before the graph, so a sign-up rolled back while the engine fails still frees the organization's
+    // name; whatever a removal that fails leaves is removed when an organization is created under the same id
+    @Override
+    public Future<Void> deleteById(String id) {
+        return super.deleteById(id).compose(v -> released(id));
+    }
+
+    @Override
+    public Future<Void> deleteByIdSync(String id) {
+        return super.deleteByIdSync(id).compose(v -> released(id));
+    }
+
+    // The organization leaves the graph with every grant made on it and every member it held
+    private Future<Void> released(String id) {
+        return relationships.removeObject(AuthzStoreService.SYSTEM, AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, id));
+    }
+
     // The organization's place in the graph, written once the record is, so a write that fails leaves an
-    // organization nobody can reach rather than one nobody stores
+    // organization nobody can reach rather than one nobody stores. What a deleted organization of the same id left
+    // behind is removed first, so the organization starts with no member and no grant
     private Future<Organization> contained(Organization organization) {
-        return relationships.ensure(AuthzStoreService.SYSTEM,
-                                    List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
-                                                                   AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId()))))
-                            .map(organization);
+        return released(organization.getId())
+                .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM,
+                                                   List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
+                                                                                  AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId())))))
+                .map(organization);
     }
 
     @Override

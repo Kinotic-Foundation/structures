@@ -183,6 +183,63 @@ public class DefaultRelationshipService implements RelationshipService {
     }
 
     @Override
+    public Future<Void> removeObject(String store, String object) {
+        return read(store, object).compose(held -> {
+            Future<Void> ret = Future.succeededFuture();
+            List<RelationshipTuple> others = new ArrayList<>();
+            for (RelationshipTuple tuple : held) {
+                if (AuthzConstants.ROLE_BINDING_RELATION.equals(tuple.relation())) {
+                    ret = ret.compose(v -> unbind(store, AuthzUtil.idOf(tuple.user()), object));
+                } else {
+                    others.add(tuple);
+                }
+            }
+            return ret.compose(v -> remove(store, others));
+        });
+    }
+
+    @Override
+    public Future<Void> removeSubject(String store, String user) {
+        // the engine reads by user within one object type, so every type of the store's model is read
+        return stores.typesOf(store)
+                     .compose(types -> Future.all(types.stream().map(type -> readByUser(store, user, type)).toList()))
+                     .compose(reads -> {
+                         Future<Void> ret = Future.succeededFuture();
+                         List<RelationshipTuple> others = new ArrayList<>();
+                         for (int i = 0; i < reads.size(); i++) {
+                             for (RelationshipTuple tuple : reads.<List<RelationshipTuple>>resultAt(i)) {
+                                 // a binding is made to one subject, so the subject's binding goes with it whole
+                                 if (AuthzUtil.typeOf(tuple.object()).endsWith(AuthzConstants.ROLE_BINDING_TYPE_SUFFIX)) {
+                                     ret = ret.compose(v -> removeBinding(store, tuple.object()));
+                                 } else {
+                                     others.add(tuple);
+                                 }
+                             }
+                         }
+                         return ret.compose(v -> remove(store, others));
+                     });
+    }
+
+    // Removes a binding wherever it is attached; the attachment names the binding as the user of a resource of the
+    // type the binding's type is named after
+    private Future<Void> removeBinding(String store, String binding) {
+        String bindingType = AuthzUtil.typeOf(binding);
+        String resourceType = bindingType.substring(0, bindingType.length() - AuthzConstants.ROLE_BINDING_TYPE_SUFFIX.length());
+        return readByUser(store, binding, resourceType).compose(attachments -> {
+            Future<Void> ret;
+            if (attachments.isEmpty()) {
+                ret = read(store, binding).compose(held -> remove(store, held));
+            } else {
+                ret = Future.succeededFuture();
+                for (RelationshipTuple attachment : attachments) {
+                    ret = ret.compose(v -> unbind(store, AuthzUtil.idOf(binding), attachment.object()));
+                }
+            }
+            return ret;
+        });
+    }
+
+    @Override
     public Future<Void> revoke(String store, String bindingId, String object) {
         String binding = AuthzUtil.bindingObject(object, bindingId);
         return holds(store, new RelationshipTuple(binding, AuthzConstants.ROLE_BINDING_RELATION, object)).compose(made -> {
@@ -236,8 +293,10 @@ public class DefaultRelationshipService implements RelationshipService {
 
     @Override
     public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
-        Future<Boolean> bundled = holds(store, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
-                                                                     AuthzUtil.roleObject(grant.roleId())));
+        // the role's relation also holds every permission a bundled one implies, which only a check evaluates
+        Future<Boolean> bundled = check(store, modelId, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
+                                                                              AuthzUtil.roleObject(grant.roleId())),
+                                        Consistency.HIGHER_CONSISTENCY);
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);

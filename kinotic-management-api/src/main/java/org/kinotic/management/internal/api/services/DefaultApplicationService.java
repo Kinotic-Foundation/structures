@@ -24,7 +24,7 @@ import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.EntityDefinitionService;
 import org.kinotic.management.api.services.ProjectService;
-import org.kinotic.management.api.services.security.PermissionService;
+import org.kinotic.management.internal.api.services.security.DefaultPermissionService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.springframework.stereotype.Component;
 
@@ -43,7 +43,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
 
     private final ProjectRepository projectRepository;
     private final EntityDefinitionRepository entityDefinitionRepository;
-    private final PermissionService permissions;
+    private final DefaultPermissionService permissions;
     private final OidcConfigurationService oidcConfigurationService;
     private final UiDeploymentRepository uiDeploymentRepository;
     private final RelationshipService relationships;
@@ -54,7 +54,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     public DefaultApplicationService(ApplicationRepository repository,
                                      ProjectRepository projectRepository,
                                      EntityDefinitionRepository entityDefinitionRepository,
-                                     PermissionService permissions,
+                                     DefaultPermissionService permissions,
                                      OidcConfigurationService oidcConfigurationService,
                                      UiDeploymentRepository uiDeploymentRepository,
                                      SecurityContext securityContext,
@@ -81,7 +81,11 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     public Future<Application> findById(String id) {
         return super.findById(id).compose(application -> application == null
                 ? Future.succeededFuture(null)
-                : visibleIds().map(ids -> ids.contains(id) ? application : null));
+                : permissions.holds(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_READ, id)
+                             // an application the caller may not read is reached through a project or an entity
+                             // definition in it the caller reads
+                             .compose(held -> held ? Future.succeededFuture(true) : visibleIds().map(ids -> ids == null || ids.contains(id)))
+                             .map(visible -> visible ? application : null));
     }
 
     @Override
@@ -99,22 +103,24 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return visibleIds().compose(ids -> scopedRepository.search(searchText, requireOrganizationId(), ids, pageable));
     }
 
-    // What the caller may see: the applications it reads, and those containing a project or an entity
-    // definition it reads, so a grant anywhere inside an application makes the application reachable
+    // What the caller may see, null for every application of the organization: the applications it reads, and
+    // those containing a project or an entity definition it reads, so a grant anywhere inside an application makes
+    // the application reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_READ),
-                          permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                                     .compose(ids -> projectRepository.findApplicationIdsOf(ids, organizationId)),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
-                                     .compose(ids -> entityDefinitionRepository.findApplicationIdsOf(ids, organizationId)))
-                     .map(visible -> {
-                         Set<String> ret = new HashSet<>();
-                         for (int i = 0; i < visible.size(); i++) {
-                             ret.addAll(visible.<Collection<String>>resultAt(i));
-                         }
-                         return ret;
-                     });
+        return permissions.findAccessibleIds(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_READ).compose(applications -> applications == null
+                ? Future.succeededFuture(null)
+                : Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
+                                        .compose(ids -> projectRepository.findApplicationIdsOf(ids, organizationId)),
+                             permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzConstants.CAN_READ)
+                                        .compose(ids -> entityDefinitionRepository.findApplicationIdsOf(ids, organizationId)))
+                        .map(containing -> {
+                            Set<String> ret = new HashSet<>(applications);
+                            for (int i = 0; i < containing.size(); i++) {
+                                ret.addAll(containing.<Collection<String>>resultAt(i));
+                            }
+                            return ret;
+                        }));
     }
 
     @Override
@@ -135,7 +141,16 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         // a caller with no tenancy opinion, such as the CLI ensuring the app row exists,
                         // omits the argument and leaves tenants to their administrators
                         newApplication.setTenantManagement(tenantManagement != null ? tenantManagement : TenantManagement.TENANT_ADMINISTRATORS);
-                        ret = save(newApplication).compose(storeProvisioner::provision);
+                        // a create, which fails on an existing id, so of two callers racing only the one that wrote
+                        // the record deletes it when provisioning fails; the other provisions the record it finds,
+                        // which is idempotent, so neither returns an application before its store exists
+                        ret = super.create(newApplication)
+                                   .compose(this::provisioned)
+                                   .recover(ex -> AlreadyExistsException.isCause(ex)
+                                           ? super.findById(applicationId).compose(found -> found == null
+                                                   ? Future.failedFuture(ex)
+                                                   : storeProvisioner.provision(found))
+                                           : Future.failedFuture(ex));
                     }
                     return ret;
                 });
@@ -145,31 +160,30 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     public Future<Application> create(Application entity) {
         // Force the id to derive from the name; beforeSave mints it from the slug.
         entity.setId(null);
-        return failOnDuplicateName(super.create(entity), entity).compose(storeProvisioner::provision);
+        return failOnDuplicateName(super.create(entity), entity).compose(this::provisioned);
     }
 
     @Override
     public Future<Application> createSync(Application entity) {
         entity.setId(null);
-        return failOnDuplicateName(super.createSync(entity), entity).compose(storeProvisioner::provision);
+        return failOnDuplicateName(super.createSync(entity), entity).compose(this::provisioned);
     }
 
-    @Override
-    public Future<Void> deleteById(String id) {
-        return super.deleteById(id).compose(v -> released(id));
+    // An application whose store could not be provisioned is deleted again with whatever provisioning wrote, so the
+    // create can be made again
+    private Future<Application> provisioned(Application application) {
+        return storeProvisioner.provision(application)
+                               .recover(e -> scopedRepository.deleteByIdSync(application.getId(), application.getOrganizationId())
+                                                             .compose(v -> released(application.getId()))
+                                                             .transform(deleted -> Future.<Application>failedFuture(e)));
     }
 
-    @Override
-    public Future<Void> deleteByIdSync(String id) {
-        return super.deleteByIdSync(id).compose(v -> released(id));
-    }
-
-    // The application leaves the graph and its store goes with everything in it, so an application created under
-    // the same id afterwards starts from an empty store rather than inheriting this one's grants
+    // The application leaves the graph with every grant made on it, and its store goes with everything in it, so an
+    // application created under the same id afterwards starts with no grant and an empty store
     private Future<Void> released(String applicationId) {
         String organizationId = requireOrganizationId();
         String store = DomainUtil.authzApplicationId(organizationId, applicationId);
-        return relationships.remove(AuthzStoreService.SYSTEM, List.of(ApplicationStoreProvisioner.containment(organizationId, applicationId)))
+        return relationships.removeObject(AuthzStoreService.SYSTEM, DomainUtil.authzApplication(organizationId, applicationId))
                             .compose(v -> storeService.deleteStore(store))
                             .compose(v -> stores.deleteByIdSync(store));
     }
@@ -183,13 +197,15 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                 : Future.failedFuture(ex));
     }
 
+    // the graph before the record: a record that outlives its graph is deleted again, while a store that outlived
+    // its record would be adopted by an application created under the same id
     @Override
     protected Future<Void> beforeDelete(String id) {
         return projectRepository.countForApplication(id, requireOrganizationId()).compose(count -> {
             if(count > 0){
                 throw new IllegalStateException("Cannot delete an application with projects in it.");
             }
-            return Future.succeededFuture();
+            return released(id);
         });
     }
 

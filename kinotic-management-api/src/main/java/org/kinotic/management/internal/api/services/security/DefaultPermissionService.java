@@ -250,12 +250,62 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(type, "type cannot be blank");
         Validate.notBlank(permission, "permission cannot be blank");
         OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(List.of());
+        }
         return stores.modelId(SYSTEM)
                      .compose(modelId -> relationships.listObjects(SYSTEM, modelId,
                                                                    DomainUtil.authzUser(participant),
                                                                    AuthzUtil.permissionName(type, permission), type,
                                                                    Consistency.MINIMIZE_LATENCY))
                      .map(objects -> objects.stream().map(object -> DomainUtil.localId(type, AuthzUtil.idOf(object))).toList());
+    }
+
+    /**
+     * Whether the caller holds a permission on one resource of its organization, through any grant that reaches it.
+     *
+     * @param type       the resource type
+     * @param permission the permission's short name, such as {@code can_read}
+     * @param id         the resource's id within the caller's organization
+     * @return true when the caller holds the permission on the resource
+     */
+    public Future<Boolean> holds(String type, String permission, String id) {
+        Validate.notBlank(type, "type cannot be blank");
+        Validate.notBlank(permission, "permission cannot be blank");
+        Validate.notBlank(id, "id cannot be blank");
+        OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(false);
+        }
+        RelationshipTuple held = new RelationshipTuple(DomainUtil.authzUser(participant),
+                                                       AuthzUtil.permissionName(type, permission),
+                                                       DomainUtil.authzObject(participant.getOrganizationId(), new Resource(type, id)));
+        return stores.modelId(SYSTEM).compose(modelId -> relationships.check(SYSTEM, modelId, held, Consistency.MINIMIZE_LATENCY));
+    }
+
+    /**
+     * The resources of a type the caller holds a permission on, as {@link #listAccessible} lists them, or null when
+     * the caller holds the permission on its organization, and so on every resource of the type in it.
+     *
+     * @param type       the resource type
+     * @param permission the permission's short name, such as {@code can_read}
+     * @return the ids of the resources, or null for every one in the caller's organization
+     */
+    public Future<List<String>> findAccessibleIds(String type, String permission) {
+        Validate.notBlank(type, "type cannot be blank");
+        Validate.notBlank(permission, "permission cannot be blank");
+        OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(List.of());
+        }
+        RelationshipTuple everywhere = new RelationshipTuple(DomainUtil.authzUser(participant),
+                                                             AuthzUtil.permissionName(type, permission),
+                                                             AuthzUtil.object(ORGANIZATION, participant.getOrganizationId()));
+        // the engine lists a bounded number of objects, so a caller holding the permission throughout the
+        // organization is answered without a listing
+        return stores.modelId(SYSTEM)
+                     .compose(modelId -> relationships.check(SYSTEM, modelId, everywhere, Consistency.MINIMIZE_LATENCY))
+                     .compose(held -> held ? Future.succeededFuture(null) : listAccessible(type, permission));
     }
 
     @Override
