@@ -102,17 +102,28 @@ open http://localhost:9090
 3. On **Members**, add someone with an invitation: a dialog shows the invitation's link to send them,
    or to open yourself.
 
-To connect Claude Code, install the Kinotic plugin (`/plugin marketplace add kinotic-ai/claude-plugin`,
-then `/plugin install kinotic@kinotic`), whose own MCP server is Kinotic Cloud's, and add this server
-beside it:
+To connect a coding agent, install the Kinotic plugin from `kinotic-ai/agent-plugin` (see the
+[quick start](../../website/content/01.apps/02.quick-start.md)), whose own MCP server is Kinotic Cloud's,
+and add this server beside it:
 
 ```bash
+# Claude Code, then /mcp → kinotic-local → authenticate
 claude mcp add -s user --transport http kinotic-local http://localhost:58503/mcp
+# Codex
+codex mcp add kinotic-local --url http://localhost:58503/mcp && codex mcp login kinotic-local
 ```
 
-In Claude Code, `/mcp` → `kinotic-local` → authenticate: the browser opens the portal's consent page on
-9090; sign in and approve. Only Claude Code on this machine can reach the server — the Claude desktop
-app's custom connectors need `https`, and claude.ai cannot reach `localhost`.
+Grok Build takes it in `~/.grok/config.toml`, then `/mcps` → `kinotic-local` → `i`:
+
+```toml
+[mcp_servers.kinotic-local]
+url = "http://localhost:58503/mcp"
+oauth_client_id = "https://kinotic.ai/oauth/grok-build-client.json"
+```
+
+Signing in opens the portal's consent page on 9090; sign in, or sign up, and approve. Only a coding
+agent on this machine can reach the server: ChatGPT, Grok and the Claude apps' connectors cannot reach
+`localhost`.
 
 ### Adding "Continue with Keycloak" (local OIDC, no internet)
 
