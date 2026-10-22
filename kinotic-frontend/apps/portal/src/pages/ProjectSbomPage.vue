@@ -8,6 +8,7 @@
     </PageHeader>
 
     <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
+    <Message v-if="alertsError" severity="warn" :closable="false" class="mb-4">{{ alertsError }}</Message>
 
     <div v-if="loading" class="p-6 text-sm text-muted-color">Loading SBOM…</div>
 
@@ -39,8 +40,6 @@
         <StatCard v-else :icon="ShieldAlert" :tint="alerts.length ? TINTS.red : TINTS.green" label="Vulnerabilities" :value="alerts.length"
                   :detail="`${countSevere(alerts.map(alert => alert.finding))} critical or high`" />
       </div>
-
-      <Message v-if="alertsError" severity="warn" :closable="false" class="mb-4">{{ alertsError }}</Message>
 
       <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
                         description="Advisories from OSV that affect the packages above, the most severe first. They are checked whenever the SBOM is read and whenever an advisory is published or changes."

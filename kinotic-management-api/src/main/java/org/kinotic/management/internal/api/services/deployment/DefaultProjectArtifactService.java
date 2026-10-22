@@ -52,11 +52,15 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
                     Future<Void> recorded = projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
                                                                                         sameDependencies && deployment.isSbomGenerated());
                     // deleted once the new artifacts are recorded, so a recordSbom of the old dependencies
-                    // checked from then on is refused; the alerts stay, so the next SBOM keeps their
-                    // acknowledgements
-                    return sameDependencies || deployment.getArtifacts() == null
+                    // checked from then on is refused, and only while it lists the old dependencies, so
+                    // a tree a recordSbom of the new ones stored meanwhile stays; the alerts stay, so the
+                    // next SBOM keeps their acknowledgements
+                    String previousHash = deployment.getArtifacts() != null ? deployment.getArtifacts().dependencyHash() : null;
+                    return sameDependencies || previousHash == null
                             ? recorded
-                            : recorded.compose(v -> projectDependenciesRepository.deleteByIdSync(projectId, participant.getOrganizationId()));
+                            : recorded.compose(v -> projectDependenciesRepository.deleteIfGeneratedFrom(projectId,
+                                                                                                        participant.getOrganizationId(),
+                                                                                                        previousHash));
                 });
     }
 
