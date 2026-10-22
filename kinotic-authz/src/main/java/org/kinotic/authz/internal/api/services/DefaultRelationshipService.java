@@ -22,7 +22,7 @@ import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
@@ -226,9 +226,9 @@ public class DefaultRelationshipService implements RelationshipService {
         Subject ret = null;
         String type = AuthzUtil.typeOf(user);
         if (AuthzUtil.USER_TYPE.equals(type)) {
-            ret = new Subject(SubjectKind.USER, AuthzUtil.idOf(user));
+            ret = new Subject(SubjectType.USER, AuthzUtil.idOf(user));
         } else if (AuthzUtil.GROUP_TYPE.equals(type) && user.endsWith("#" + AuthzUtil.MEMBER_RELATION)) {
-            ret = new Subject(SubjectKind.GROUP, AuthzUtil.idOf(user));
+            ret = new Subject(SubjectType.GROUP, AuthzUtil.idOf(user));
         }
         return ret;
     }
@@ -240,7 +240,7 @@ public class DefaultRelationshipService implements RelationshipService {
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);
-        } else if (grant.subject().kind() == SubjectKind.GROUP && subject.kind() == SubjectKind.USER) {
+        } else if (grant.subject().type() == SubjectType.GROUP && subject.type() == SubjectType.USER) {
             RelationshipTuple membership = new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id()),
                                                                  AuthzUtil.MEMBER_RELATION,
                                                                  AuthzUtil.object(AuthzUtil.GROUP_TYPE, grant.subject().id()));

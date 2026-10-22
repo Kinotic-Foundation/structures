@@ -53,7 +53,7 @@ import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import { CircleCheck, CircleX, MapPin, SearchCheck } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
-import { type AccessExplanation, type Resource, type RoleDefinition, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type AccessExplanation, type Resource, type RoleDefinition, type Subject, SubjectType } from '@kinotic-ai/management-api'
 import { DashboardSection, TableChip, permissionLabel, showErrorToast, splitPermission, typeLabel } from '@kinotic-ai/frontend-common'
 import { type DefinitionOption, definitionName, definitionOf, resourceLabel, resourceOf, tenantOf } from './applicationResources'
 import type { SubjectOption } from './useSubjects'
@@ -143,7 +143,7 @@ async function check(): Promise<void> {
   const resource = resourceOf(props.applicationId, where.value.trim(), definitionId.value)
   checking.value = true
   try {
-    explanation.value = await Kinotic.applicationAccess.explain(props.applicationId, { kind: SubjectKind.USER, id: picked.subject.id }, permission.value, resource)
+    explanation.value = await Kinotic.applicationAccess.explain(props.applicationId, { type: SubjectType.USER, id: picked.subject.id }, permission.value, resource)
     checkedLabel.value = picked.label
     const split = splitPermission(permission.value)
     checkedPermission.value = `${permissionLabel(split.permission).toLowerCase()} on ${typeLabel(split.type).toLowerCase()}`

@@ -11,7 +11,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -247,7 +247,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     // An application's store has no groups, so a subject is one of its identities
     private static void validate(Subject subject) {
         Validate.notNull(subject, "subject cannot be null");
-        Validate.isTrue(subject.kind() == SubjectKind.USER, "a grant in an application is made to a user or a machine");
+        Validate.isTrue(subject.type() == SubjectType.USER, "a grant in an application is made to a user or a machine");
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 

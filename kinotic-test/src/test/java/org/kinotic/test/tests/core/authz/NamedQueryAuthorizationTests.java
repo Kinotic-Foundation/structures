@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
@@ -72,7 +72,7 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(tenantId);
         ScopedParticipant caller = applicationParticipant(tenantId, bob.getId());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
         List<Object> request = List.of(person.getId(), RENAME_QUERY, List.of());
 

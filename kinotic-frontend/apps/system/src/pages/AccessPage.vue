@@ -57,7 +57,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { KeyRound } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
-import { type Grant, type RoleDefinition, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type Grant, type RoleDefinition, type Subject, SubjectType } from '@kinotic-ai/management-api'
 import { DashboardSection, EmptyChartCharacter, NoAccessState, PageHeader, RoleCell, SubjectCell, TINTS,
          errorMessage, isAuthorizationError, showErrorToast, splitPermission } from '@kinotic-ai/frontend-common'
 import AccessCheckPanel from '@/components/access/AccessCheckPanel.vue'
@@ -87,7 +87,7 @@ const grantDrawerVisible = ref(false)
 /** The subject the page was opened for, from its query, or null for everyone's grants. */
 const subjectFilter = computed<Subject | null>(() => {
   const id = route.query.subject
-  return typeof id === 'string' && id.length > 0 ? { kind: SubjectKind.USER, id } : null
+  return typeof id === 'string' && id.length > 0 ? { type: SubjectType.USER, id } : null
 })
 
 const shown = computed(() => subjectFilter.value
@@ -136,7 +136,7 @@ async function canManageSelf(): Promise<boolean> {
   const systemUserId = SYSTEM_USER_STATE.connectedInfo?.participant?.id
   let ret = false
   if (systemUserId) {
-    ret = (await Kinotic.systemAccess.explain({ kind: SubjectKind.USER, id: systemUserId }, 'can_manage_access')).allowed
+    ret = (await Kinotic.systemAccess.explain({ type: SubjectType.USER, id: systemUserId }, 'can_manage_access')).allowed
   }
   return ret
 }

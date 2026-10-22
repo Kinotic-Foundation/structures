@@ -129,14 +129,14 @@ public class ProjectDeployIdentityService {
     }
 
     // Each role is bound under a binding id of the machine's own, so issuing credentials again binds each role once
-    private Future<Void> bind(String machineId, MachineType kind, Project project) {
+    private Future<Void> bind(String machineId, MachineType machineType, Project project) {
         String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, machineId);
         String projectObject = AuthzUtil.object(AuthzUtil.PROJECT_TYPE,
                                                 DomainUtil.authzId(AuthzUtil.PROJECT_TYPE, project.getOrganizationId(), project.getId()));
         String application = DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId());
         List<Map.Entry<String, String>> grants = new ArrayList<>();
         grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.PROJECT_TYPE, AuthzUtil.EDITOR), projectObject));
-        if (kind == MachineType.APP_RUNTIME) {
+        if (machineType == MachineType.APP_RUNTIME) {
             grants.add(Map.entry(AuthzUtil.APPLICATION_RUNTIME_ROLE, application));
             grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.ADMIN), application));
         } else {
@@ -155,9 +155,9 @@ public class ProjectDeployIdentityService {
      * The machine a workload of the project is created with when it has none, named for the console
      * listing and for the participant metadata in the logs.
      */
-    private static MachineParticipantIdentity newMachine(Project project, MachineType kind, String role) {
+    private static MachineParticipantIdentity newMachine(Project project, MachineType machineType, String role) {
         MachineParticipantIdentity machine = new MachineParticipantIdentity();
-        machine.setMachineType(kind)
+        machine.setMachineType(machineType)
                .setOrganizationId(project.getOrganizationId())
                .setDisplayName((project.getName() != null ? project.getName() : project.getId()) + " " + role);
         return machine;

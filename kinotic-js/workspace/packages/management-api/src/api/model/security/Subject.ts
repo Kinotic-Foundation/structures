@@ -1,4 +1,4 @@
-import type { SubjectKind } from '@/api/model/security/SubjectKind'
+import type { SubjectType } from '@/api/model/security/SubjectType'
 
 /**
  * Who a grant is made to: a user by its identity id, or a group by its id, which stands for every member the
@@ -6,7 +6,7 @@ import type { SubjectKind } from '@/api/model/security/SubjectKind'
  */
 export interface Subject {
     /** Whether the id names a user or a group. */
-    kind: SubjectKind
+    type: SubjectType
     /** The user's identity id or the group's id. */
     id: string
 }

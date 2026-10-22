@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
@@ -61,7 +61,7 @@ public class ApplicationIsolationTests extends KinoticTestBase {
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
         Grant here = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), personHere)));
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "findById", caller, List.of(person.getId(), "row-1"))),

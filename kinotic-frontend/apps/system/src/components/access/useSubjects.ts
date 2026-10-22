@@ -1,6 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import { type MachineParticipantIdentity, type Subject, SubjectKind, type SystemParticipantIdentity } from '@kinotic-ai/management-api'
+import { type MachineParticipantIdentity, type Subject, SubjectType, type SystemParticipantIdentity } from '@kinotic-ai/management-api'
 
 /** Who a system grant can be made to, as the pickers and the grant rows show them. */
 export interface SubjectOption {
@@ -55,7 +55,7 @@ export function useSubjects(): {
 
 function systemUserOption(user: SystemParticipantIdentity): SubjectOption {
   return {
-    subject: { kind: SubjectKind.USER, id: user.id ?? '' },
+    subject: { type: SubjectType.USER, id: user.id ?? '' },
     label: user.displayName || user.email,
     detail: user.displayName ? user.email : null,
     staff: 'System user'
@@ -64,7 +64,7 @@ function systemUserOption(user: SystemParticipantIdentity): SubjectOption {
 
 function machineOption(machine: MachineParticipantIdentity): SubjectOption {
   return {
-    subject: { kind: SubjectKind.USER, id: machine.id ?? '' },
+    subject: { type: SubjectType.USER, id: machine.id ?? '' },
     label: machine.displayName || machine.id || '',
     detail: machine.displayName ? machine.id ?? null : null,
     staff: 'Machine'

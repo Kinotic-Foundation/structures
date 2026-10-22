@@ -4,10 +4,10 @@
       <div class="flex flex-col gap-5">
         <div>
           <span class="mb-2 block text-sm font-medium">Who</span>
-          <SelectButton v-model="kind" :options="KINDS" option-label="label" option-value="value" :allow-empty="false" class="mb-3" />
-          <Select v-model="subjectId" :options="kind === SubjectKind.USER ? members : groups" option-label="label" option-value="subject.id"
-                  filter :filter-fields="['label', 'detail']" :placeholder="kind === SubjectKind.USER ? 'Choose a member' : 'Choose a group'"
-                  class="w-full" :empty-message="kind === SubjectKind.USER ? 'No members' : 'No groups yet'">
+          <SelectButton v-model="subjectType" :options="SUBJECT_TYPES" option-label="label" option-value="value" :allow-empty="false" class="mb-3" />
+          <Select v-model="subjectId" :options="subjectType === SubjectType.USER ? members : groups" option-label="label" option-value="subject.id"
+                  filter :filter-fields="['label', 'detail']" :placeholder="subjectType === SubjectType.USER ? 'Choose a member' : 'Choose a group'"
+                  class="w-full" :empty-message="subjectType === SubjectType.USER ? 'No members' : 'No groups yet'">
             <template #option="{ option }">
               <div class="flex flex-col">
                 <span class="text-sm">{{ option.label }}</span>
@@ -50,7 +50,7 @@ import SelectButton from 'primevue/selectbutton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { type Grant, type Resource, type RoleDefinition, SubjectKind } from '@kinotic-ai/management-api'
+import { type Grant, type Resource, type RoleDefinition, SubjectType } from '@kinotic-ai/management-api'
 import { FormDrawer, showErrorToast, summarizeRole, typeLabel } from '@kinotic-ai/frontend-common'
 import type { SubjectOption } from './useSubjects'
 
@@ -72,13 +72,13 @@ const emit = defineEmits<{
   (e: 'granted', grant: Grant): void
 }>()
 
-const KINDS = [
-  { label: 'Member', value: SubjectKind.USER },
-  { label: 'Group', value: SubjectKind.GROUP }
+const SUBJECT_TYPES = [
+  { label: 'Member', value: SubjectType.USER },
+  { label: 'Group', value: SubjectType.GROUP }
 ]
 
 const toast = useToast()
-const kind = ref<SubjectKind>(SubjectKind.USER)
+const subjectType = ref<SubjectType>(SubjectType.USER)
 const subjectId = ref<string | null>(null)
 const roleId = ref<string | null>(null)
 const granting = ref(false)
@@ -87,14 +87,14 @@ const description = computed(() => `Give a member or a group a role on this ${ty
 
 watch(() => props.visible, visible => {
   if (visible) {
-    kind.value = SubjectKind.USER
+    subjectType.value = SubjectType.USER
     subjectId.value = null
     roleId.value = null
   }
 })
 
-// a picked member is not a group, so switching the kind clears the pick
-watch(kind, () => { subjectId.value = null })
+// a picked member is not a group, so switching the subject type clears the pick
+watch(subjectType, () => { subjectId.value = null })
 
 async function submit(): Promise<void> {
   if (!subjectId.value || !roleId.value) {
@@ -102,7 +102,7 @@ async function submit(): Promise<void> {
   }
   granting.value = true
   try {
-    const grant = await Kinotic.permissions.grant({ kind: kind.value, id: subjectId.value }, roleId.value, props.resource)
+    const grant = await Kinotic.permissions.grant({ type: subjectType.value, id: subjectId.value }, roleId.value, props.resource)
     toast.add({ severity: 'success', summary: 'Access granted', life: 4000 })
     emit('granted', grant)
     emit('update:visible', false)

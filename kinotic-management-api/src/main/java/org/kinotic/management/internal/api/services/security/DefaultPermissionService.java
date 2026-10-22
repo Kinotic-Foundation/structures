@@ -11,7 +11,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -355,7 +355,7 @@ public class DefaultPermissionService implements PermissionService {
     // themselves
     private Future<Subject> requireSubject(Subject subject, String organizationId) {
         Future<Subject> ret;
-        if (subject.kind() == SubjectKind.USER) {
+        if (subject.type() == SubjectType.USER) {
             ret = requireUser(subject.id(), organizationId);
         } else {
             ret = requireGroup(subject.id(), organizationId).map(subject);
@@ -389,9 +389,9 @@ public class DefaultPermissionService implements PermissionService {
             if (identity instanceof MachineParticipantIdentity machine
                     && organizationId.equals(machine.getOrganizationId())
                     && machine.getApplicationId() == null) {
-                ret = Future.succeededFuture(new Subject(SubjectKind.USER, id));
+                ret = Future.succeededFuture(new Subject(SubjectType.USER, id));
             } else if (identity instanceof OrganizationParticipantIdentity) {
-                ret = requireMember(id, organizationId).map(new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(id, organizationId))));
+                ret = requireMember(id, organizationId).map(new Subject(SubjectType.USER, AuthzUtil.idOf(DomainUtil.authzMember(id, organizationId))));
             } else {
                 throw new IllegalArgumentException("No member or machine of the organization has id " + id);
             }
@@ -450,7 +450,7 @@ public class DefaultPermissionService implements PermissionService {
 
     private static void validate(Subject subject) {
         Validate.notNull(subject, "subject cannot be null");
-        Validate.notNull(subject.kind(), "subject kind cannot be null");
+        Validate.notNull(subject.type(), "subject type cannot be null");
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 
@@ -461,7 +461,7 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     private static String userOf(Subject subject) {
-        return subject.kind() == SubjectKind.USER
+        return subject.type() == SubjectType.USER
                 ? AuthzUtil.object(AuthzUtil.USER_TYPE, subject.id())
                 : membersOf(AuthzUtil.object(AuthzUtil.GROUP_TYPE, subject.id()));
     }

@@ -8,7 +8,7 @@ import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -114,7 +114,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         Project a = project(application);
         Project b = project(application);
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
 
@@ -145,7 +145,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         Application application = application();
         EntityDefinition definition = definition(application, project(application));
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "entity_definition.editor",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
 
@@ -155,7 +155,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertToolCallRefused(ENTITY_DEFINITION_SERVICE, "unPublish", caller, Map.of("entityDefinitionId", definition.getId()), "entity_definition_can_delete");
         assertRefused(ENTITY_DEFINITION_SERVICE, "deleteById", caller, List.of(definition.getId()), "entity_definition_can_delete");
 
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.admin",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "entity_definition.admin",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         assertTrue(awaitUntil(() -> admitted(ENTITY_DEFINITION_SERVICE, "unPublish", caller, List.of(definition.getId()))),
                    "the administrator of the definition never un-published it");
@@ -165,7 +165,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     public void aDelegateActsWithItsOwnersAuthority() throws Exception {
         Project a = project(application());
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "request");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant delegate = participant("cli-" + suffix(), Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, sally.getId()));
 
@@ -185,7 +185,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         // a listing of the caller's own access is admitted by the zone alone
         authorize(PERMISSION_SERVICE, "listAccessible", caller, List.of(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ));
 
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, member.getId()), "organization.viewer",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, member.getId()), "organization.viewer",
                                                         new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))));
         assertTrue(awaitUntil(() -> admitted(MEMBER_SERVICE, "findMembers", caller, listing)), "the viewer never saw the members");
         assertRefused(MEMBER_SERVICE, "removeMember", caller, List.of(member.getId()), "organization_can_manage_members");
@@ -194,7 +194,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         // the organization's viewer holds no project permission on; an editor of projects granted on the
         // organization holds every project's
         assertRefused(PROJECT_SERVICE, "syncIndex", caller, List.of(), "project_can_edit on organization:" + TEST_ORG_ID);
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, member.getId()), "project.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, member.getId()), "project.editor",
                                                         new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))));
         assertTrue(awaitUntil(() -> admitted(PROJECT_SERVICE, "syncIndex", caller, List.of())), "the editor of projects never re-synced them");
     }
@@ -209,7 +209,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
                    "the creator was never bound as the administrator");
 
         // every server that started swept the organization, and found it administered after the first
-        Subject creator = new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
+        Subject creator = new Subject(SubjectType.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
         long creatorBindings = await(relationships.findGrants(AuthzStoreService.SYSTEM, organization))
                 .stream()
                 .filter(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))

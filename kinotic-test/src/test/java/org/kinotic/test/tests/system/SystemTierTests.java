@@ -9,7 +9,7 @@ import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -140,7 +140,7 @@ public class SystemTierTests extends KinoticTestBase {
         // the administrator holds everything on the system and inside it
         Participant admin = userParticipant(SEEDED_ADMIN_ID);
         authorize(MEMBER_SERVICE, "createMachine", admin, List.of("a machine"));
-        authorize(ACCESS_SERVICE, "grant", admin, List.of(new Subject(SubjectKind.USER, SEEDED_ADMIN_ID), AuthzUtil.SYSTEM_SUPPORT_ROLE));
+        authorize(ACCESS_SERVICE, "grant", admin, List.of(new Subject(SubjectType.USER, SEEDED_ADMIN_ID), AuthzUtil.SYSTEM_SUPPORT_ROLE));
         authorize(ORGANIZATION_SERVICE, "findMembers", admin, Arrays.asList(organization().getId(), null, PAGE));
         authorize(NODE_SERVICE, "registerNode", admin, List.of(NodeFixtures.registration("any-node", 1, 1024, 1024)));
     }
@@ -148,7 +148,7 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void supportReadsTheSystemAndIsRefusedItsWrites() throws Exception {
         SystemParticipantIdentity support = systemUser("system-user");
-        Subject subject = new Subject(SubjectKind.USER, support.getId());
+        Subject subject = new Subject(SubjectType.USER, support.getId());
         Grant grant = await(access.grant(subject, AuthzUtil.SYSTEM_SUPPORT_ROLE));
         Organization organization = organization();
         Participant caller = userParticipant(support.getId());
@@ -178,7 +178,7 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void aMaintainerRunsTheSystemAndIsRefusedANodesReports() throws Exception {
         SystemParticipantIdentity maintainer = systemUser("system-user");
-        await(access.grant(new Subject(SubjectKind.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
         Participant caller = userParticipant(maintainer.getId());
 
         assertTrue(awaitUntil(() -> admitted(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"))), "the maintainer never managed workloads");
@@ -195,8 +195,8 @@ public class SystemTierTests extends KinoticTestBase {
         MachineParticipantIdentity registrar = machine("tier registrar");
         MachineParticipantIdentity other = machine("tier bystander");
         SystemParticipantIdentity maintainer = systemUser("system-user");
-        await(access.grant(new Subject(SubjectKind.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
-        await(access.grant(new Subject(SubjectKind.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, maintainer.getId()), AuthzUtil.SYSTEM_MAINTAINER_ROLE));
         Participant registrarCaller = machineParticipant(registrar.getId());
         Participant otherCaller = machineParticipant(other.getId());
         VmNodeRegistration node = NodeFixtures.registration("tier-" + suffix(), 4, 4096, 10240);
@@ -222,7 +222,7 @@ public class SystemTierTests extends KinoticTestBase {
         List<Grant> grants = await(relationships.findGrants(SYSTEM, nodeObject));
         assertEquals(1, grants.size());
         assertEquals(VmNodeOrchestrationService.AGENT_ROLE, grants.getFirst().roleId());
-        assertEquals(new Subject(SubjectKind.USER, registrar.getId()), grants.getFirst().subject());
+        assertEquals(new Subject(SubjectType.USER, registrar.getId()), grants.getFirst().subject());
 
         // a node registering again binds nothing twice
         await(runAs(registrarCaller, () -> nodeOrchestration.registerNode(node)));
@@ -241,11 +241,11 @@ public class SystemTierTests extends KinoticTestBase {
         SystemParticipantIdentity user = systemUser("system-user");
 
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.USER, member.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.USER, member.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.GROUP, user.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.GROUP, user.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.USER, user.getId()), "project.editor-of-nothing")));
+                         failure(() -> access.grant(new Subject(SubjectType.USER, user.getId()), "project.editor-of-nothing")));
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.revoke("no-such-grant")));
         // the roles a system grant can name are the system's own and those of the types on it, none of an
         // organization's or a tenant's
@@ -258,14 +258,14 @@ public class SystemTierTests extends KinoticTestBase {
         assertTrue(defined.stream().noneMatch(role -> organizationTree.contains(role.resourceType())), roles.toString());
         assertTrue(defined.stream().allMatch(role -> role.grantableOn().contains(AuthzUtil.SYSTEM_TYPE)), roles.toString());
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.USER, user.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectType.USER, user.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
     }
 
     @Test
     public void theTelemetryTenantFollowsTheSystemGrant() throws Exception {
         SystemParticipantIdentity newcomer = systemUser("system-user");
         SystemParticipantIdentity support = systemUser("system-user");
-        await(access.grant(new Subject(SubjectKind.USER, support.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE));
+        await(access.grant(new Subject(SubjectType.USER, support.getId()), AuthzUtil.SYSTEM_SUPPORT_ROLE));
         ServerLogQuery query = new ServerLogQuery().setTelemetryServiceName("kinotic-test").setStart(0).setEnd(1).setLimit(1);
 
         assertInstanceOf(AuthorizationException.class, failure(() -> runAs(userParticipant(newcomer.getId()), () -> logService.serverHistory(query))));
@@ -277,7 +277,7 @@ public class SystemTierTests extends KinoticTestBase {
 
     // How many grants of the role the system holds for the subject
     private long grantsOf(String subjectId, String roleId) throws Exception {
-        Subject subject = new Subject(SubjectKind.USER, subjectId);
+        Subject subject = new Subject(SubjectType.USER, subjectId);
         return await(access.findGrants()).stream().filter(grant -> roleId.equals(grant.roleId()) && subject.equals(grant.subject())).count();
     }
 

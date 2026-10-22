@@ -8,7 +8,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.core.api.utils.ZoneUtil;
@@ -272,8 +272,8 @@ public class DomainUtil {
     public static Grant localGrant(Grant grant) {
         Resource resource = grant.resource();
         Subject subject = grant.subject();
-        if (subject.kind() == SubjectKind.USER) {
-            subject = new Subject(SubjectKind.USER, identityOf(subject.id()));
+        if (subject.type() == SubjectType.USER) {
+            subject = new Subject(SubjectType.USER, identityOf(subject.id()));
         }
         return new Grant(grant.id(), grant.roleId(), subject, new Resource(resource.type(), localId(resource.type(), resource.id())));
     }

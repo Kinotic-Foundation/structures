@@ -52,7 +52,7 @@ import SelectButton from 'primevue/selectbutton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { type Grant, type RoleDefinition, SubjectKind } from '@kinotic-ai/management-api'
+import { type Grant, type RoleDefinition, SubjectType } from '@kinotic-ai/management-api'
 import { FormDrawer, showErrorToast, summarizeRole } from '@kinotic-ai/frontend-common'
 import type { SubjectOption } from './useSubjects'
 
@@ -88,7 +88,7 @@ watch(() => props.visible, visible => {
   }
 })
 
-// a picked system user is not a machine, so switching the kind clears the pick
+// a picked system user is not a machine, so switching the subject type clears the pick
 watch(staff, () => { subjectId.value = null })
 
 async function submit(): Promise<void> {
@@ -97,7 +97,7 @@ async function submit(): Promise<void> {
   }
   granting.value = true
   try {
-    const grant = await Kinotic.systemAccess.grant({ kind: SubjectKind.USER, id: subjectId.value }, roleId.value)
+    const grant = await Kinotic.systemAccess.grant({ type: SubjectType.USER, id: subjectId.value }, roleId.value)
     toast.add({ severity: 'success', summary: 'Access granted', life: 4000 })
     emit('granted', grant)
     emit('update:visible', false)

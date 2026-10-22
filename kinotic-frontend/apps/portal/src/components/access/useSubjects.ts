@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
 import { type ApplicationParticipantIdentity, type Group, type MachineParticipantIdentity, type OrganizationMember, type Subject,
-  SubjectKind } from '@kinotic-ai/management-api'
+  SubjectType } from '@kinotic-ai/management-api'
 
 /** Who a grant can be made to, as the pickers and the grant rows show them. */
 export interface SubjectOption {
@@ -63,12 +63,12 @@ export function useSubjects(applicationId: string | null = null): {
 
 /** The key a subject is told apart by: a user and a group may share an id. */
 export function keyOf(subject: Subject): string {
-  return `${subject.kind}:${subject.id}`
+  return `${subject.type}:${subject.id}`
 }
 
 function memberOption(member: OrganizationMember | ApplicationParticipantIdentity): SubjectOption {
   return {
-    subject: { kind: SubjectKind.USER, id: member.id ?? '' },
+    subject: { type: SubjectType.USER, id: member.id ?? '' },
     label: member.displayName || member.email,
     detail: member.displayName ? member.email : null
   }
@@ -77,7 +77,7 @@ function memberOption(member: OrganizationMember | ApplicationParticipantIdentit
 // a machine is a user subject to the store, named as the Machines page names it
 function machineOption(machine: MachineParticipantIdentity): SubjectOption {
   return {
-    subject: { kind: SubjectKind.USER, id: machine.id ?? '' },
+    subject: { type: SubjectType.USER, id: machine.id ?? '' },
     label: machine.displayName || machine.id || '',
     detail: machine.displayName ? machine.id ?? null : null
   }
@@ -85,7 +85,7 @@ function machineOption(machine: MachineParticipantIdentity): SubjectOption {
 
 function groupOption(group: Group): SubjectOption {
   return {
-    subject: { kind: SubjectKind.GROUP, id: group.id ?? '' },
+    subject: { type: SubjectType.GROUP, id: group.id ?? '' },
     label: group.name,
     detail: group.description
   }

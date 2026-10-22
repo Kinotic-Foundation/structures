@@ -6,7 +6,7 @@ import org.kinotic.app.api.services.ApplicationServiceDirectory;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.directory.ServiceDirectory;
@@ -132,7 +132,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, tenantId);
         assertRefused(service, "findReports", caller, List.of(), type + "_can_read on tenant:" + tenantId);
         await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(type, AuthzUtil.VIEWER), tenant)));

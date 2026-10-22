@@ -6,10 +6,10 @@
       <div class="flex flex-col gap-5">
         <div>
           <span class="mb-2 block text-sm font-medium">Who</span>
-          <SelectButton v-model="kind" :options="KINDS" :allow-empty="false" class="mb-3" />
-          <Select v-model="subjectId" :options="kind === 'User' ? users : machines" option-label="label" option-value="subject.id"
-                  filter :filter-fields="['label', 'detail']" :placeholder="kind === 'User' ? 'Choose a user' : 'Choose a machine'"
-                  class="w-full" :empty-message="kind === 'User' ? 'No users yet' : 'No machines yet'">
+          <SelectButton v-model="subjectType" :options="SUBJECT_TYPES" :allow-empty="false" class="mb-3" />
+          <Select v-model="subjectId" :options="subjectType === 'User' ? users : machines" option-label="label" option-value="subject.id"
+                  filter :filter-fields="['label', 'detail']" :placeholder="subjectType === 'User' ? 'Choose a user' : 'Choose a machine'"
+                  class="w-full" :empty-message="subjectType === 'User' ? 'No users yet' : 'No machines yet'">
             <template #option="{ option }">
               <div class="flex flex-col">
                 <span class="text-sm">{{ option.label }}</span>
@@ -60,7 +60,7 @@ import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { type Grant, type Resource, type RoleDefinition, SubjectKind } from '@kinotic-ai/management-api'
+import { type Grant, type Resource, type RoleDefinition, SubjectType } from '@kinotic-ai/management-api'
 import { FormDrawer, showErrorToast, summarizeRole } from '@kinotic-ai/frontend-common'
 import { type DefinitionOption, definitionOf, resourceOf, tenantOf } from './applicationResources'
 import type { SubjectOption } from './useSubjects'
@@ -90,12 +90,12 @@ const emit = defineEmits<{
   (e: 'granted', grant: Grant): void
 }>()
 
-const KINDS = ['User', 'Machine']
+const SUBJECT_TYPES = ['User', 'Machine']
 const SCOPES = ['Whole application', 'One tenant']
 const ROWS = ['Every definition', 'One definition']
 
 const toast = useToast()
-const kind = ref<'User' | 'Machine'>('User')
+const subjectType = ref<'User' | 'Machine'>('User')
 const scope = ref<'Whole application' | 'One tenant'>('Whole application')
 const rows = ref<'Every definition' | 'One definition'>('Every definition')
 const subjectId = ref<string | null>(null)
@@ -126,7 +126,7 @@ const reach = computed(() => {
 
 watch(() => props.visible, visible => {
   if (visible) {
-    kind.value = 'User'
+    subjectType.value = 'User'
     subjectId.value = null
     roleId.value = null
     const tenant = tenantOf(props.initialResource)
@@ -138,8 +138,8 @@ watch(() => props.visible, visible => {
   }
 })
 
-// a picked user is not a machine, so switching the kind clears the pick
-watch(kind, () => { subjectId.value = null })
+// a picked user is not a machine, so switching the subject type clears the pick
+watch(subjectType, () => { subjectId.value = null })
 
 async function submit(): Promise<void> {
   if (!subjectId.value || !roleId.value || !resource.value) {
@@ -147,7 +147,7 @@ async function submit(): Promise<void> {
   }
   granting.value = true
   try {
-    const grant = await Kinotic.applicationAccess.grant(props.applicationId, { kind: SubjectKind.USER, id: subjectId.value }, roleId.value, resource.value)
+    const grant = await Kinotic.applicationAccess.grant(props.applicationId, { type: SubjectType.USER, id: subjectId.value }, roleId.value, resource.value)
     toast.add({ severity: 'success', summary: 'Access granted', life: 4000 })
     emit('granted', grant)
     emit('update:visible', false)

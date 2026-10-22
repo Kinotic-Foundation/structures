@@ -73,7 +73,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { KeyRound, MapPin } from '@lucide/vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import { type Grant, type Resource, type RoleDefinition, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type Grant, type Resource, type RoleDefinition, type Subject, SubjectType } from '@kinotic-ai/management-api'
 import { DashboardSection, EmptyChartCharacter, NoAccessState, PageHeader, RoleCell, SubjectCell, TINTS, TableChip,
          errorMessage, isAuthorizationError, showErrorToast } from '@kinotic-ai/frontend-common'
 import EndUserAccessCheckPanel from '@/components/access/EndUserAccessCheckPanel.vue'
@@ -118,7 +118,7 @@ const definition = ref<string>(EVERY_DEFINITION)
 /** The subject the page was opened for, from its query, or null for everyone's grants. */
 const subjectFilter = computed<Subject | null>(() => {
   const id = route.query.subject
-  return typeof id === 'string' && id.length > 0 ? { kind: SubjectKind.USER, id } : null
+  return typeof id === 'string' && id.length > 0 ? { type: SubjectType.USER, id } : null
 })
 
 /** The resource the page is looking at: the whole application, the tenant typed or picked, the definition picked, or both. */

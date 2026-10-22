@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.core.api.crud.Identifiable;
 import org.kinotic.core.api.crud.Page;
@@ -103,7 +103,7 @@ public class VisibilityTests extends KinoticTestBase {
         Application y = application();
         project(y);
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "visible");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         OrganizationParticipant caller = participant(sally.getId());
 
@@ -138,7 +138,7 @@ public class VisibilityTests extends KinoticTestBase {
         Project b = project(x);
         EntityDefinition definition = await(runAsOrganization(() -> entityDefinitionService.create(definition(x.getId(), a.getId()))));
         OrganizationParticipantIdentity sally = member(TEST_ORG_ID, "visible");
-        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.viewer",
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.USER, sally.getId()), "entity_definition.viewer",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         OrganizationParticipant caller = participant(sally.getId());
 

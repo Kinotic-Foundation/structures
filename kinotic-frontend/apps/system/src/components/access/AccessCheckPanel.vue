@@ -50,7 +50,7 @@ import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import { CircleCheck, CircleX, SearchCheck } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
-import { type AccessExplanation, type RoleDefinition, type Subject, SubjectKind } from '@kinotic-ai/management-api'
+import { type AccessExplanation, type RoleDefinition, type Subject, SubjectType } from '@kinotic-ai/management-api'
 import { DashboardSection, permissionLabel, showErrorToast, splitPermission } from '@kinotic-ai/frontend-common'
 import type { SubjectOption } from './useSubjects'
 
@@ -97,7 +97,7 @@ async function check(): Promise<void> {
   const split = splitPermission(permission.value)
   checking.value = true
   try {
-    explanation.value = await Kinotic.systemAccess.explain({ kind: SubjectKind.USER, id: picked.subject.id }, split.permission)
+    explanation.value = await Kinotic.systemAccess.explain({ type: SubjectType.USER, id: picked.subject.id }, split.permission)
     checkedLabel.value = picked.label
     checkedPermission.value = permissionLabel(split.permission).toLowerCase()
   } catch (err) {

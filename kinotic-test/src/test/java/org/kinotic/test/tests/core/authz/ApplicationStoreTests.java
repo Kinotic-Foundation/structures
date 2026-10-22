@@ -9,7 +9,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -137,7 +137,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, tenantId);
         Participant caller = applicationParticipant(tenantId, bob.getId());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource personHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
         Resource carHere = new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(car.getId(), tenantId));
         List<Object> readRow = List.of(person.getId(), "row-1");
@@ -175,7 +175,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
 
         // a grant on the definition reaches it in every tenant, including one no grant was made in
         Resource personEverywhere = new Resource(AuthzUtil.ENTITY_DEFINITION_TYPE, person.getId());
-        Grant everyTenant = await(runAsOrganization(() -> access.grant(TEST_APP_ID, new Subject(SubjectKind.USER, alice.getId()),
+        Grant everyTenant = await(runAsOrganization(() -> access.grant(TEST_APP_ID, new Subject(SubjectType.USER, alice.getId()),
                                                                        AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.VIEWER), personEverywhere)));
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "findById", other, readRow)), "the viewer granted on the definition was never admitted");
         assertRefused(ENTITIES_SERVICE, "bulkUpdate", other, List.of(person.getId(), List.of()), AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_EDIT));
@@ -184,7 +184,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         assertEquals(List.of(everyTenant), await(runAsOrganization(() -> access.findGrants(TEST_APP_ID, personThere))));
 
         // a grant on the application reaches every definition in every tenant
-        Grant everywhere = await(runAsOrganization(() -> access.grant(TEST_APP_ID, new Subject(SubjectKind.USER, alice.getId()),
+        Grant everywhere = await(runAsOrganization(() -> access.grant(TEST_APP_ID, new Subject(SubjectType.USER, alice.getId()),
                                                                       AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.VIEWER),
                                                                       new Resource(AuthzUtil.APPLICATION_TYPE, TEST_APP_ID))));
         assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "findById", other, List.of(car.getId(), "row-1"))), "the viewer granted on the application was never admitted");
@@ -203,7 +203,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         String editor = AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR);
         ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, "tenant-" + suffix());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, bob.getTenantId());
 
         // a grant on a project, which the application's store knows nothing of
@@ -217,7 +217,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.grant(TEST_APP_ID, subject, editor, new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, person.getId()))));
         // a grant to the organization's member, who is not one of the application's users
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(TEST_APP_ID, new Subject(SubjectKind.USER, TEST_ORGANIZATION_PARTICIPANT.getId()), editor, tenant)));
+                         failure(() -> access.grant(TEST_APP_ID, new Subject(SubjectType.USER, TEST_ORGANIZATION_PARTICIPANT.getId()), editor, tenant)));
         // a grant of a role the store does not define
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.grant(TEST_APP_ID, subject, "project.editor", tenant)));
         // a grant on a tenant of the application's own role, which is homed above the tenant
@@ -236,7 +236,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         Tenant tenant = await(runAsOrganization(() -> tenantService.createTenantIfNotExist(TEST_APP_ID, "Hooli " + suffix(), "A customer")));
         ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, tenant.getId());
-        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        Subject subject = new Subject(SubjectType.USER, bob.getId());
         String store = DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
         String tenantObject = AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenant.getId());
         String withinObject = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenant.getId()));

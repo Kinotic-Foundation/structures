@@ -17,7 +17,7 @@ import {
     Project,
     type Resource,
     type Subject,
-    SubjectKind
+    SubjectType
 } from '@kinotic-ai/management-api'
 import {
     IEntityRepository,
@@ -188,7 +188,7 @@ export async function appFixtureSubject(applicationId: string, tenantId: string,
     if (!user?.id) {
         throw new Error(`No user ${email} is seeded for application ${applicationId}`)
     }
-    return {kind: SubjectKind.USER, id: user.id}
+    return {type: SubjectType.USER, id: user.id}
 }
 
 /**
@@ -223,7 +223,7 @@ export async function grantTenantAdmin(applicationId: string, tenantId: string, 
  * @return the grant's id, which revokes it
  */
 export async function grantRuntime(kinotic: KinoticSingleton, machineId: string, applicationId: string): Promise<string> {
-    const subject: Subject = {kind: SubjectKind.USER, id: machineId}
+    const subject: Subject = {type: SubjectType.USER, id: machineId}
     const application: Resource = {type: 'application', id: applicationId}
     const grant = await kinotic.permissions.grant(subject, 'application.runtime', application)
     // the permission is in the system store's model once the reconciler writes the services an app server

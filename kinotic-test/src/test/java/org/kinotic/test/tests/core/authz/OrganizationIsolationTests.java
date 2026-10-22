@@ -7,7 +7,7 @@ import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.security.Participant;
@@ -169,7 +169,7 @@ public class OrganizationIsolationTests extends KinoticTestBase {
     }
 
     private static Subject user(UserParticipantIdentity identity) {
-        return new Subject(SubjectKind.USER, identity.getId());
+        return new Subject(SubjectType.USER, identity.getId());
     }
 
     private Throwable failure(Participant caller, Supplier<Future<?>> call) {

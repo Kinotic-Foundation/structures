@@ -1,5 +1,5 @@
 import {Kinotic, Pageable} from '@kinotic-ai/core'
-import {Group, Project, SubjectKind, type RoleDefinition} from '@kinotic-ai/management-api'
+import {Group, Project, SubjectType, type RoleDefinition} from '@kinotic-ai/management-api'
 import * as allure from 'allure-js-commons'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {initKinoticClient, shutdownKinoticClient} from '../TestHelpers.js'
@@ -75,13 +75,13 @@ describe('Kinotic JS', () => {
         const group = Object.assign(new Group(), {name: 'QA e2e', description: 'tests everything'})
         const savedGroup = await Kinotic.permissions.saveGroup(group)
         const onProject = {type: 'project', id: project.id!}
-        const sally = {kind: SubjectKind.USER, id: SALLY_ID}
+        const sally = {type: SubjectType.USER, id: SALLY_ID}
         try {
             await Kinotic.permissions.addGroupMember(savedGroup.id!, SALLY_ID)
             expect((await Kinotic.permissions.findGroupMembers(savedGroup.id!)).map(member => member.id)).toEqual([SALLY_ID])
             expect((await Kinotic.permissions.findGroups(Pageable.create(0, 100))).content?.some(listed => listed.id === savedGroup.id)).toBe(true)
 
-            const grant = await Kinotic.permissions.grant({kind: SubjectKind.GROUP, id: savedGroup.id!}, 'project.viewer', onProject)
+            const grant = await Kinotic.permissions.grant({type: SubjectType.GROUP, id: savedGroup.id!}, 'project.viewer', onProject)
             try {
                 // the listing reaches up to the organization, where the fixture administrator's grant is
                 expect((await Kinotic.permissions.findGrants(onProject)).filter(listed => listed.resource.id === onProject.id)).toEqual([grant])

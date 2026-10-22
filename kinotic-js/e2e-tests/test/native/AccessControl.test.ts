@@ -1,7 +1,7 @@
 import {Client} from '@modelcontextprotocol/sdk/client/index.js'
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import {BasicCredentialsResolver, Kinotic, KinoticSingleton, Pageable} from '@kinotic-ai/core'
-import {ManagementApiPlugin, Project, SubjectKind} from '@kinotic-ai/management-api'
+import {ManagementApiPlugin, Project, SubjectType} from '@kinotic-ai/management-api'
 import * as allure from 'allure-js-commons'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {E2E_FIXTURE_PASSWORD,
@@ -48,7 +48,7 @@ describe('Kinotic JS', () => {
         application = await Kinotic.applications.createApplicationIfNotExist('e2e-access-control', 'e2e fixture application for the access control test')
         projectA = await Kinotic.projects.createProjectIfNotExist(new Project(null, application.id, 'access-control-a', 'Project A'))
         projectB = await Kinotic.projects.createProjectIfNotExist(new Project(null, application.id, 'access-control-b', 'Project B'))
-        const grant = await Kinotic.permissions.grant({kind: SubjectKind.USER, id: SALLY_ID}, 'project.editor', {type: 'project', id: projectA.id!})
+        const grant = await Kinotic.permissions.grant({type: SubjectType.USER, id: SALLY_ID}, 'project.editor', {type: 'project', id: projectA.id!})
         grantId = grant.id
 
         sallyKinotic = new KinoticSingleton()

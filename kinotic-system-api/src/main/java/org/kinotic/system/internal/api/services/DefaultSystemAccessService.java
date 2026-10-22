@@ -11,7 +11,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -115,7 +115,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
     // The system has no groups, so a subject is one of its identities
     private static void validate(Subject subject) {
         Validate.notNull(subject, "subject cannot be null");
-        Validate.isTrue(subject.kind() == SubjectKind.USER, "a grant on the system is made to a user");
+        Validate.isTrue(subject.type() == SubjectType.USER, "a grant on the system is made to a user");
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 

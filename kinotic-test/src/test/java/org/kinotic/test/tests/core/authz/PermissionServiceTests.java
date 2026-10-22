@@ -11,7 +11,7 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
-import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -223,7 +223,7 @@ public class PermissionServiceTests extends KinoticTestBase {
 
         Project project = project(application());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
-        Grant grant = await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.GROUP, group.getId()), "project.viewer", onProject)));
+        Grant grant = await(runAsOrganization(() -> permissions.grant(new Subject(SubjectType.GROUP, group.getId()), "project.viewer", onProject)));
         assertTrue(held(member, "project_can_read", onProject), "a member reads what the group was granted");
         AccessExplanation reads = await(runAsOrganization(() -> permissions.explain(user(member), AuthzUtil.CAN_READ, onProject)));
         assertTrue(reads.allowed());
@@ -284,7 +284,7 @@ public class PermissionServiceTests extends KinoticTestBase {
 
 
     private static Subject user(UserParticipantIdentity member) {
-        return new Subject(SubjectKind.USER, member.getId());
+        return new Subject(SubjectType.USER, member.getId());
     }
 
     private boolean reconciledTo(String hash) throws Exception {
