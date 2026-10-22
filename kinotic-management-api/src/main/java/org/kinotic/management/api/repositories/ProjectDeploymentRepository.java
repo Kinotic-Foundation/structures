@@ -33,6 +33,15 @@ public class ProjectDeploymentRepository extends AbstractApplicationScopedReposi
 
     public static final WatchedIndex WATCHED = new WatchedIndex(WatchedType.PROJECT_DEPLOYMENT, "kinotic_project_deployment");
 
+    private static final String RECORD_ARTIFACTS_SCRIPT = """
+            def deployment = ctx._source;
+            boolean sameDependencies = deployment.artifacts != null
+                    && deployment.artifacts.dependencyHash == params.artifacts.dependencyHash;
+            deployment.sbomGenerated = sameDependencies && deployment.sbomGenerated == true;
+            deployment.artifacts = params.artifacts;
+            deployment.updated = params.updated;
+            """;
+
     private static final String RECORD_SBOM_GENERATED_SCRIPT = """
             def deployment = ctx._source;
             if (deployment.artifacts == null || deployment.artifacts.dependencyHash != params.dependencyHash) {
@@ -227,17 +236,22 @@ public class ProjectDeploymentRepository extends AbstractApplicationScopedReposi
     }
 
     /**
-     * Records the artifacts the sync workload found in a commit together with whether the project's
-     * {@link org.kinotic.management.api.model.deployment.ProjectDependencies} list their
-     * dependencies, leaving every other field as it is.
+     * Records the artifacts the sync workload found in a commit, leaving every other field as it is
+     * except whether the project's {@link org.kinotic.management.api.model.deployment.ProjectDependencies}
+     * list their dependencies, which stays set only when the artifacts list the dependencies with
+     * the hash the previous artifacts listed.
      */
-    public Future<Void> recordArtifacts(String projectId, String orgId, ProjectArtifacts artifacts, boolean sbomGenerated) {
+    public Future<Void> recordArtifacts(String projectId, String orgId, ProjectArtifacts artifacts) {
+        Validate.notBlank(projectId, "projectId cannot be blank");
+        Validate.notBlank(orgId, "orgId cannot be blank");
         Validate.notNull(artifacts, "artifacts cannot be null");
         Validate.notBlank(artifacts.commitSha(), "artifacts.commitSha cannot be blank");
-        Map<String, Object> fields = new HashMap<>();
-        fields.put("artifacts", artifacts);
-        fields.put("sbomGenerated", sbomGenerated);
-        return partial(projectId, orgId, fields);
+        return crudServiceTemplate.scriptedUpdate(indexName,
+                                                  composeDocumentId(projectId, orgId),
+                                                  RECORD_ARTIFACTS_SCRIPT,
+                                                  Map.of("artifacts", artifacts, "updated", new Date()),
+                                                  u -> u.routing(orgId).refresh(Refresh.WaitFor))
+                                  .mapEmpty();
     }
 
     /**

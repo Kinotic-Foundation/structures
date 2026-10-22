@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 @Slf4j
@@ -43,16 +42,11 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
         Validate.notBlank(artifacts.commitSha(), "artifacts.commitSha is required");
         validate(artifacts);
         OrganizationParticipant participant = securityContext.requireParticipant(OrganizationParticipant.class);
+        // the SBOM lists the dependencies it was generated from, so a report of other dependencies
+        // marks it outdated and the deployment generates it again; the tree and its alerts stay until
+        // the next SBOM replaces them, which keeps their acknowledgements
         return loadOwned(projectId, participant)
-                .compose(deployment -> {
-                    // the SBOM lists the dependencies it was generated from, so a report of other
-                    // dependencies marks it outdated and the deployment generates it again; the tree and
-                    // its alerts stay until the next SBOM replaces them, which keeps their acknowledgements
-                    boolean sameDependencies = deployment.getArtifacts() != null
-                            && Objects.equals(deployment.getArtifacts().dependencyHash(), artifacts.dependencyHash());
-                    return projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
-                                                                       sameDependencies && deployment.isSbomGenerated());
-                });
+                .compose(deployment -> projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts));
     }
 
     @Override
