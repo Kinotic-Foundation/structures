@@ -228,7 +228,7 @@ locals {
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_HOST"   = ip
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_PORT"   = "9200"
     }]...), {
-    SPRING_PROFILES_ACTIVE       = "production,dev-server"
+    SPRING_PROFILES_ACTIVE       = "dev-server"
     BPL_JVM_HEAD_ROOM            = "10"
     JAVA_TOOL_OPTIONS            = "-XX:MaxDirectMemorySize=512m -javaagent:/workspace/BOOT-INF/classes/opentelemetry-javaagent.jar --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
     KINOTIC_MAX_OFF_HEAP_MEMORY  = "419430400"
@@ -424,10 +424,10 @@ locals {
       mounts        = []
       entrypoint    = local.images.cnb.entrypoint
       image_env     = local.images.cnb.env
-      # No fixture migration applies: no test users, no console samples. The dev-server profile points Summit 42's
-      # email templates at the development server's Summit 42
+      # No fixture migration applies: no test users, no console samples. The dev-server profile applies the
+      # development server's own seeds, the Summit 42 email templates linking to its Summit 42
       env = {
-        SPRING_PROFILES_ACTIVE           = "production,dev-server"
+        SPRING_PROFILES_ACTIVE           = "dev-server"
         KINOTIC_MIGRATION_ELASTIC_SCHEME = "http"
         KINOTIC_MIGRATION_ELASTIC_HOST   = local.es_ips[0]
         KINOTIC_MIGRATION_ELASTIC_PORT   = "9200"
