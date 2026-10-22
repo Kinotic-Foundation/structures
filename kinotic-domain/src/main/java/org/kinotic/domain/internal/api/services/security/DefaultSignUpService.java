@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
@@ -40,7 +41,7 @@ public class DefaultSignUpService implements SignUpService {
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
 
     @Override
-    public Future<Void> initiateLocalSignUp(String email, String displayName, String emailTemplateId) {
+    public Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate) {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
 
@@ -63,7 +64,7 @@ public class DefaultSignUpService implements SignUpService {
                     return requireNoOrganizationUser(pending);
                 })
                 .compose(v -> pendingSignUpRepository.save(pending))
-                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplateId));
+                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplate));
     }
 
     @Override

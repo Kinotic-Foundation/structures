@@ -389,19 +389,6 @@ CREATE TABLE IF NOT EXISTS kinotic_invite_email_template (
     updated DATE
 );
 
--- The emails a UI built on Kinotic sends in its own name (SystemEmailTemplate): Handlebars sources of an
--- invitation or verification email, which a call names by id, whose links open the page of the UI at uiBaseUrl, or
--- the portal's when it is absent. System users manage them in the system console (SystemEmailTemplateService).
-CREATE TABLE IF NOT EXISTS kinotic_system_email_template (
-    id KEYWORD,
-    uiBaseUrl KEYWORD NOT INDEXED,
-    subject TEXT,
-    htmlBody TEXT,
-    textBody TEXT,
-    created DATE,
-    updated DATE
-);
-
 -- OAuth 2.0 Device Authorization Grant (RFC 8628): pending CLI device-code login flows.
 -- Short-lived (minutes); deleted once the CLI collects its tokens. deviceCodeHash is the
 -- SHA-256 of the high-entropy device_code the CLI polls with — the plaintext is never stored.

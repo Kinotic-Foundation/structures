@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingInvite;
@@ -44,7 +45,7 @@ public class DefaultInviteService implements InviteService {
     private final EmailService emailService;
 
     @Override
-    public Future<PendingInvite> createInvite(PendingInvite invite, String emailTemplateId) {
+    public Future<PendingInvite> createInvite(PendingInvite invite, EmailTemplate emailTemplate) {
         Validate.notBlank(invite.getEmail(), "email is required");
         Validate.notBlank(invite.getOrganizationId(), "organizationId is required");
         Validate.notBlank(invite.getInvitedByName(), "invitedByName is required");
@@ -69,7 +70,7 @@ public class DefaultInviteService implements InviteService {
                     // saveSync because the console re-queries pending invites as soon as this
                     // returns — a plain save races the ES index refresh and the new row is missed.
                     return pendingInviteRepository.saveSync(invite)
-                            .compose(saved -> emailService.sendInviteEmail(saved, org.getName(), emailTemplateId)
+                            .compose(saved -> emailService.sendInviteEmail(saved, org.getName(), emailTemplate)
                                                           .map(saved));
                 });
     }
@@ -290,7 +291,7 @@ public class DefaultInviteService implements InviteService {
     }
 
     @Override
-    public Future<Void> resendInvite(String inviteId, String organizationId, String emailTemplateId) {
+    public Future<Void> resendInvite(String inviteId, String organizationId, EmailTemplate emailTemplate) {
         Validate.notBlank(inviteId, "inviteId is required");
         Validate.notBlank(organizationId, "organizationId is required");
         return pendingInviteRepository.findById(inviteId)
@@ -300,7 +301,7 @@ public class DefaultInviteService implements InviteService {
                         return Future.failedFuture(new IllegalArgumentException("Invitation not found."));
                     }
                     return organizationService.findById(organizationId)
-                                              .compose(org -> emailService.sendInviteEmail(invite, org.getName(), emailTemplateId));
+                                              .compose(org -> emailService.sendInviteEmail(invite, org.getName(), emailTemplate));
                 });
     }
 

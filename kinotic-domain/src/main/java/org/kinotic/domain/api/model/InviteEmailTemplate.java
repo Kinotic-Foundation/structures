@@ -9,15 +9,14 @@ import java.util.Date;
 
 /**
  * An application's customized invitation email — at most one per application. Subject and
- * bodies are Handlebars sources rendered with the invitation variables
- * ({@link SystemEmailTemplate#DEFAULT_INVITATION_ID}); when an application has no row here, the
- * {@link SystemEmailTemplate} the invitation is sent with is used.
+ * bodies are Handlebars sources rendered with the same variables as the built-in
+ * invitation template; when an application has no row here, the built-in is used.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class InviteEmailTemplate implements ApplicationScoped<String>, EmailTemplate {
+public class InviteEmailTemplate implements ApplicationScoped<String> {
 
     private String id;
 

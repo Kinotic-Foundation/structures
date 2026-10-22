@@ -6,7 +6,6 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.Inviter;
 import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
@@ -56,17 +55,17 @@ public class DefaultMemberService implements MemberService {
 
     @Override
     public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation) {
-        return memberInvitationService.addMember(Inviter.from(requireOrgParticipant()), email, displayName, sendInvitation, null);
+        return memberInvitationService.addMember(email, displayName, sendInvitation, null);
     }
 
     @Override
     public Future<Void> sendInvitation(String email) {
-        return memberInvitationService.sendInvitation(Inviter.from(requireOrgParticipant()), email, null);
+        return memberInvitationService.sendInvitation(email, null);
     }
 
     @Override
     public Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId) {
-        return memberInvitationService.inviteMember(Inviter.from(requireOrgParticipant()), email, displayName, applicationId, null)
+        return memberInvitationService.inviteMember(email, displayName, applicationId, null)
                                       .map(PendingInviteSummary::from);
     }
 

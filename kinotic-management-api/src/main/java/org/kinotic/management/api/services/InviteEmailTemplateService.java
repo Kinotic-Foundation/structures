@@ -9,14 +9,14 @@ import org.kinotic.domain.api.services.ApplicationScopedCrudService;
  * CRUD service for an application's customized invitation email — at most one
  * {@link InviteEmailTemplate} per application. Saving validates the Handlebars sources, so
  * a broken template is rejected instead of breaking the next send. Deleting the template
- * reverts the application to the platform email template each invitation is sent with.
+ * reverts the application to the built-in invitation email.
  */
 @Publish
 public interface InviteEmailTemplateService extends ApplicationScopedCrudService<InviteEmailTemplate, String> {
 
     /**
      * Finds the application's invitation template, or {@code null} when the application
-     * uses the platform email template each invitation is sent with.
+     * uses the built-in email.
      */
     Future<InviteEmailTemplate> findByApplication(String applicationId);
 
