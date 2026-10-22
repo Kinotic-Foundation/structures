@@ -5,8 +5,14 @@ kinotic:
       # Clients permitted to start an authorization-code flow, by Client ID Metadata Document URL.
       # Listing any client closes the endpoint to every client not listed.
       allowedClientIds:
+        # ChatGPT custom MCP servers and plugins
+        - https://chatgpt.com/oauth/client.json
         # Codex
         - https://chatgpt.com/oauth/codex/client.json
+        # Grok connectors and Grok Bot, which share Cursor's client
+        - https://cursor.com/oauth/mcp-client.json
+        # Grok Build, which has no client metadata document of its own
+        - https://kinotic.ai/oauth/grok-build-client.json
         # Claude Code
         - https://claude.ai/oauth/claude-code-client-metadata
         # Claude web, desktop, and mobile custom connectors

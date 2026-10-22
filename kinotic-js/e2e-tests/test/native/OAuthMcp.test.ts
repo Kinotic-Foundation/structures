@@ -35,9 +35,10 @@ function stompHandshake(url: string, token: string): Promise<number | 'open'> {
  * reads to find the authorization server, the Client ID Metadata Document rules the authorize
  * endpoint enforces on a client_id, and the device grant the CLI logs in with.
  *
- * Set KINOTIC_E2E_CODEX_OAUTH=true to exercise authorization-code consent and PKCE using
- * Codex's public metadata document against the management server, the one server whose OAuth
- * allowlist admits Codex. This requires outbound HTTPS access to chatgpt.com from that server.
+ * Set KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS=true to exercise the published metadata documents of the
+ * OpenAI and xAI clients against the management server, the one server whose OAuth allowlist
+ * admits them, including authorization-code consent and PKCE as Codex. This requires outbound
+ * HTTPS access to chatgpt.com, cursor.com, and kinotic.ai from that server.
  */
 describe('Kinotic JS', () => {
 
@@ -85,7 +86,7 @@ describe('Kinotic JS', () => {
         expect(response.status).toBe(404)
     })
 
-    it.runIf(process.env.KINOTIC_E2E_CODEX_OAUTH === 'true')(
+    it.runIf(process.env.KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS === 'true')(
         'binds Codex approval and denial callbacks to the advertised issuer', async () => {
         const clientId = 'https://chatgpt.com/oauth/codex/client.json'
         const redirectUri = 'http://127.0.0.1:33418/callback'
@@ -132,6 +133,29 @@ describe('Kinotic JS', () => {
                 expect(exchange.status).toBe(200)
                 expect((await exchange.json()).access_token).toBeTruthy()
             }
+        }
+    }, 60000)
+
+    it.runIf(process.env.KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS === 'true')(
+        'starts consent for the ChatGPT, Grok, and Grok Build metadata documents', async () => {
+        const challenge = createHash('sha256').update(randomBytes(48).toString('base64url')).digest('base64url')
+        const clients = [
+            // prefers private_key_jwt and lists none among the methods it supports
+            {clientId: 'https://chatgpt.com/oauth/client.json',
+             redirectUri: 'https://chatgpt.com/connector_platform_oauth_redirect'},
+            {clientId: 'https://cursor.com/oauth/mcp-client.json',
+             redirectUri: 'https://grok.com/connectors-oauth-exchange-code/'},
+            {clientId: 'https://kinotic.ai/oauth/grok-build-client.json',
+             redirectUri: 'http://127.0.0.1:41873/callback'}
+        ]
+        for (const {clientId, redirectUri} of clients) {
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, response_type: 'code',
+                code_challenge: challenge, code_challenge_method: 'S256'
+            })
+            const authorization = await fetch(`${restBase()}/api/auth/oauth/authorize?${params}`, {redirect: 'manual'})
+            expect(authorization.status, clientId).toBe(302)
+            expect(new URL(authorization.headers.get('Location')!).searchParams.get('request_id'), clientId).toBeTruthy()
         }
     }, 60000)
 

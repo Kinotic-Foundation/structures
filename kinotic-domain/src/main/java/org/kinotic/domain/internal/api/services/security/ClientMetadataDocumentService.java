@@ -183,10 +183,15 @@ public class ClientMetadataDocumentService {
         if (!clientId.equals(document.getClientId())) {
             throw new IllegalArgumentException("client metadata document does not match its client_id");
         }
-        // no shared secret can exist for a document-identified client
+        // no shared secret can exist for a document-identified client, so the token endpoint takes
+        // none; a client preferring another method qualifies when it lists none among those it
+        // supports, as ChatGPT's private_key_jwt document does
         String authMethod = document.getTokenEndpointAuthMethod();
-        if (authMethod != null && !"none".equals(authMethod)) {
-            throw new IllegalArgumentException("client metadata document must use token_endpoint_auth_method none");
+        List<String> supportedAuthMethods = document.getTokenEndpointAuthMethodsSupported();
+        boolean supportsNone = "none".equals(authMethod)
+                || (supportedAuthMethods != null ? supportedAuthMethods.contains("none") : authMethod == null);
+        if (!supportsNone) {
+            throw new IllegalArgumentException("client metadata document must support token_endpoint_auth_method none");
         }
         if (document.getClientSecret() != null || document.getClientSecretExpiresAt() != null) {
             throw new IllegalArgumentException("client metadata document must not carry a client secret");
