@@ -188,9 +188,9 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('./pages/MachinesPage.vue'),
                 meta: { sidebar: consoleItem('Machines', Cpu, 90, 'Members') }
             },
-            // The platform's grants: who runs it, and what each system user and machine may do
+            // The system's grants: who runs it, and what each system user and machine may do
             {
-                name: 'platform-access',
+                name: 'system-access',
                 path: 'members/access',
                 component: () => import('./pages/AccessPage.vue'),
                 meta: { sidebar: consoleItem('Access', LockKeyhole, 95, 'Members') }

@@ -14,11 +14,11 @@ import org.kinotic.management.api.model.workload.Workload;
 /**
  * The workload records as the console reads and manages them: every run deployed across the
  * cluster, its record kept after the run ends, listed by node and read back with its history.
- * Every function is checked on the platform: reading a record needs {@code can_read_workloads},
+ * Every function is checked on the system: reading a record needs {@code can_read_workloads},
  * writing one {@code can_manage_workloads}.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.PLATFORM_TYPE, resourceId = AuthzUtil.PLATFORM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_WORKLOADS)
+@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_WORKLOADS)
 public interface WorkloadService extends IdentifiableCrudService<Workload, String> {
 
     @Override

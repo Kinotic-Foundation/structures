@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-col">
-    <PageHeader title="Access" description="Who runs the platform: the grants made on it reach every organization and worker node." />
+    <PageHeader title="Access" description="Who runs the system: the grants made on it reach every organization and worker node." />
 
-    <NoAccessState v-if="refused" description="No grant you hold reaches the platform's access. An administrator of the platform can grant you access from this page." />
+    <NoAccessState v-if="refused" description="No grant you hold reaches the system's access. An administrator of the system can grant you access from this page." />
     <div v-else class="flex flex-col gap-4">
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
-      <DashboardSection :icon="KeyRound" :tint="TINTS.ink" title="Grants on the platform" :count="loading ? undefined : shown.length"
-                        :description="subjectFilter ? `The grants of ${labelOf(subjectFilter)}.` : 'Who holds a role on the platform, and so on everything on it.'">
+      <DashboardSection :icon="KeyRound" :tint="TINTS.ink" title="Grants on the system" :count="loading ? undefined : shown.length"
+                        :description="subjectFilter ? `The grants of ${labelOf(subjectFilter)}.` : 'Who holds a role on the system, and so on everything on it.'">
         <template #actions>
           <Button v-if="subjectFilter" label="Show everyone" icon="pi pi-filter-slash" size="small" severity="secondary" outlined @click="clearSubject" />
           <Button v-if="canManageAccess" label="Grant access" icon="pi pi-plus" size="small" @click="grantDrawerVisible = true" />
@@ -16,7 +16,7 @@
           <Skeleton v-for="n in 2" :key="n" height="2.5rem" />
         </div>
         <EmptyChartCharacter v-else-if="shown.length === 0" class="py-6" :title="subjectFilter ? 'No grants for them yet' : 'No grants yet'"
-                             :hint="canManageAccess ? 'Grant a system user or a machine a role to give them access to the platform.' : 'Access to the platform comes from grants made here.'" />
+                             :hint="canManageAccess ? 'Grant a system user or a machine a role to give them access to the system.' : 'Access to the system comes from grants made here.'" />
         <DataTable v-else :value="shown">
           <Column header="Who" style="width: 40%">
             <template #body="{ data, index }">
@@ -66,7 +66,7 @@ import { useSubjects } from '@/components/access/useSubjects'
 import { SYSTEM_USER_STATE } from '@/states/SystemUserState'
 
 /**
- * The platform's Access page: the grants made on the platform, a grant of a role to a system user or a machine,
+ * The system's Access page: the grants made on the system, a grant of a role to a system user or a machine,
  * and a check that explains anyone's access. Opened for one subject from the Users or Machines page, it shows
  * that subject's grants alone.
  */
@@ -94,12 +94,12 @@ const shown = computed(() => subjectFilter.value
     ? grants.value.filter(grant => grant.subject.id === subjectFilter.value?.id)
     : grants.value)
 
-/** The platform's own permissions: what explain answers for, read from the roles that bundle them. */
+/** The system's own permissions: what explain answers for, read from the roles that bundle them. */
 const catalog = computed(() => {
   const names = new Set<string>()
   for (const role of roles.value) {
     for (const permission of role.permissions) {
-      if (splitPermission(permission).type === 'platform') {
+      if (splitPermission(permission).type === 'system') {
         names.add(permission)
       }
     }
@@ -107,7 +107,7 @@ const catalog = computed(() => {
   return [...names].sort()
 })
 
-watch(() => route.name, name => { if (name === 'platform-access') load() }, { immediate: true })
+watch(() => route.name, name => { if (name === 'system-access') load() }, { immediate: true })
 
 async function load(): Promise<void> {
   loading.value = true
@@ -125,13 +125,13 @@ async function load(): Promise<void> {
     refused.value = false
   } catch (err) {
     refused.value = isAuthorizationError(err)
-    error.value = refused.value ? null : errorMessage(err, 'Failed to load the platform\'s access')
+    error.value = refused.value ? null : errorMessage(err, 'Failed to load the system\'s access')
   } finally {
     loading.value = false
   }
 }
 
-// whether the signed-in system user may grant and revoke, asked of the platform's access service about themself
+// whether the signed-in system user may grant and revoke, asked of the system's access service about themself
 async function canManageSelf(): Promise<boolean> {
   const systemUserId = SYSTEM_USER_STATE.connectedInfo?.participant?.id
   let ret = false
@@ -146,7 +146,7 @@ function roleOf(roleId: string): RoleDefinition | undefined {
 }
 
 function clearSubject(): void {
-  router.replace({ name: 'platform-access' })
+  router.replace({ name: 'system-access' })
 }
 
 function onGranted(grant: Grant): void {
@@ -156,7 +156,7 @@ function onGranted(grant: Grant): void {
 function confirmRevoke(grant: Grant): void {
   confirm.require({
     header: 'Revoke access',
-    message: `Revoke ${roleOf(grant.roleId)?.name ?? grant.roleId} from ${labelOf.value(grant.subject)}? They lose every permission the role gave them on the platform.`,
+    message: `Revoke ${roleOf(grant.roleId)?.name ?? grant.roleId} from ${labelOf.value(grant.subject)}? They lose every permission the role gave them on the system.`,
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Revoke', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },

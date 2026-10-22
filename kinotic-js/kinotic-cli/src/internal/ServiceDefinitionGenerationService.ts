@@ -36,7 +36,7 @@ const WARNINGS_METADATA_KEY = 'warnings'
  * the project's servicesPaths: one function per instance method of the class and the classes it extends, with
  * the parameters a request carries, typed as an entity's properties are, and the AuthzResource, AuthzCheck and
  * AuthzUnchecked declarations of the class and its methods. The definitions are written to the ServiceDefinitions
- * module, which declares them to the runtime so each service registers in the platform's service directory as it
+ * module, which declares them to the runtime so each service registers in the system's service directory as it
  * comes online.
  */
 export class ServiceDefinitionGenerationService {

@@ -218,7 +218,7 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
     }
 
     /**
-     * Returns the entries of the platform's own services, the ones with no owning organization.
+     * Returns the entries of the system's own services, the ones with no owning organization.
      */
     public Future<Page<ServiceDirectoryEntry>> findSystemEntries(Pageable pageable) {
         return findAll(pageable, b -> b.query(q -> q.bool(bq -> bq.mustNot(n -> n.exists(e -> e.field("organizationId"))))))

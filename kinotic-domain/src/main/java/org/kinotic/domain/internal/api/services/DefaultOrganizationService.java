@@ -81,8 +81,8 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
     // The organization's place in the graph, written once the record is, so a write that fails leaves an
     // organization nobody can reach rather than one nobody stores
     private Future<Organization> contained(Organization organization) {
-        return relationships.ensure(AuthzStoreService.PLATFORM,
-                                    List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID),
+        return relationships.ensure(AuthzStoreService.SYSTEM,
+                                    List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
                                                                    AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organization.getId()))))
                             .map(organization);
     }

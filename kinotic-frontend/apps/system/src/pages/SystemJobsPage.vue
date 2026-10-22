@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col">
-    <PageHeader title="System jobs" description="Platform jobs an operator can run on demand, and the runs they made, task by task.">
+    <PageHeader title="System jobs" description="Jobs a system user can run on demand, and the runs they made, task by task.">
       <template #actions>
         <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading" @click="refresh" />
       </template>

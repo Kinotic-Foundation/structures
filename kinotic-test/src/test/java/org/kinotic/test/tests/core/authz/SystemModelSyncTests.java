@@ -31,16 +31,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the platform store follows the service directory through the reconcile master: once the stack boots,
+ * Verifies the system store follows the service directory through the reconcile master: once the stack boots,
  * the store's record is reconciled to the model generated from every contract the directory holds and the engine
  * runs that model; a contract published to the directory afterwards reaches the store with no other signal; and a
  * contract published again unchanged is declined, so nothing is marked and nothing regenerates.
  */
 @SpringBootTest
-public class PlatformModelSyncTests extends KinoticTestBase {
+public class SystemModelSyncTests extends KinoticTestBase {
 
     private static final String PROBE_NAMESPACE = "org.kinotic.test";
-    private static final String PROBE_NAME = "PlatformModelProbeService";
+    private static final String PROBE_NAME = "SystemModelProbeService";
     private static final String PROBE_ID = PROBE_NAMESPACE + "." + PROBE_NAME;
     private static final String PROBE_TYPE = "model_probe";
 
@@ -63,17 +63,17 @@ public class PlatformModelSyncTests extends KinoticTestBase {
     private WatchEventService watchEvents;
 
     @Test
-    public void platformStoreRunsTheModelGeneratedFromTheDirectory() throws Exception {
+    public void systemStoreRunsTheModelGeneratedFromTheDirectory() throws Exception {
         AuthzModel expected = modelFromDirectory();
-        assertTrue(awaitUntil(() -> reconciledTo(expected.hash())), "the platform store never reconciled to the directory's model");
+        assertTrue(awaitUntil(() -> reconciledTo(expected.hash())), "the system store never reconciled to the directory's model");
 
-        String version = await(storeService.ensureModel(AuthzStoreService.PLATFORM, expected));
-        assertEquals(version, await(storeService.ensureModel(AuthzStoreService.PLATFORM, expected)),
+        String version = await(storeService.ensureModel(AuthzStoreService.SYSTEM, expected));
+        assertEquals(version, await(storeService.ensureModel(AuthzStoreService.SYSTEM, expected)),
                      "the engine runs the generated model, so ensuring it writes no new version");
     }
 
     @Test
-    public void aContractPublishedToTheDirectoryReachesThePlatformStore() throws Exception {
+    public void aContractPublishedToTheDirectoryReachesTheSystemStore() throws Exception {
         // a permission of its own each run, so the publish changes the model whatever an earlier run left
         ServiceDirectoryEntry probe = probe("can_probe_" + System.currentTimeMillis());
         long published = contractsPublished();
@@ -81,7 +81,7 @@ public class PlatformModelSyncTests extends KinoticTestBase {
         await(directoryStrategy.upsertEntry(probe));
         AuthzModel expected = modelFromDirectory();
         assertTrue(expected.permissions().containsKey(PROBE_TYPE), "the directory's model carries the published contract");
-        assertTrue(awaitUntil(() -> reconciledTo(expected.hash())), "the master never carried the published contract to the platform store");
+        assertTrue(awaitUntil(() -> reconciledTo(expected.hash())), "the master never carried the published contract to the system store");
         assertTrue(awaitUntil(() -> contractsPublished() == published + 1), "the publish was never entered in the ledger");
 
         // the same contract again is declined in the shard operation that would have written it: no mark for
@@ -89,30 +89,30 @@ public class PlatformModelSyncTests extends KinoticTestBase {
         await(directoryStrategy.upsertEntry(probe));
         Thread.sleep(3_000);
         assertEquals(published + 1, contractsPublished(), "an unchanged contract was entered in the ledger again");
-        assertTrue(reconciledTo(expected.hash()), "the platform store left the directory's model");
+        assertTrue(reconciledTo(expected.hash()), "the system store left the directory's model");
     }
 
     private AuthzModel modelFromDirectory() throws Exception {
-        return modelGenerator.platformModel(await(serviceDirectory.findSystemDefinitions()));
+        return modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
     }
 
     private boolean reconciledTo(String hash) throws Exception {
-        AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));
+        AuthzStore store = await(stores.findById(AuthzStore.SYSTEM));
         ReconcileState<AuthzModelRevision> state = store.getState();
         return state.isReconciled() && state.getObserved() != null && hash.equals(state.getObserved().hash());
     }
 
-    // The renewals of the platform store's intent the directory entered in the ledger
+    // The renewals of the system store's intent the directory entered in the ledger
     private long contractsPublished() throws Exception {
         return await(watchEvents.findAll(Pageable.create(0, 500, null))).getContent()
                                                                         .stream()
                                                                         .filter(event -> event.type() == WatchedType.AUTHZ_STORE
-                                                                                && AuthzStore.PLATFORM.equals(event.id())
+                                                                                && AuthzStore.SYSTEM.equals(event.id())
                                                                                 && event.eventType() == WatchEventType.DESIRED_RENEWED)
                                                                         .count();
     }
 
-    // A platform service with a resource type of its own, as the directory would hold it, with no handler behind it
+    // A system service with a resource type of its own, as the directory would hold it, with no handler behind it
     private static ServiceDirectoryEntry probe(String permission) {
         FunctionDefinition function = new FunctionDefinition().setName("probe");
         function.setDecorators(List.of(new AuthzCheckC3Decorator().setResource(PROBE_TYPE)
@@ -120,7 +120,7 @@ public class PlatformModelSyncTests extends KinoticTestBase {
                                                                   .setPermissionResource(PROBE_TYPE)
                                                                   .setPermission(permission)));
         ServiceDefinition definition = new ServiceDefinition().setNamespace(PROBE_NAMESPACE).setName(PROBE_NAME);
-        definition.setDecorators(List.of(new AuthzResourceC3Decorator().setResourceType(PROBE_TYPE).setParent("platform")));
+        definition.setDecorators(List.of(new AuthzResourceC3Decorator().setResourceType(PROBE_TYPE).setParent("system")));
         definition.addFunction(function);
         return new ServiceDirectoryEntry().setId(PROBE_ID)
                                           .setServiceAddress("srv://" + PROBE_NAMESPACE + "/" + PROBE_NAME)

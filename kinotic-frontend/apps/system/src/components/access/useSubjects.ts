@@ -2,7 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
 import { type MachineParticipantIdentity, type Subject, SubjectKind, type SystemParticipantIdentity } from '@kinotic-ai/management-api'
 
-/** Who a platform grant can be made to, as the pickers and the grant rows show them. */
+/** Who a system grant can be made to, as the pickers and the grant rows show them. */
 export interface SubjectOption {
   subject: Subject
   /** The system user's name or email, or the machine's name. */
@@ -13,12 +13,12 @@ export interface SubjectOption {
   staff: 'System user' | 'Machine'
 }
 
-// The pickers and the names on the grant rows read the first pages of the platform's system users and machines,
-// which cover a platform of a few hundred of each; a subject beyond them is shown by its id
+// The pickers and the names on the grant rows read the first pages of the system users and machines,
+// which cover a system of a few hundred of each; a subject beyond them is shown by its id
 const SUBJECT_PAGE_SIZE = 500
 
 /**
- * The platform's system users and machines as grant subjects, read once per page: the pickers list them and the
+ * The system users and machines as grant subjects, read once per page: the pickers list them and the
  * grant rows name them.
  */
 export function useSubjects(): {

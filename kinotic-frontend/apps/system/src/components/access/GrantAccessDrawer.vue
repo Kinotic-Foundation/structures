@@ -1,8 +1,8 @@
 <template>
   <FormDrawer :visible="visible" title="Grant access"
-              description="Give a system user or a machine a role on the platform, which reaches every organization and worker node on it."
+              description="Give a system user or a machine a role on the system, which reaches every organization and worker node on it."
               @close="emit('update:visible', false)">
-    <form id="platform-grant-form" @submit.prevent="submit">
+    <form id="system-grant-form" @submit.prevent="submit">
       <div class="flex flex-col gap-5">
         <div>
           <span class="mb-2 block text-sm font-medium">Who</span>
@@ -19,8 +19,8 @@
           </Select>
         </div>
         <div>
-          <label for="platform-grant-role" class="mb-2 block text-sm font-medium">Role</label>
-          <Select input-id="platform-grant-role" v-model="roleId" :options="roles" option-label="name" option-value="id" filter
+          <label for="system-grant-role" class="mb-2 block text-sm font-medium">Role</label>
+          <Select input-id="system-grant-role" v-model="roleId" :options="roles" option-label="name" option-value="id" filter
                   placeholder="Choose a role" class="w-full">
             <template #option="{ option }">
               <div class="flex flex-col">
@@ -32,14 +32,14 @@
               </div>
             </template>
           </Select>
-          <p class="mt-1.5 text-[0.8125rem] text-muted-color">The role's permissions reach the platform and everything on it.</p>
+          <p class="mt-1.5 text-[0.8125rem] text-muted-color">The role's permissions reach the system and everything on it.</p>
         </div>
       </div>
     </form>
 
     <template #footer>
       <Button type="button" label="Cancel" severity="secondary" outlined @click="emit('update:visible', false)" />
-      <Button type="submit" form="platform-grant-form" label="Grant" icon="pi pi-check" :loading="granting" :disabled="!subjectId || !roleId" />
+      <Button type="submit" form="system-grant-form" label="Grant" icon="pi pi-check" :loading="granting" :disabled="!subjectId || !roleId" />
     </template>
   </FormDrawer>
 </template>
@@ -57,8 +57,8 @@ import { FormDrawer, showErrorToast, summarizeRole } from '@kinotic-ai/frontend-
 import type { SubjectOption } from './useSubjects'
 
 /**
- * Grants a role to a system user or a machine on the platform: the subject holds every permission the role bundles
- * on the platform and on everything on it.
+ * Grants a role to a system user or a machine on the system: the subject holds every permission the role bundles
+ * on the system and on everything on it.
  */
 const props = defineProps<{
   visible: boolean

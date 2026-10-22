@@ -50,7 +50,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
  * The {@link RequestAuthorizer} over the stores: a function's check is read from its contract in the service
@@ -58,13 +58,13 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
  * that stops once it has read the object, or from a tool call's arguments by name, and the engine answers for the
  * caller. A function is served without the engine only when its contract marks it
  * unchecked; a function no contract covers, of a service the directory holds no definition for or one the
- * definition leaves out, is refused. The engine answers for the caller, or for the owner a delegate acts for, from the platform's store for an
- * organization's members and the platform's own staff, and from the application's store for an application's
- * users. A system user or one of the platform's machines, whose scope names no organization, is checked
- * on the platform itself wherever a check names the caller's scope, and an application's user on its tenant,
+ * definition leaves out, is refused. The engine answers for the caller, or for the owner a delegate acts for, from the system's store for an
+ * organization's members and the system's own staff, and from the application's store for an application's
+ * users. A system user or one of the system's machines, whose scope names no organization, is checked
+ * on the system itself wherever a check names the caller's scope, and an application's user on its tenant,
  * or on the application when it has none. A definition's rows are checked on the definition a request names: a
  * tenant's user on the definition within its tenant, an organization's member on the definition in the
- * platform's store. What is kept of a contract is dropped when the directory announces the contract written
+ * system's store. What is kept of a contract is dropped when the directory announces the contract written
  * again. A refusal is answered "Not authorized", followed by its reason when {@code kinotic.debug} is on.
  */
 @Slf4j
@@ -73,16 +73,16 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
 public class DefaultRequestAuthorizer implements RequestAuthorizer {
 
     // a service's contract is read from the directory once and kept; the version in a request's CRI makes a
-    // redeployed service a new key, and the retention bounds how long a platform service's new check waits
+    // redeployed service a new key, and the retention bounds how long a system service's new check waits
     private static final Duration DEFINITION_RETENTION = Duration.ofMinutes(5);
     private static final int DEFINITION_CAPACITY = 10_000;
 
     // the scope levels a check can be made on, each named by the template of its id, innermost first: a caller
-    // missing one is checked on the next, and one missing them all on the platform
+    // missing one is checked on the next, and one missing them all on the system
     private static final List<Resource> SCOPE_LEVELS = List.of(new Resource(AuthzUtil.TENANT_TYPE, "{@tenantId}"),
                                                                new Resource(AuthzUtil.APPLICATION_TYPE, "{@applicationId}"),
                                                                new Resource(AuthzUtil.ORGANIZATION_TYPE, "{@organizationId}"));
-    private static final Resource PLATFORM_LEVEL = new Resource(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID);
+    private static final Resource SYSTEM_LEVEL = new Resource(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
 
     private final ObjectProvider<ServiceDirectory> directoryProvider;
     private final AuthzStoreService stores;
@@ -142,14 +142,14 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     }
 
     // Runs the authorization with the store answering for the caller: an application's own user's is the
-    // application's store, every other caller's the platform's
+    // application's store, every other caller's the system's
     private Future<Void> withStore(Participant participant, BiFunction<ScopedParticipant, String, Future<Void>> authorization) {
         Validate.notNull(participant, "participant cannot be null");
         Future<Void> ret;
         if (participant instanceof ScopedParticipant scoped) {
             String store = participant instanceof ApplicationParticipant application
                     ? DomainUtil.authzApplicationId(application.getOrganizationId(), application.getApplicationId())
-                    : PLATFORM;
+                    : SYSTEM;
             ret = authorization.apply(scoped, store);
         } else {
             ret = Future.failedFuture(securityExceptions.notAuthorized("No store answers for participant of type {} with id {}",
@@ -269,7 +269,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     /**
      * The object a check on the caller's scope is made on: the level the check names, or, for a caller whose
      * scope stops above it, the caller's own level, as an organization member asked for an application's
-     * projects is checked on the organization, and a system user asked for either on the platform.
+     * projects is checked on the organization, and a system user asked for either on the system.
      * Every ancestor carries the permissions of the levels below it, so the check keeps its meaning there. A
      * check on anything but a scope level is kept as declared.
      */
@@ -281,7 +281,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
                     && scopeValue(AuthzUtil.templateReferences(SCOPE_LEVELS.get(level).id()).getFirst(), scope) == null) {
                 level++;
             }
-            ret = level < SCOPE_LEVELS.size() ? SCOPE_LEVELS.get(level) : PLATFORM_LEVEL;
+            ret = level < SCOPE_LEVELS.size() ? SCOPE_LEVELS.get(level) : SYSTEM_LEVEL;
         }
         return ret;
     }

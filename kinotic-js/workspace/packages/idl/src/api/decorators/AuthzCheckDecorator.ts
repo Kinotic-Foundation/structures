@@ -4,7 +4,7 @@ import {C3Decorator} from '@/api/decorators/C3Decorator'
  * The authorization check a function requires. A service's definition declares what the derivation cannot
  * read from the function's name and parameters: a permission of its own, another resource than the derived
  * one, the permissions it implies, a consistent answer, or that the function is served with no check. The
- * platform derives the rest when the service registers, naming the resource checked and the type the permission
+ * system derives the rest when the service registers, naming the resource checked and the type the permission
  * is named for.
  */
 export class AuthzCheckDecorator extends C3Decorator {
@@ -21,7 +21,7 @@ export class AuthzCheckDecorator extends C3Decorator {
     public resourceId: string | null = null
 
     /**
-     * The type the permission is named for, which the platform derives.
+     * The type the permission is named for, which the system derives.
      */
     public permissionResource: string | null = null
 

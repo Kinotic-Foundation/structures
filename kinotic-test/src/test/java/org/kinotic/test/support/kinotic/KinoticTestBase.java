@@ -128,7 +128,7 @@ public abstract class KinoticTestBase {
     private OrganizationMembershipService memberships;
 
     /**
-     * Waits for the platform store to run the model of every platform service in the directory, and makes
+     * Waits for the system store to run the model of every system service in the directory, and makes
      * {@link #TEST_ORGANIZATION_PARTICIPANT} a member and the administrator of {@link #TEST_ORG_ID} in it, so the
      * listings that filter to what the caller may see show it everything, as they do an organization's administrator.
      */
@@ -137,24 +137,24 @@ public abstract class KinoticTestBase {
         if (!testParticipantAdministers) {
             // the first context of a run publishes every contract in one write and the reconciler then takes the
             // model they imply; a check for a permission the store's model lacks fails rather than refuses
-            assertTrue(awaitUntil(this::platformModelCurrent), "the platform store never ran the model of the platform's services");
+            assertTrue(awaitUntil(this::systemModelCurrent), "the system store never ran the model of the system's services");
             // OrganizationGraphBootstrap leaves an organization that has an administrator as it is, so the test
             // participant is bound only once the bootstrap has bound the seeded creator
             assertTrue(awaitUntil(this::administered), "the organization graph bootstrap never bound the test organization's creator");
-            assertTrue(awaitUntil(this::bound), "the platform store never accepted the test participant's administrator binding");
+            assertTrue(awaitUntil(this::bound), "the system store never accepted the test participant's administrator binding");
             testParticipantAdministers = true;
         }
     }
 
-    private boolean platformModelCurrent() throws Exception {
+    private boolean systemModelCurrent() throws Exception {
         List<ServiceDefinition> services = await(serviceDirectory.findSystemDefinitions());
-        AuthzStore platform = await(authzStores.findById(AuthzStore.PLATFORM));
-        AuthzModelRevision observed = platform != null ? platform.getState().getObserved() : null;
-        return !services.isEmpty() && observed != null && observed.hash().equals(modelGenerator.platformModel(services).hash());
+        AuthzStore system = await(authzStores.findById(AuthzStore.SYSTEM));
+        AuthzModelRevision observed = system != null ? system.getState().getObserved() : null;
+        return !services.isEmpty() && observed != null && observed.hash().equals(modelGenerator.systemModel(services).hash());
     }
 
     private boolean administered() throws Exception {
-        return await(relationshipService.findGrants(AuthzStoreService.PLATFORM, AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID)))
+        return await(relationshipService.findGrants(AuthzStoreService.SYSTEM, AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID)))
                 .stream()
                 .anyMatch(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && !TEST_PARTICIPANT_ADMIN_BINDING.equals(grant.id()));
     }
@@ -164,9 +164,9 @@ public abstract class KinoticTestBase {
         String organization = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID);
         boolean ret;
         try {
-            await(relationshipService.ensure(AuthzStoreService.PLATFORM,
+            await(relationshipService.ensure(AuthzStoreService.SYSTEM,
                                              List.of(new RelationshipTuple(member, AuthzUtil.MEMBER_RELATION, organization)))
-                                     .compose(v -> relationshipService.ensureBound(AuthzStoreService.PLATFORM,
+                                     .compose(v -> relationshipService.ensureBound(AuthzStoreService.SYSTEM,
                                                                                    TEST_PARTICIPANT_ADMIN_BINDING,
                                                                                    AuthzUtil.ORGANIZATION_ADMIN_ROLE,
                                                                                    member,
@@ -261,7 +261,7 @@ public abstract class KinoticTestBase {
     }
 
     /**
-     * Creates a system user, one of the platform's staff.
+     * Creates a system user, one of the system's staff.
      *
      * @param emailPrefix the start of the user's email, which a random suffix makes unique
      * @return the system user

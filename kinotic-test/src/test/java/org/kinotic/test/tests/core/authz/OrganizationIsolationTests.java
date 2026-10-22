@@ -103,12 +103,12 @@ public class OrganizationIsolationTests extends KinoticTestBase {
         assertNotNull(await(storeService.modelId(theirStore)));
 
         // the other organization's admin holds its own application and not ours
-        String platformModel = await(storeService.modelId(AuthzStoreService.PLATFORM));
+        String systemModel = await(storeService.modelId(AuthzStoreService.SYSTEM));
         String theirAdmin = DomainUtil.authzMember(other.getId(), otherOrganizationId);
-        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, platformModel,
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, systemModel,
                                              new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, theirStore)),
                                              Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationships.check(AuthzStoreService.PLATFORM, platformModel,
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, systemModel,
                                               new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, ourStore)),
                                               Consistency.HIGHER_CONSISTENCY)));
 

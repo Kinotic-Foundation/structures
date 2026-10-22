@@ -46,16 +46,16 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     private static final String PLACED = AuthzUtil.PLACED_RELATION;
 
     @Override
-    public AuthzModel platformModel(Collection<ServiceDefinition> services) {
-        return generate(AuthzStoreKind.PLATFORM, services);
+    public AuthzModel systemModel(Collection<ServiceDefinition> services) {
+        return generate(AuthzStoreKind.SYSTEM, services);
     }
 
     @Override
-    public AuthzModel applicationModel(Collection<ServiceDefinition> platformServices, Collection<ServiceDefinition> services) {
+    public AuthzModel applicationModel(Collection<ServiceDefinition> systemServices, Collection<ServiceDefinition> services) {
         List<ServiceDefinition> all = new ArrayList<>();
-        for (ServiceDefinition service : platformServices) {
+        for (ServiceDefinition service : systemServices) {
             AuthzResourceC3Decorator resource = service.findDecorator(AuthzResourceC3Decorator.class);
-            // the platform's services an application's users call: the tenant's, and the entities repository
+            // the system's services an application's users call: the tenant's, and the entities repository
             // declared on the definition, whose permissions are the rows'
             if (resource != null && (TENANT.equals(resource.getResourceType()) || ENTITY_DEFINITION.equals(resource.getResourceType()))) {
                 all.add(service);
@@ -119,14 +119,14 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     /**
      * The home types of the roles a binding on each resource type may grant: the type itself and the types it
-     * carries, except those across a trust boundary below it. In the platform's store an organization and a tenant
-     * are boundaries, so the platform grants none of an organization's roles and an organization none of a
+     * carries, except those across a trust boundary below it. In the system's store an organization and a tenant
+     * are boundaries, so the system grants none of an organization's roles and an organization none of a
      * tenant's; an application's store has none. A definition within a tenant grants the definition's roles.
      */
     private static Map<String, Set<String>> bindable(AuthzStoreKind kind,
                                                      Map<String, ResourceType> types,
                                                      Map<String, Set<String>> carried) {
-        Set<String> boundaries = kind == AuthzStoreKind.PLATFORM ? Set.of(ORGANIZATION, TENANT) : Set.of();
+        Set<String> boundaries = kind == AuthzStoreKind.SYSTEM ? Set.of(ORGANIZATION, TENANT) : Set.of();
         Map<String, Set<String>> ret = new TreeMap<>();
         for (ResourceType type : types.values()) {
             Set<String> homes = new TreeSet<>();
@@ -171,10 +171,10 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     /**
      * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting and managing access, an admin
-     * of everything on it and inside it, and the roles its services declare; and for a platform store the
-     * application developer, everything inside an application but the application's own, the platform maintainer,
-     * the platform's own permissions and the reading ones of everything on it, and the platform support, the
-     * reading permissions of the platform and of everything on it. A role that would bundle nothing is not a
+     * of everything on it and inside it, and the roles its services declare; and for a system store the
+     * application developer, everything inside an application but the application's own, the system maintainer,
+     * the system's own permissions and the reading ones of everything on it, and the system support, the
+     * reading permissions of the system and of everything on it. A role that would bundle nothing is not a
      * role.
      */
     private static Map<String, Set<String>> builtInRoles(AuthzStoreKind kind,
@@ -191,13 +191,13 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.EDITOR), editing);
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.ADMIN), inside(type, types, carried, true, false));
         }
-        if (kind == AuthzStoreKind.PLATFORM) {
-            ResourceType platform = types.get(AuthzUtil.PLATFORM_TYPE);
-            Set<String> maintaining = modelNames(platform, platform.permissions.keySet());
-            maintaining.addAll(inside(platform, types, carried, false, true));
+        if (kind == AuthzStoreKind.SYSTEM) {
+            ResourceType system = types.get(AuthzUtil.SYSTEM_TYPE);
+            Set<String> maintaining = modelNames(system, system.permissions.keySet());
+            maintaining.addAll(inside(system, types, carried, false, true));
             role(ret, AuthzUtil.APPLICATION_DEVELOPER_ROLE, inside(types.get(APPLICATION), types, carried, false, false));
-            role(ret, AuthzUtil.PLATFORM_MAINTAINER_ROLE, maintaining);
-            role(ret, AuthzUtil.PLATFORM_SUPPORT_ROLE, inside(platform, types, carried, true, true));
+            role(ret, AuthzUtil.SYSTEM_MAINTAINER_ROLE, maintaining);
+            role(ret, AuthzUtil.SYSTEM_SUPPORT_ROLE, inside(system, types, carried, true, true));
         }
         for (ResourceType type : types.values()) {
             for (Map.Entry<String, Set<String>> declared : type.declaredRoles.entrySet()) {
@@ -258,9 +258,9 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
      */
     private static Map<String, ResourceType> kernelTypes(AuthzStoreKind kind) {
         Map<String, ResourceType> ret = new LinkedHashMap<>();
-        if (kind == AuthzStoreKind.PLATFORM) {
-            ret.put(AuthzUtil.PLATFORM_TYPE, new ResourceType(AuthzUtil.PLATFORM_TYPE, null));
-            ResourceType organization = new ResourceType(ORGANIZATION, AuthzUtil.PLATFORM_TYPE);
+        if (kind == AuthzStoreKind.SYSTEM) {
+            ret.put(AuthzUtil.SYSTEM_TYPE, new ResourceType(AuthzUtil.SYSTEM_TYPE, null));
+            ResourceType organization = new ResourceType(ORGANIZATION, AuthzUtil.SYSTEM_TYPE);
             organization.memberships.put(MEMBER, Set.of(USER));
             ret.put(ORGANIZATION, organization);
             ResourceType application = new ResourceType(APPLICATION, ORGANIZATION);
@@ -408,7 +408,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
      */
     private static ObjectNode roleBindingType(AuthzStoreKind kind, String boundOn, Set<String> homes, Set<String> permissions) {
         List<String> memberTypes = new ArrayList<>(List.of(USER, GROUP + "#" + MEMBER));
-        if (kind == AuthzStoreKind.PLATFORM) {
+        if (kind == AuthzStoreKind.SYSTEM) {
             memberTypes.add(ORGANIZATION + "#" + MEMBER);
         }
         memberTypes.add(APPLICATION + "#" + END_USER);

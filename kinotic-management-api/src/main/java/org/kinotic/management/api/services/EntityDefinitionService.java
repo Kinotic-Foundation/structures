@@ -21,7 +21,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 @AuthzResource(value = EntityDefinitionService.RESOURCE_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
 public interface EntityDefinitionService extends ProjectScopedCrudService<EntityDefinition, String> {
 
-    /** The resource type an entity definition is in the platform's authorization model. */
+    /** The resource type an entity definition is in the system's authorization model. */
     String RESOURCE_TYPE = AuthzUtil.ENTITY_DEFINITION_TYPE;
 
     /**

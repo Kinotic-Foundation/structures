@@ -13,31 +13,31 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 import java.util.List;
 
 /**
- * Access control of the platform itself, used by the system console: the roles the platform's system users and
- * machines can be granted, and the grants made on the platform, which reach every organization and node on
- * it. Every function acts on the platform, and a subject named must be one of the platform's own system users or
+ * Access control of the system itself, used by the system console: the roles the system users and
+ * machines can be granted, and the grants made on the system, which reach every organization and node on
+ * it. Every function acts on the system, and a subject named must be one of the system users or
  * machines.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.PLATFORM_TYPE, resourceId = AuthzUtil.PLATFORM_OBJECT_ID)
+@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
 public interface SystemAccessService {
 
     /**
-     * Every role a grant on the platform can name: the built-in roles the model defines, each with the
+     * Every role a grant on the system can name: the built-in roles the model defines, each with the
      * permissions it bundles.
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles();
 
     /**
-     * The grants made on the platform.
+     * The grants made on the system.
      */
     @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants();
 
     /**
-     * Grants a role to a system user or machine on the platform. The subject holds every permission the
-     * role bundles on the platform and on everything on it: every organization, and every node.
+     * Grants a role to a system user or machine on the system. The subject holds every permission the
+     * role bundles on the system and on everything on it: every organization, and every node.
      *
      * @param subject who holds the grant, a user naming a system user's or a machine's identity id
      * @param roleId  the role granted, a built-in role's id
@@ -47,7 +47,7 @@ public interface SystemAccessService {
     Future<Grant> grant(Subject subject, String roleId);
 
     /**
-     * Revokes a grant made on the platform.
+     * Revokes a grant made on the system.
      *
      * @param grantId the grant
      */
@@ -55,7 +55,7 @@ public interface SystemAccessService {
     Future<Void> revoke(String grantId);
 
     /**
-     * Whether a system user or machine holds a permission of the platform, and the grants it holds the
+     * Whether a system user or machine holds a permission of the system, and the grants it holds the
      * permission through.
      *
      * @param subject    the system user or machine

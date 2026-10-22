@@ -13,7 +13,7 @@ import java.util.Collection;
  * store, and for each resource type {@code <type>} a role type {@code <type>_role}, whose roles bundle only the
  * permissions of the type and of the types inside it, and a binding type {@code <type>_role_binding}, the only
  * binding a resource of the type accepts, which grants only roles homed at the type or inside it within its trust
- * boundary (the platform's store bounds an organization and a tenant). An application's model also carries the
+ * boundary (the system's store bounds an organization and a tenant). An application's model also carries the
  * fixed types of its data, {@code entity_definition} for a definition's rows and {@code tenant_definition} for
  * those rows within one tenant. Each service declaring an {@code @AuthzResource} contributes its type, its parent and the permissions
  * its functions require, the entities repository among them, so a definition's rows have the permissions it
@@ -25,29 +25,29 @@ import java.util.Collection;
 public interface AuthzModelGenerator {
 
     /**
-     * The model of the platform store, from the platform's own services.
+     * The model of the system store, from the system's own services.
      *
-     * @param services the converted contracts of every service the platform publishes
+     * @param services the converted contracts of every service the system publishes
      * @return the model
      * @throws IllegalArgumentException when a declaration names a type the model does not have, a parent that
      *                                  would cycle, or a permission whose model name is too long
      */
-    AuthzModel platformModel(Collection<ServiceDefinition> services);
+    AuthzModel systemModel(Collection<ServiceDefinition> services);
 
     /**
-     * The model of one application's store, from the platform's services its users call and the application's
-     * own. Of the platform's services only those declared on the tenant and on the entity definition take
+     * The model of one application's store, from the system's services its users call and the application's
+     * own. Of the system's services only those declared on the tenant and on the entity definition take
      * part: the ones serving a tenant's users in every application, whose permissions the tenant then carries,
-     * and the entities repository, whose permissions a definition's rows have; a platform service declared on
+     * and the entities repository, whose permissions a definition's rows have; a system service declared on
      * any other type stays out of the application's model. The model does not depend on the application's
      * definitions: every definition's rows are typed {@code entity_definition}, and the definition itself is
      * the object a check or a grant names.
      *
-     * @param platformServices the converted contracts of the platform's own services
+     * @param systemServices the converted contracts of the system's own services
      * @param services         the converted contracts of the application's own services
      * @return the model
-     * @throws IllegalArgumentException as for {@link #platformModel}
+     * @throws IllegalArgumentException as for {@link #systemModel}
      */
-    AuthzModel applicationModel(Collection<ServiceDefinition> platformServices, Collection<ServiceDefinition> services);
+    AuthzModel applicationModel(Collection<ServiceDefinition> systemServices, Collection<ServiceDefinition> services);
 
 }

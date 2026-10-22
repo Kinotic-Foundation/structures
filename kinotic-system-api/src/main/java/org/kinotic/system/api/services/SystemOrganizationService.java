@@ -18,11 +18,11 @@ import org.kinotic.management.api.model.PendingInviteSummary;
  * Cross-organization reads for system users. Published in the system zone, which only
  * SYSTEM participants may address, so every method takes the target organization explicitly
  * instead of resolving it from the caller's scope. A read of one organization is checked on that
- * organization, and a read across organizations on the platform; a grant made on the platform
+ * organization, and a read across organizations on the system; a grant made on the system
  * reaches every organization on it.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, parent = AuthzUtil.PLATFORM_TYPE)
+@AuthzResource(value = AuthzUtil.ORGANIZATION_TYPE, parent = AuthzUtil.SYSTEM_TYPE)
 public interface SystemOrganizationService {
 
     /**

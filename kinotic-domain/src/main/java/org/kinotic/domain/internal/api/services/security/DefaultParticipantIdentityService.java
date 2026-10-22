@@ -407,13 +407,13 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 .compose(this::endUser);
     }
 
-    // An application's user is an end user of its application, in the platform's store and in the application's
+    // An application's user is an end user of its application, in the system's store and in the application's
     // own, where its tenant is also placed under the application with the user as a member
     private <T extends UserParticipantIdentity> Future<T> endUser(T user) {
         Future<Void> written;
         if (user instanceof ApplicationParticipantIdentity applicationUser) {
             List<RelationshipTuple> inApplication = DomainUtil.applicationUserTuples(applicationUser);
-            written = relationships.ensure(AuthzStoreService.PLATFORM, List.of(inApplication.getFirst()))
+            written = relationships.ensure(AuthzStoreService.SYSTEM, List.of(inApplication.getFirst()))
                                    .compose(v -> relationships.ensure(DomainUtil.authzApplicationId(applicationUser.getOrganizationId(),
                                                                                                     applicationUser.getApplicationId()),
                                                                       inApplication));

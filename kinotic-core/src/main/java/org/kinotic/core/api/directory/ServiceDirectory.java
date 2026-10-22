@@ -42,7 +42,7 @@ public interface ServiceDirectory {
                                                             Pageable pageable);
 
     /**
-     * The definitions of the platform's own services, the ones no organization owns, which the platform's
+     * The definitions of the system's own services, the ones no organization owns, which the system's
      * authorization model is generated from, as the directory holds them now.
      * @return every system-scoped entry's definition
      */

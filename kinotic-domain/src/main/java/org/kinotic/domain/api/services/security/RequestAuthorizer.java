@@ -7,7 +7,7 @@ import org.kinotic.core.api.security.Participant;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Authorizes an external request against the function it addresses, once, where the platform stamps the caller
+ * Authorizes an external request against the function it addresses, once, where the system stamps the caller
  * onto it: a client's request at the gateway, and a tool call at the MCP endpoint. The check is the one the
  * function's contract in the service directory declares; a function its contract marks unchecked passes on the
  * zone rules alone, and a function no contract covers is refused.

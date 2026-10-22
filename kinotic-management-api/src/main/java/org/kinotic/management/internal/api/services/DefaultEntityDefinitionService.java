@@ -132,16 +132,16 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     }
 
     // The definition's place in the graph, written once the record is, so a write that fails leaves a
-    // definition nobody can reach rather than one nobody stores: in the platform's store, where the
+    // definition nobody can reach rather than one nobody stores: in the system's store, where the
     // organization's members hold it, and in the application's, where its rows are reached through it
     private Future<EntityDefinition> contained(EntityDefinition entityDefinition) {
-        return relationships.ensure(AuthzStoreService.PLATFORM, List.of(containment(entityDefinition)))
+        return relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
                             .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
                             .map(entityDefinition);
     }
 
     private Future<Void> removed(EntityDefinition entityDefinition) {
-        return relationships.remove(AuthzStoreService.PLATFORM, List.of(containment(entityDefinition)))
+        return relationships.remove(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
                             .compose(v -> relationships.remove(storeOf(entityDefinition), List.of(containment(entityDefinition))));
     }
 

@@ -1,8 +1,8 @@
 import {AuthzCheck, AuthzResource, Publish} from '@kinotic-ai/core'
 
 /**
- * The application's own service: the runtime hosting it registers it in the platform's directory with the
- * definition `kinotic sync` generated for it, so the platform checks every request to it against the
+ * The application's own service: the runtime hosting it registers it in the system's directory with the
+ * definition `kinotic sync` generated for it, so the system checks every request to it against the
  * application's store.
  */
 @Publish('com.acme.reports')

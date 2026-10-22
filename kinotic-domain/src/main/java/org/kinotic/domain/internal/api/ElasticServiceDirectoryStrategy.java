@@ -53,7 +53,7 @@ public class ElasticServiceDirectoryStrategy implements ServiceDirectoryStrategy
         for (ServiceDirectoryEntry entry : entries) {
             if (changed.contains(entry.getId())) {
                 stores.add(entry.getApplicationId() == null
-                                   ? AuthzStore.PLATFORM
+                                   ? AuthzStore.SYSTEM
                                    : DomainUtil.authzApplicationId(entry.getOrganizationId(), entry.getApplicationId()));
             }
         }

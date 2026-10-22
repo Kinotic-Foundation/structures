@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Elasticsearch repository for {@link AuthzStore}s over the {@code kinotic_authz_store} index, stored by id
- * alone: an application's record id carries its organization, and the platform's store has none.
+ * alone: an application's record id carries its organization, and the system's store has none.
  */
 @Component
 public class AuthzStoreRepository extends AbstractReconcilableRepository<AuthzStore, AuthzModelRevision> {

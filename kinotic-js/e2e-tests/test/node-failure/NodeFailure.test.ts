@@ -14,7 +14,7 @@ import {
     kinoticServer
 } from '../TestHelpers.js'
 import {ProbeService, type ProbeEvent} from './ProbeService.js'
-// the probe's definition, which carries the unchecked mark the platform serves it by
+// the probe's definition, which carries the unchecked mark the system serves it by
 import '../generated/ServiceDefinitions.js'
 
 ensureNodeWebSocket()

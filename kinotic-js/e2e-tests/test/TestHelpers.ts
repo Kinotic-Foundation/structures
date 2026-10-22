@@ -226,7 +226,7 @@ export async function grantRuntime(kinotic: KinoticSingleton, machineId: string,
     const subject: Subject = {kind: SubjectKind.USER, id: machineId}
     const application: Resource = {type: 'application', id: applicationId}
     const grant = await kinotic.permissions.grant(subject, 'application.runtime', application)
-    // the permission is in the platform store's model once the reconciler writes the services an app server
+    // the permission is in the system store's model once the reconciler writes the services an app server
     // registers as it starts, a moment after the server is up
     await until(async () => (await kinotic.permissions.explain(subject, 'can_register_services', application)).allowed)
     return grant.id

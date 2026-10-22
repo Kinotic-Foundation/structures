@@ -145,7 +145,7 @@ public class ProjectDeployIdentityService {
         Future<Void> ret = Future.succeededFuture();
         for (Map.Entry<String, String> grant : grants) {
             String roleId = grant.getKey();
-            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.PLATFORM, roleId + "-of-" + machineId,
+            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.SYSTEM, roleId + "-of-" + machineId,
                                                              roleId, machine, grant.getValue()));
         }
         return ret;

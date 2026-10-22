@@ -164,11 +164,11 @@ public class SchemaServiceAuthzTest {
     }
 
     @Test
-    public void aCheckOnThePlatformUsesItsFixedId() {
+    public void aCheckOnTheSystemUsesItsFixedId() {
         ServiceDefinition service = convert(TestVmNodeService.class);
 
         AuthzCheckC3Decorator register = check(service, "register");
-        assertEquals("platform", register.getResource());
+        assertEquals("system", register.getResource());
         assertEquals("kinotic", register.getResourceId());
         assertEquals("vm_node", register.getPermissionResource());
         assertEquals("can_register_node", register.getPermission());
@@ -276,7 +276,7 @@ public class SchemaServiceAuthzTest {
         // a verb deriving nothing, and one deriving a permission, both take the service's
         assertEquals("can_manage_workloads", check(service, "deployWorkload").getPermission());
         assertEquals("can_manage_workloads", check(service, "deleteWorkload").getPermission());
-        assertEquals("platform:kinotic", check(service, "deployWorkload").getResource() + ":" + check(service, "deployWorkload").getResourceId());
+        assertEquals("system:kinotic", check(service, "deployWorkload").getResource() + ":" + check(service, "deployWorkload").getResourceId());
         assertEquals("can_read_workloads", check(service, "findWorkload").getPermission());
     }
 

@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Test configuration that starts the Kinotic stack (Elasticsearch, its test settings, kinotic-migration, and
- * OpenFGA with its platform store) via Docker Compose using compose.kinotic-test.yml.
+ * OpenFGA with its system store) via Docker Compose using compose.kinotic-test.yml.
  */
 @Component
 public class KinoticTestComposeBoostrap {
@@ -110,7 +110,7 @@ public class KinoticTestComposeBoostrap {
 
             waitForContainerToComplete("kinotic-elasticsearch-test-settings");
             waitForContainerToComplete("kinotic-migration");
-            // the platform store, which the authorization services look up by name and never create
+            // the system store, which the authorization services look up by name and never create
             waitForContainerToComplete("openfga-init");
 
             synchronized (containerLock) {

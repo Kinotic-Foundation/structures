@@ -178,7 +178,7 @@ function resolveEffectiveZone(constructor: Function): string | null {
 
 /**
  * Marks a published service as acting on one type of resource, which `kinotic sync` reads from the class's
- * source into the service's definition, which the runtime registers in the platform's service directory when
+ * source into the service's definition, which the runtime registers in the system's service directory when
  * the service comes online, so every request to the service is authorized before the service sees it. The type
  * and the permissions its functions need become part of the application's authorization model, where roles
  * bundle permissions and grants bind roles to callers.
@@ -241,7 +241,7 @@ export function AuthzUnchecked(value: Function, context: ClassDecoratorContext<a
 
 /**
  * Returns whether the given service instance's class, or a class it extends, declares an {@link AuthzResource} or
- * is marked {@link AuthzUnchecked}: either way the service's definition carries what the platform serves it by.
+ * is marked {@link AuthzUnchecked}: either way the service's definition carries what the system serves it by.
  * @param serviceInstance the service instance to inspect
  */
 export function declaresAuthz(serviceInstance: object): boolean {

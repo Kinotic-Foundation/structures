@@ -18,11 +18,11 @@ public final class AuthzUtil {
      */
     public static final String SCOPE_REFERENCE_PREFIX = "@";
 
-    /** The type of the platform itself, the root every organization sits under. */
-    public static final String PLATFORM_TYPE = "platform";
+    /** The type of the system itself, the root every organization sits under. */
+    public static final String SYSTEM_TYPE = "system";
 
-    /** The id of the one platform object, so a check on the platform needs no id from the request. */
-    public static final String PLATFORM_OBJECT_ID = "kinotic";
+    /** The id of the one system object, so a check on the system needs no id from the request. */
+    public static final String SYSTEM_OBJECT_ID = "kinotic";
 
     /** The kernel types every store has: the identities. */
     public static final String USER_TYPE = "user";
@@ -38,7 +38,7 @@ public final class AuthzUtil {
      */
     public static final String ROLE_BINDING_TYPE_SUFFIX = "_role_binding";
 
-    /** The type an entity definition is in the platform store, under its application. */
+    /** The type an entity definition is in the system store, under its application. */
     public static final String ENTITY_DEFINITION_TYPE = "entity_definition";
     /**
      * The type of a definition's rows within one tenant, in an application's store: a definition and a tenant
@@ -54,7 +54,7 @@ public final class AuthzUtil {
      */
     public static final String PLACED_RELATION = "placed";
 
-    /** The type a project is in the platform store, under its application. */
+    /** The type a project is in the system store, under its application. */
     public static final String PROJECT_TYPE = "project";
 
     /** The kernel types of the identity scopes, each contained in the one before it. */
@@ -81,19 +81,19 @@ public final class AuthzUtil {
     public static final String ADMIN = "admin";
     /** The level of the built-in role over everything inside an application but the application itself. */
     public static final String DEVELOPER = "developer";
-    /** The levels of the system users' roles: running the platform, and reading it. */
+    /** The levels of the system users' roles: running the system, and reading it. */
     public static final String MAINTAINER = "maintainer";
     public static final String SUPPORT = "support";
     /** The built-in role holding every permission of an organization and of everything inside it. */
     public static final String ORGANIZATION_ADMIN_ROLE = ORGANIZATION_TYPE + "." + ADMIN;
     /** The built-in role holding every permission of everything inside an application, and none of its own. */
     public static final String APPLICATION_DEVELOPER_ROLE = APPLICATION_TYPE + "." + DEVELOPER;
-    /** The built-in role holding every permission of the platform and of everything on it. */
-    public static final String PLATFORM_ADMIN_ROLE = PLATFORM_TYPE + "." + ADMIN;
-    /** The built-in role holding the platform's own permissions and the reading permissions of everything on it. */
-    public static final String PLATFORM_MAINTAINER_ROLE = PLATFORM_TYPE + "." + MAINTAINER;
-    /** The built-in role holding the reading permissions of the platform and of everything on it. */
-    public static final String PLATFORM_SUPPORT_ROLE = PLATFORM_TYPE + "." + SUPPORT;
+    /** The built-in role holding every permission of the system and of everything on it. */
+    public static final String SYSTEM_ADMIN_ROLE = SYSTEM_TYPE + "." + ADMIN;
+    /** The built-in role holding the system's own permissions and the reading permissions of everything on it. */
+    public static final String SYSTEM_MAINTAINER_ROLE = SYSTEM_TYPE + "." + MAINTAINER;
+    /** The built-in role holding the reading permissions of the system and of everything on it. */
+    public static final String SYSTEM_SUPPORT_ROLE = SYSTEM_TYPE + "." + SUPPORT;
     /**
      * The declared role of an application's runtimes, which the contract service declares and a deployment grants
      * the runtime machines it provisions on the application.
@@ -106,7 +106,7 @@ public final class AuthzUtil {
     /** The permission of saving a definition's rows, beside the derived verbs. */
     public static final String CAN_CREATE = "can_create";
     /**
-     * The permissions the platform's own services declare, beside the derived verbs: each named once here, so a
+     * The permissions the system's own services declare, beside the derived verbs: each named once here, so a
      * declaration, a grant, a check and a test name one thing.
      */
     public static final String CAN_MANAGE_ACCESS = "can_manage_access";

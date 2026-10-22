@@ -19,7 +19,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
  * manage through {@code MachineService}.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.PLATFORM_TYPE, resourceId = AuthzUtil.PLATFORM_OBJECT_ID)
+@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
 public interface SystemMemberService {
 
     /**

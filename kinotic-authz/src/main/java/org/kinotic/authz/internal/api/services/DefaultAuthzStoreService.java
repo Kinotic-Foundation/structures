@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DefaultAuthzStoreService implements AuthzStoreService, InitializingBean {
 
-    static final String PLATFORM_STORE_NAME = "kinotic-platform";
+    static final String SYSTEM_STORE_NAME = "kinotic-system";
     private static final String APPLICATION_STORE_PREFIX = "kinotic-app-";
     // the SDK's model classes bind by their own wire names, so the application's mapper customizations stay
     // out of the conversion in both directions
@@ -63,7 +63,7 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
     @Override
     public Future<String> ensureStore(String store) {
         Future<String> ret;
-        if (PLATFORM.equals(store)) {
+        if (SYSTEM.equals(store)) {
             ret = storeIdOf(store);
         } else {
             // asked by name every time, so a store deleted and re-created under its name since this node last
@@ -300,13 +300,13 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
         modelVersions.remove(storeId);
     }
 
-    // The engine's name of a store: the platform's fixed one, or an application's prefixed by what it is
+    // The engine's name of a store: the system's fixed one, or an application's prefixed by what it is
     // The engine caps a store's name at 64 characters, which an application's id need not fit, so an application's
     // store is named by the id's 128-bit digest
     private static String storeNameOf(String store) {
         String ret;
-        if (PLATFORM.equals(store)) {
-            ret = PLATFORM_STORE_NAME;
+        if (SYSTEM.equals(store)) {
+            ret = SYSTEM_STORE_NAME;
         } else {
             long[] hash = LongTupleHashFunction.xx128().hashChars(store);
             ret = APPLICATION_STORE_PREFIX + HexFormat.of().formatHex(ByteBuffer.allocate(Long.BYTES * 2).putLong(hash[0]).putLong(hash[1]).array());
@@ -318,8 +318,8 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
         String name = storeNameOf(store);
         return findStore(name).map(id -> {
             if (id == null) {
-                throw new IllegalStateException(PLATFORM.equals(store)
-                        ? "No store is named '" + name + "'; the platform store is created before the servers start"
+                throw new IllegalStateException(SYSTEM.equals(store)
+                        ? "No store is named '" + name + "'; the system store is created before the servers start"
                         : "No store is named '" + name + "'; the application's store is created when its record is reconciled");
             }
             return id;

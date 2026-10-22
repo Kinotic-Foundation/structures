@@ -31,7 +31,7 @@ public interface ServiceDirectoryStrategy {
                                                             Pageable pageable);
 
     /**
-     * Returns the entries of the platform's own services, the ones no organization owns.
+     * Returns the entries of the system's own services, the ones no organization owns.
      * @param pageable the page settings to use
      * @return a page of the system-scoped entries
      */

@@ -13,11 +13,11 @@ import org.kinotic.system.api.model.workload.VmNode;
 
 /**
  * The node records as the console reads and manages them: every node registered to host
- * workloads, read back with its history. A node is a resource on the platform, so a grant made
- * on the platform reaches every node, and one made on a node reaches that node alone.
+ * workloads, read back with its history. A node is a resource on the system, so a grant made
+ * on the system reaches every node, and one made on a node reaches that node alone.
  */
 @Publish
-@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.PLATFORM_TYPE)
+@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.SYSTEM_TYPE)
 public interface VmNodeService extends IdentifiableCrudService<VmNode, String> {
 
     /** The resource type a node is in the authorization model. */

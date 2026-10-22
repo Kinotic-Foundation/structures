@@ -58,7 +58,7 @@ public class DefaultLogService implements LogService {
     public Flux<Buffer> tailServer(String telemetryServiceName, String telemetryServiceInstanceId, long start) {
         Flux<Buffer> ret;
         try {
-            // the platform's tenant, which admits a platform participant alone
+            // the system's tenant, which admits a system participant alone
             ret = tailOf(null, TelemetryTenant.serverLogSelector(telemetryServiceName, telemetryServiceInstanceId), start);
         } catch (Exception e) {
             ret = Flux.error(e);

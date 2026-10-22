@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * The worker of the authorization stores: keeps the model a store runs equal to the one generated for it, the
- * platform's from the directory entries that belong to it and an application's from the platform's services
+ * system's from the directory entries that belong to it and an application's from the system's services
  * its users call and the services registered in its scope, and the store's built-in roles bundling what that
  * model has. The reconcile master calls it when a service of the store is registered, when the store is found
  * out of its desired state, and once when the master starts, so a model write the engine refused is made again
@@ -47,16 +47,16 @@ public class AuthzStoreReconciler implements Reconciler<AuthzStore> {
         return modelOf(current).compose(model -> run(current, model)).map(Requeue.NONE);
     }
 
-    // The platform's model from the platform's own services; an application's from the platform's services its
+    // The system's model from the system's own services; an application's from the system's services its
     // users call and whatever services its runtimes registered
     private Future<AuthzModel> modelOf(AuthzStore store) {
         Future<AuthzModel> ret;
         if (store.getApplicationId() == null) {
-            ret = directory.findSystemDefinitions().map(generator::platformModel);
+            ret = directory.findSystemDefinitions().map(generator::systemModel);
         } else {
             ret = directory.findSystemDefinitions()
-                           .compose(platform -> directory.findApplicationDefinitions(store.getOrganizationId(), store.getApplicationId())
-                                                         .map(services -> generator.applicationModel(platform, services)));
+                           .compose(system -> directory.findApplicationDefinitions(store.getOrganizationId(), store.getApplicationId())
+                                                         .map(services -> generator.applicationModel(system, services)));
         }
         return ret;
     }

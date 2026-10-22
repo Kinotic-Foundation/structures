@@ -27,14 +27,14 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 @Component
 @RequiredArgsConstructor
 public class DefaultSystemAccessService implements SystemAccessService {
 
-    private static final Resource PLATFORM_RESOURCE = new Resource(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID);
-    private static final String PLATFORM_OBJECT = AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID);
+    private static final Resource SYSTEM_RESOURCE = new Resource(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
+    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
 
     private final ServiceDirectory directory;
     private final AuthzModelGenerator generator;
@@ -44,12 +44,12 @@ public class DefaultSystemAccessService implements SystemAccessService {
 
     @Override
     public Future<List<RoleDefinition>> findRoles() {
-        return model().map(model -> model.builtInRoles(AuthzUtil.PLATFORM_TYPE));
+        return model().map(model -> model.builtInRoles(AuthzUtil.SYSTEM_TYPE));
     }
 
     @Override
     public Future<List<Grant>> findGrants() {
-        return relationships.findGrants(PLATFORM, PLATFORM_OBJECT).map(grants -> grants.stream().map(DomainUtil::localGrant).toList());
+        return relationships.findGrants(SYSTEM, SYSTEM_OBJECT).map(grants -> grants.stream().map(DomainUtil::localGrant).toList());
     }
 
     @Override
@@ -57,31 +57,31 @@ public class DefaultSystemAccessService implements SystemAccessService {
         validate(subject);
         Validate.notBlank(roleId, "roleId cannot be blank");
         return model().compose(model -> {
-            if (!model.roles().containsKey(roleId) || !model.grantable(roleId, AuthzUtil.PLATFORM_TYPE)) {
-                throw new IllegalArgumentException("No role of the platform has id " + roleId);
+            if (!model.roles().containsKey(roleId) || !model.grantable(roleId, AuthzUtil.SYSTEM_TYPE)) {
+                throw new IllegalArgumentException("No role of the system has id " + roleId);
             }
             return requireStaff(subject);
-        }).compose(stored -> relationships.bind(PLATFORM, roleId, userOf(stored), PLATFORM_OBJECT))
-          .map(bindingId -> new Grant(bindingId, roleId, subject, PLATFORM_RESOURCE));
+        }).compose(stored -> relationships.bind(SYSTEM, roleId, userOf(stored), SYSTEM_OBJECT))
+          .map(bindingId -> new Grant(bindingId, roleId, subject, SYSTEM_RESOURCE));
     }
 
     @Override
     public Future<Void> revoke(String grantId) {
         Validate.notBlank(grantId, "grantId cannot be blank");
-        return relationships.revoke(PLATFORM, grantId, PLATFORM_OBJECT);
+        return relationships.revoke(SYSTEM, grantId, SYSTEM_OBJECT);
     }
 
     @Override
     public Future<AccessExplanation> explain(Subject subject, String permission) {
         validate(subject);
         Validate.notBlank(permission, "permission cannot be blank");
-        String name = AuthzUtil.permissionName(AuthzUtil.PLATFORM_TYPE, permission);
-        return requireStaff(subject).compose(stored -> relationships.findGrants(PLATFORM, PLATFORM_OBJECT)
-                .compose(grants -> stores.modelId(PLATFORM).compose(modelId -> {
-                    RelationshipTuple holds = new RelationshipTuple(userOf(stored), name, PLATFORM_OBJECT);
+        String name = AuthzUtil.permissionName(AuthzUtil.SYSTEM_TYPE, permission);
+        return requireStaff(subject).compose(stored -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
+                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> {
+                    RelationshipTuple holds = new RelationshipTuple(userOf(stored), name, SYSTEM_OBJECT);
                     // an administrator asks after changing access, so the answer must not predate the change
-                    Future<Boolean> allowed = relationships.check(PLATFORM, modelId, holds, Consistency.HIGHER_CONSISTENCY);
-                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(PLATFORM, modelId, grant, stored, name)).toList();
+                    Future<Boolean> allowed = relationships.check(SYSTEM, modelId, holds, Consistency.HIGHER_CONSISTENCY);
+                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(SYSTEM, modelId, grant, stored, name)).toList();
                     return Future.all(explains).compose(results -> allowed.map(held -> {
                         List<Grant> through = new ArrayList<>();
                         for (int i = 0; i < grants.size(); i++) {
@@ -95,10 +95,10 @@ public class DefaultSystemAccessService implements SystemAccessService {
     }
 
     private Future<AuthzModel> model() {
-        return directory.findSystemDefinitions().map(generator::platformModel);
+        return directory.findSystemDefinitions().map(generator::systemModel);
     }
 
-    // The platform's staff, a system user or a machine in SYSTEM scope, each held by the store as itself
+    // The system's staff, a system user or a machine in SYSTEM scope, each held by the store as itself
     private Future<Subject> requireStaff(Subject subject) {
         return identities.findById(subject.id()).map(identity -> {
             boolean staff = identity instanceof SystemParticipantIdentity
@@ -106,16 +106,16 @@ public class DefaultSystemAccessService implements SystemAccessService {
                         && machine.getOrganizationId() == null
                         && machine.getApplicationId() == null);
             if (!staff) {
-                throw new IllegalArgumentException("No system user or machine of the platform has id " + subject.id());
+                throw new IllegalArgumentException("No system user or machine of the system has id " + subject.id());
             }
             return subject;
         });
     }
 
-    // The platform has no groups, so a subject is one of its identities
+    // The system has no groups, so a subject is one of its identities
     private static void validate(Subject subject) {
         Validate.notNull(subject, "subject cannot be null");
-        Validate.isTrue(subject.kind() == SubjectKind.USER, "a grant on the platform is made to a user");
+        Validate.isTrue(subject.kind() == SubjectKind.USER, "a grant on the system is made to a user");
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 

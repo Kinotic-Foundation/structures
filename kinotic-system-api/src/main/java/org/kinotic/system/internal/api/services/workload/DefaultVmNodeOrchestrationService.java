@@ -94,21 +94,21 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
     }
 
     /**
-     * The node's place in the graph, written once its record is: the node is on the platform, so a grant made
+     * The node's place in the graph, written once its record is: the node is on the system, so a grant made
      * there reaches it, and the machine that registered it is its agent, which is what its heartbeats and
      * reports are checked for. A registration made from inside the server carries no participant and binds
      * no agent.
      */
     private Future<Void> contained(String nodeId, Participant registrar) {
         String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onPlatform = new RelationshipTuple(AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID),
-                                                             AuthzUtil.PLATFORM_TYPE,
+        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
+                                                             AuthzUtil.SYSTEM_TYPE,
                                                              node);
-        Future<Void> ret = relationships.ensure(AuthzStoreService.PLATFORM, List.of(onPlatform));
+        Future<Void> ret = relationships.ensure(AuthzStoreService.SYSTEM, List.of(onSystem));
         if (registrar != null) {
             // one binding per node and machine, so a node registering again, or on another server, binds nothing twice
             String bindingId = nodeId + "-agent-" + registrar.getId();
-            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.PLATFORM, bindingId, AGENT_ROLE,
+            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.SYSTEM, bindingId, AGENT_ROLE,
                                                              DomainUtil.authzUser(registrar), node));
         }
         return ret;
@@ -405,21 +405,21 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                 .map(Requeue.NONE);
     }
 
-    // Every grant made on the node is revoked, then the node leaves the platform, so a node registered again
+    // Every grant made on the node is revoked, then the node leaves the system, so a node registered again
     // under the same id starts with no agent
     private Future<Void> released(String nodeId) {
         String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onPlatform = new RelationshipTuple(AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID),
-                                                             AuthzUtil.PLATFORM_TYPE,
+        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
+                                                             AuthzUtil.SYSTEM_TYPE,
                                                              node);
-        return relationships.read(AuthzStoreService.PLATFORM, node).compose(held -> {
+        return relationships.read(AuthzStoreService.SYSTEM, node).compose(held -> {
             Future<Void> chain = Future.succeededFuture();
             for (RelationshipTuple tuple : held) {
                 if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())) {
-                    chain = chain.compose(v -> relationships.unbind(AuthzStoreService.PLATFORM, AuthzUtil.idOf(tuple.user()), node));
+                    chain = chain.compose(v -> relationships.unbind(AuthzStoreService.SYSTEM, AuthzUtil.idOf(tuple.user()), node));
                 }
             }
-            return chain.compose(v -> relationships.remove(AuthzStoreService.PLATFORM, List.of(onPlatform)));
+            return chain.compose(v -> relationships.remove(AuthzStoreService.SYSTEM, List.of(onSystem)));
         });
     }
 

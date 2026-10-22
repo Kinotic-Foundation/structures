@@ -19,8 +19,8 @@ import java.lang.annotation.Target;
  *
  * <p>Examples: {@code @AuthzCheck(permission = "can_report", resourceId = "{registration.id}")} on
  * {@code heartbeat(Registration registration)}, whose name derives no permission and whose id is inside the
- * body; {@code @AuthzCheck(resource = "platform", permission = "can_register_node")} on {@code registerNode} of
- * the service typed {@code vm_node}, checked on the platform, where the node is not yet, for a permission of the
+ * body; {@code @AuthzCheck(resource = "system", permission = "can_register_node")} on {@code registerNode} of
+ * the service typed {@code vm_node}, checked on the system, where the node is not yet, for a permission of the
  * node type.
  */
 @Target(ElementType.METHOD)

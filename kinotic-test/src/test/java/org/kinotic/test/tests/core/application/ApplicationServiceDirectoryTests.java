@@ -179,7 +179,7 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
     }
 
     private void grantRuntime(String applicationId) throws Exception {
-        await(relationships.ensureBound(AuthzStoreService.PLATFORM,
+        await(relationships.ensureBound(AuthzStoreService.SYSTEM,
                                         "runtime-of-" + runtime.getId() + "-" + applicationId,
                                         AuthzUtil.APPLICATION_RUNTIME_ROLE,
                                         AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()),

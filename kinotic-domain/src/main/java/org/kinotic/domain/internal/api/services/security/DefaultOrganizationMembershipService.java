@@ -190,22 +190,22 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     // members reaches
     private Future<Void> joined(OrganizationMembership membership) {
         return membership.isEnabled()
-                ? relationships.ensure(AuthzStoreService.PLATFORM, List.of(memberOf(membership.getOrganizationUserId(), membership.getOrganizationId())))
+                ? relationships.ensure(AuthzStoreService.SYSTEM, List.of(memberOf(membership.getOrganizationUserId(), membership.getOrganizationId())))
                 : Future.succeededFuture();
     }
 
     private Future<Void> left(String organizationUserId, String organizationId) {
-        return relationships.remove(AuthzStoreService.PLATFORM, List.of(memberOf(organizationUserId, organizationId)));
+        return relationships.remove(AuthzStoreService.SYSTEM, List.of(memberOf(organizationUserId, organizationId)));
     }
 
     // The membership's user leaves every group and every grant, so an organization user joining again starts with
     // none; a binding is typed by what it is attached to, so the grants are read on each type of the organization tier
     private Future<Void> withdrawn(String user) {
-        return directoryProvider.getObject().findSystemDefinitions().map(generator::platformModel).compose(model -> {
+        return directoryProvider.getObject().findSystemDefinitions().map(generator::systemModel).compose(model -> {
             List<Future<List<RelationshipTuple>>> reads = new ArrayList<>();
-            reads.add(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.GROUP_TYPE));
+            reads.add(relationships.readByUser(AuthzStoreService.SYSTEM, user, AuthzUtil.GROUP_TYPE));
             for (String type : model.tier(AuthzUtil.ORGANIZATION_TYPE)) {
-                reads.add(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.roleBindingType(type)));
+                reads.add(relationships.readByUser(AuthzStoreService.SYSTEM, user, AuthzUtil.roleBindingType(type)));
             }
             return Future.all(reads);
         }).compose(held -> {
@@ -213,7 +213,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
             for (int i = 0; i < held.size(); i++) {
                 all.addAll(held.<List<RelationshipTuple>>resultAt(i));
             }
-            return relationships.remove(AuthzStoreService.PLATFORM, all);
+            return relationships.remove(AuthzStoreService.SYSTEM, all);
         });
     }
 

@@ -41,8 +41,8 @@ public class DefaultZoneRulesService implements ZoneRulesService {
                 && zonePartitioningService.hostsZone(DomainUtil.APP_ZONE_PREFIX + "." + organization.getOrganizationId())) {
             String organizationId = organization.getOrganizationId();
             String prefix = organizationId + ".";
-            hostedZones = stores.modelId(AuthzStoreService.PLATFORM)
-                                .compose(modelId -> relationships.listObjects(AuthzStoreService.PLATFORM, modelId,
+            hostedZones = stores.modelId(AuthzStoreService.SYSTEM)
+                                .compose(modelId -> relationships.listObjects(AuthzStoreService.SYSTEM, modelId,
                                                                               DomainUtil.authzUser(participant),
                                                                               CAN_REGISTER_SERVICES,
                                                                               AuthzUtil.APPLICATION_TYPE,

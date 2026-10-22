@@ -3,7 +3,7 @@ import type {ServiceDefinition} from '@kinotic-ai/idl'
 /**
  * A service of an application as its runtime registers it in the platform's service directory: the application
  * it belongs to, where it is addressed, whether it is advertised, and its definition with the decorators it
- * declares. The platform owns everything else about the directory's entry: the checks it derives, the tools the
+ * declares. The system owns everything else about the directory's entry: the checks it derives, the tools the
  * functions declare, and the service's liveness.
  */
 export interface ServiceDirectoryEntry {

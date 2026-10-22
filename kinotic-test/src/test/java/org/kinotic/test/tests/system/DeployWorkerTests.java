@@ -247,11 +247,11 @@ public class DeployWorkerTests extends KinoticTestBase {
 
         String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, deployed.getMachineIdentityId());
         String registers = AuthzUtil.permissionName(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_REGISTER_SERVICES);
-        String modelId = await(stores.modelId(AuthzStoreService.PLATFORM));
-        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+        String modelId = await(stores.modelId(AuthzStoreService.SYSTEM));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
                                              new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID)),
                                              Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
                                               new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID)),
                                               Consistency.HIGHER_CONSISTENCY)));
     }

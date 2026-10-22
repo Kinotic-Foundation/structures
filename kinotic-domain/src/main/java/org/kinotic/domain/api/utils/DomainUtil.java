@@ -218,7 +218,7 @@ public class DomainUtil {
     /**
      * The tuples an application's user holds in its application's own store: the user is an end user of the
      * application, and, for a user of a tenant, the tenant is placed under the application with the user as a
-     * member. The platform's store holds the first of them, the end user tuple, alone.
+     * member. The system's store holds the first of them, the end user tuple, alone.
      *
      * @param user an application's user
      * @return the tuples, the end user tuple first

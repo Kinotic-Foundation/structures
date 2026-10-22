@@ -7,9 +7,9 @@ package org.kinotic.authz.api.model;
 public enum AuthzStoreKind {
 
     /**
-     * The one store holding the developer-side graph of every organization and the platform itself.
+     * The one store holding the developer-side graph of every organization and the system itself.
      */
-    PLATFORM,
+    SYSTEM,
 
     /**
      * An application's own store, holding its end users, tenants and data grants.

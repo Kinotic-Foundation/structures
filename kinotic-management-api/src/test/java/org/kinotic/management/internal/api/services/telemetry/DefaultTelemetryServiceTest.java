@@ -49,23 +49,23 @@ class DefaultTelemetryServiceTest extends ParticipantCallTest {
 
     @Test
     void systemParticipantReadsAnyOrganization() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.findTrace("globex", "abc123"));
+        callAs(SYSTEM_USER, () -> service.findTrace("globex", "abc123"));
 
         assertEquals("globex", tempoClient.tenant);
         assertEquals("abc123", tempoClient.traceId);
     }
 
     @Test
-    void platformParticipantWithoutTheGrantIsRefused() {
+    void systemParticipantWithoutTheGrantIsRefused() {
         assertInstanceOf(AuthorizationException.class,
-                         failureOf(PLATFORM_NEWCOMER, () -> service.findTrace("globex", "abc123")));
+                         failureOf(SYSTEM_NEWCOMER, () -> service.findTrace("globex", "abc123")));
         assertInstanceOf(AuthorizationException.class,
-                         failureOf(PLATFORM_NEWCOMER, () -> service.queryMetrics(metricQuery(null))));
+                         failureOf(SYSTEM_NEWCOMER, () -> service.queryMetrics(metricQuery(null))));
     }
 
     @Test
     void systemParticipantReadsThePlatformTenantWhenNamingNone() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.queryMetrics(metricQuery(null)));
+        callAs(SYSTEM_USER, () -> service.queryMetrics(metricQuery(null)));
 
         assertEquals(TelemetryTenant.SYSTEM, mimirClient.tenant);
     }

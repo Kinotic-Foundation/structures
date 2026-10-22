@@ -18,7 +18,7 @@ const SUBJECT_PAGE_SIZE = 500
 
 /**
  * Who a grant can be made to, read once per panel: the organization's members and groups, as the pickers of
- * the platform store's panels list them, or, for an application, its users and machines, as the pickers of the
+ * the system store's panels list them, or, for an application, its users and machines, as the pickers of the
  * application's own store list them; the grant rows name whichever were read.
  *
  * @param applicationId the application whose users and machines are the subjects, or null for the organization's

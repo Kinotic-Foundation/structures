@@ -268,7 +268,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         String me = AuthzUtil.object(AuthzUtil.USER_TYPE, bob.getId());
         assertTrue(await(relationships.holds(store, new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store)))));
         assertTrue(await(relationships.holds(store, new RelationshipTuple(me, AuthzUtil.MEMBER_RELATION, AuthzUtil.object(AuthzUtil.TENANT_TYPE, bob.getTenantId())))));
-        assertTrue(await(relationships.holds(AuthzStoreService.PLATFORM, new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store)))));
+        assertTrue(await(relationships.holds(AuthzStoreService.SYSTEM, new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store)))));
 
         await(runAsOrganization(() -> applicationService.deleteById(application.getId())));
 
@@ -287,7 +287,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
 
         // a reconcile of the store's record that runs while the application is deleted creates the store again,
         // running the application's model and holding nothing
-        AuthzModel model = await(directory.findSystemDefinitions().map(platform -> generator.applicationModel(platform, List.of())));
+        AuthzModel model = await(directory.findSystemDefinitions().map(system -> generator.applicationModel(system, List.of())));
         await(storeService.ensureStore(store).compose(id -> relationships.ensureModelWithRoles(store, model)));
         assertFalse(await(relationships.holds(store, placed)));
 

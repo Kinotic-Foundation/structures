@@ -90,9 +90,9 @@ public class VisibilityTests extends KinoticTestBase {
     private ServiceDirectory serviceDirectory;
 
     @BeforeEach
-    public void awaitPlatformModel() throws Exception {
-        AuthzModel model = modelGenerator.platformModel(await(serviceDirectory.findSystemDefinitions()));
-        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the platform store never reconciled to the directory's model");
+    public void awaitSystemModel() throws Exception {
+        AuthzModel model = modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
+        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
     }
 
     @Test
@@ -197,7 +197,7 @@ public class VisibilityTests extends KinoticTestBase {
 
 
     private boolean reconciledTo(String hash) throws Exception {
-        AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));
+        AuthzStore store = await(stores.findById(AuthzStore.SYSTEM));
         ReconcileState<AuthzModelRevision> state = store.getState();
         return state.isReconciled() && state.getObserved() != null && hash.equals(state.getObserved().hash());
     }

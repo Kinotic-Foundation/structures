@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the console's access control over the platform store: custom roles defined from the model's catalog
+ * Verifies the console's access control over the system store: custom roles defined from the model's catalog
  * and deleted once unused, grants reaching down the containment tree and stopping when revoked, groups granting
  * through their members, and the caller's own access listed and explained.
  */
@@ -91,10 +91,10 @@ public class PermissionServiceTests extends KinoticTestBase {
     // The master ticks every two seconds, then writes the model and brings the built-in roles in step, which
     // every grant below binds on
     @BeforeEach
-    public void awaitPlatformModel() throws Exception {
-        AuthzModel model = modelGenerator.platformModel(await(serviceDirectory.findSystemDefinitions()));
-        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the platform store never reconciled to the directory's model");
-        modelId = await(storeService.modelId(AuthzStoreService.PLATFORM));
+    public void awaitSystemModel() throws Exception {
+        AuthzModel model = modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
+        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
+        modelId = await(storeService.modelId(AuthzStoreService.SYSTEM));
     }
 
     @Test
@@ -123,7 +123,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
                 new RoleDefinition(null, "Climber", null, false, ProjectService.RESOURCE_TYPE, null, Set.of("application_can_edit"))))));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition(null, "Operator", null, false, AuthzUtil.PLATFORM_TYPE, null, Set.of("project_can_read"))))));
+                new RoleDefinition(null, "Reader", null, false, AuthzUtil.SYSTEM_TYPE, null, Set.of("project_can_read"))))));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
                 new RoleDefinition("project.editor", "Project Editor", null, true, ProjectService.RESOURCE_TYPE, null, Set.of("project_can_edit"))))));
 
@@ -154,25 +154,25 @@ public class PermissionServiceTests extends KinoticTestBase {
             assertTrue(tier.containsAll(role.grantableOn()), "role " + role.id() + " is grantable outside the organization's tier");
         }
         List<String> ids = roles.stream().map(RoleDefinition::id).toList();
-        assertFalse(ids.contains(AuthzUtil.PLATFORM_SUPPORT_ROLE), ids.toString());
+        assertFalse(ids.contains(AuthzUtil.SYSTEM_SUPPORT_ROLE), ids.toString());
         assertFalse(ids.contains(AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN)), ids.toString());
         assertFalse(ids.stream().anyMatch(id -> id.startsWith("vm_node.")), ids.toString());
         RoleDefinition projectEditor = roles.stream().filter(role -> role.id().equals("project.editor")).findFirst().orElseThrow();
         assertEquals(Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE), projectEditor.grantableOn());
 
-        // a role homed above the resource, and a platform role, are refused by the service
+        // a role homed above the resource, and a system role, are refused by the service
         Project project = project(application());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
         Resource onOrganization = new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID);
         Subject subject = user(member(TEST_ORG_ID, "tier"));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.ORGANIZATION_ADMIN_ROLE, onProject))));
-        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE, onOrganization))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.SYSTEM_SUPPORT_ROLE, onOrganization))));
 
         // and by the engine for a writer that skips the service
         String user = DomainUtil.authzMember(subject.id(), TEST_ORG_ID);
-        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, user,
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, user,
                                                                               DomainUtil.authzObject(TEST_ORG_ID, onProject))));
-        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.PLATFORM, AuthzUtil.PLATFORM_SUPPORT_ROLE, user,
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzUtil.SYSTEM_SUPPORT_ROLE, user,
                                                                               DomainUtil.authzObject(TEST_ORG_ID, onOrganization))));
     }
 
@@ -259,14 +259,14 @@ public class PermissionServiceTests extends KinoticTestBase {
     }
 
     private boolean held(UserParticipantIdentity member, String permission, Resource resource) throws Exception {
-        return await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+        return await(relationships.check(AuthzStoreService.SYSTEM, modelId,
                                          new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID), permission,
                                                                DomainUtil.authzObject(TEST_ORG_ID, resource)),
                                          Consistency.HIGHER_CONSISTENCY));
     }
 
     private Set<String> bundled(String roleId) throws Exception {
-        return await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.roleObject(roleId)))
+        return await(relationships.read(AuthzStoreService.SYSTEM, AuthzUtil.roleObject(roleId)))
                 .stream().map(RelationshipTuple::relation).collect(java.util.stream.Collectors.toSet());
     }
 
@@ -288,7 +288,7 @@ public class PermissionServiceTests extends KinoticTestBase {
     }
 
     private boolean reconciledTo(String hash) throws Exception {
-        AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));
+        AuthzStore store = await(stores.findById(AuthzStore.SYSTEM));
         ReconcileState<AuthzModelRevision> state = store.getState();
         return state.isReconciled() && state.getObserved() != null && hash.equals(state.getObserved().hash());
     }

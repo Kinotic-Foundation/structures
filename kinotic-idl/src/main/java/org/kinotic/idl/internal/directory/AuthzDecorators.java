@@ -336,7 +336,7 @@ final class AuthzDecorators {
     }
 
     /**
-     * The derived id of the checked resource of type {@code resource}: the platform's fixed id, the parent's id
+     * The derived id of the checked resource of type {@code resource}: the system's fixed id, the parent's id
      * when the resource is the parent, else a resource of the service's own type among the parameters.
      */
     private static String resourceIdOf(String resource,
@@ -345,8 +345,8 @@ final class AuthzDecorators {
                                      List<ParameterDefinition> parameters,
                                      ConversionContext conversionContext) {
         String ret;
-        if (AuthzUtil.PLATFORM_TYPE.equals(resource)) {
-            ret = AuthzUtil.PLATFORM_OBJECT_ID;
+        if (AuthzUtil.SYSTEM_TYPE.equals(resource)) {
+            ret = AuthzUtil.SYSTEM_OBJECT_ID;
         } else if (resource.equals(parent)) {
             ret = parentId(parent, parameters, conversionContext);
         } else {
@@ -406,7 +406,7 @@ final class AuthzDecorators {
     /**
      * The template naming the parent resource: the id parameter named {@code <parent>Id}, else that property
      * of the first object parameter that has it, else the caller's own scope for a parent the scope carries, else
-     * the platform's fixed id for a parent that is the platform.
+     * the system's fixed id for a parent that is the system.
      */
     private static String parentId(String parent, List<ParameterDefinition> parameters, ConversionContext conversionContext) {
         String idName = camelCase(parent) + "Id";
@@ -423,8 +423,8 @@ final class AuthzDecorators {
         if (ret == null && SCOPED_PARENTS.contains(parent)) {
             ret = "{" + AuthzUtil.SCOPE_REFERENCE_PREFIX + idName + "}";
         }
-        if (ret == null && AuthzUtil.PLATFORM_TYPE.equals(parent)) {
-            ret = AuthzUtil.PLATFORM_OBJECT_ID;
+        if (ret == null && AuthzUtil.SYSTEM_TYPE.equals(parent)) {
+            ret = AuthzUtil.SYSTEM_OBJECT_ID;
         }
         return ret;
     }

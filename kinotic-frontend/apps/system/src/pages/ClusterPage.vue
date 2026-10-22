@@ -8,7 +8,7 @@
 
     <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
 
-    <NoAccessState v-if="refused" description="No grant you hold reaches the cluster. An administrator of the platform can grant you access from the Access page." />
+    <NoAccessState v-if="refused" description="No grant you hold reaches the cluster. An administrator of the system can grant you access from the Access page." />
     <div v-else class="flex flex-col gap-4">
       <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard v-for="stat in stats" :key="stat.label" :icon="stat.icon" :tint="stat.tint" :label="stat.label"

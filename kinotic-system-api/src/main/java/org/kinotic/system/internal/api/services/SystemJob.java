@@ -4,7 +4,7 @@ import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.system.api.services.SystemJobService;
 
 /**
- * A grind job the platform's operators can start on demand through {@link SystemJobService}. Every
+ * A grind job a system user can start on demand through {@link SystemJobService}. Every
  * Spring bean implementing this interface is listed, and each start runs a fresh definition on
  * behalf of the platform. The console shows each task with the icon and the views it declares; a
  * step that runs a workload shows its log by declaring it as the step's start view.

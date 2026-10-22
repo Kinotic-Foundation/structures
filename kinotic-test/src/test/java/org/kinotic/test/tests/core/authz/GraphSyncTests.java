@@ -54,9 +54,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the platform store's graph follows the lifecycle writes: an organization, an application, a project,
+ * Verifies the system store's graph follows the lifecycle writes: an organization, an application, a project,
  * an entity definition and a user each take their place in it as part of the write that creates them and leave
- * it with the write that deletes them; the built-in roles bundle what the platform model has; and the user who
+ * it with the write that deletes them; the built-in roles bundle what the system model has; and the user who
  * signs an organization up administers it, which a check through the model answers.
  */
 @SpringBootTest
@@ -152,15 +152,15 @@ public class GraphSyncTests extends KinoticTestBase {
     }
 
     @Test
-    public void builtInRolesBundleWhatThePlatformModelHas() throws Exception {
+    public void builtInRolesBundleWhatTheSystemModelHas() throws Exception {
         AuthzModel model = modelFromDirectory();
-        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the platform store never reconciled to the directory's model");
+        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
 
         assertTrue(model.roles().get("project.editor").contains("project_can_edit"));
         assertTrue(model.roles().get(AuthzUtil.ORGANIZATION_ADMIN_ROLE).containsAll(
                 Set.of("project_can_delete", "entity_definition_can_delete", "application_can_edit")));
         for (Map.Entry<String, Set<String>> role : model.roles().entrySet()) {
-            Set<String> bundled = await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.roleObject(role.getKey())))
+            Set<String> bundled = await(relationships.read(AuthzStoreService.SYSTEM, AuthzUtil.roleObject(role.getKey())))
                     .stream()
                     .filter(tuple -> AuthzUtil.EVERYONE.equals(tuple.user()))
                     .map(RelationshipTuple::relation)
@@ -173,8 +173,8 @@ public class GraphSyncTests extends KinoticTestBase {
     public void signingUpMakesTheCreatorTheOrganizationsAdmin() throws Exception {
         String suffix = suffix();
         AuthzModel model = modelFromDirectory();
-        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the platform store never reconciled to the directory's model");
-        String modelId = await(storeService.ensureModel(AuthzStoreService.PLATFORM, model));
+        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
+        String modelId = await(storeService.ensureModel(AuthzStoreService.SYSTEM, model));
 
         String token = UUID.randomUUID().toString();
         PendingSignUp pending = new PendingSignUp();
@@ -191,36 +191,36 @@ public class GraphSyncTests extends KinoticTestBase {
         String user = DomainUtil.authzMember(admin.getId(), organizationId);
         String organization = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId);
 
-        assertTrue(holds(new RelationshipTuple(AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID), AuthzUtil.PLATFORM_TYPE, organization)),
-                   "the organization is under the platform");
+        assertTrue(holds(new RelationshipTuple(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID), AuthzUtil.SYSTEM_TYPE, organization)),
+                   "the organization is under the system");
         assertTrue(holds(new RelationshipTuple(user, AuthzUtil.MEMBER_RELATION, organization)), "the creator is a member");
 
         // the binding of the organization admin role reaches the organization and everything created inside it
-        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, modelId, new RelationshipTuple(user, "application_can_edit", organization), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "application_can_edit", organization), Consistency.HIGHER_CONSISTENCY)));
         DefaultOrganizationParticipant creator = new DefaultOrganizationParticipant(admin.getId(), organizationId,
                                                                                     Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
                                                                                            ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                                                     List.of("ADMIN"));
         Application application = await(runAs(creator, () -> applicationService.createApplicationIfNotExist("Graph Admin App", "graph sync", null)));
         String applicationObject = AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
-        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, modelId, new RelationshipTuple(user, "application_can_edit", applicationObject), Consistency.HIGHER_CONSISTENCY)));
-        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, modelId, new RelationshipTuple(user, "project_can_delete", applicationObject), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "application_can_edit", applicationObject), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "project_can_delete", applicationObject), Consistency.HIGHER_CONSISTENCY)));
         // and nothing outside the organization
-        assertFalse(await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
                                               new RelationshipTuple(user, "application_can_edit",
                                                                     AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID)), Consistency.HIGHER_CONSISTENCY)));
     }
 
     private boolean holds(RelationshipTuple relationship) throws Exception {
-        return await(relationships.holds(AuthzStoreService.PLATFORM, relationship));
+        return await(relationships.holds(AuthzStoreService.SYSTEM, relationship));
     }
 
     private AuthzModel modelFromDirectory() throws Exception {
-        return modelGenerator.platformModel(await(serviceDirectory.findSystemDefinitions()));
+        return modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
     }
 
     private boolean reconciledTo(String hash) throws Exception {
-        AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));
+        AuthzStore store = await(stores.findById(AuthzStore.SYSTEM));
         ReconcileState<AuthzModelRevision> state = store.getState();
         return state.isReconciled() && state.getObserved() != null && hash.equals(state.getObserved().hash());
     }

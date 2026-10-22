@@ -169,7 +169,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     private Future<Void> released(String applicationId) {
         String organizationId = requireOrganizationId();
         String store = DomainUtil.authzApplicationId(organizationId, applicationId);
-        return relationships.remove(AuthzStoreService.PLATFORM, List.of(ApplicationStoreProvisioner.containment(organizationId, applicationId)))
+        return relationships.remove(AuthzStoreService.SYSTEM, List.of(ApplicationStoreProvisioner.containment(organizationId, applicationId)))
                             .compose(v -> storeService.deleteStore(store))
                             .compose(v -> stores.deleteByIdSync(store));
     }

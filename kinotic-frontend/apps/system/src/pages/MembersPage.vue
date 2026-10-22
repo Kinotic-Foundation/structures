@@ -62,7 +62,7 @@
       <!-- a system user's grants live on the Access page; an organization's people are granted in the portal -->
       <div v-if="selectedMember && !selectedMember.invite && !organizationId" class="mt-4 flex justify-end">
         <Button label="Manage access" icon="pi pi-key" size="small" severity="secondary" outlined
-                @click="router.push({ name: 'platform-access', query: { subject: selectedMember.id } })" />
+                @click="router.push({ name: 'system-access', query: { subject: selectedMember.id } })" />
       </div>
     </SteppingDrawer>
   </div>

@@ -28,11 +28,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places an application in the authorization graph: under its organization in the platform's store, and in a
- * store of its own, running the kernel model, the platform's tenant services included, with its roles so the
+ * Places an application in the authorization graph: under its organization in the system's store, and in a
+ * store of its own, running the kernel model, the system's tenant services included, with its roles so the
  * application's users and tenants can be placed in it and granted on at once, and the store's record, which the
  * reconciler keeps in step with the application's entity definitions and registered services from then on.
  * Whatever the application already holds, its projects, entity definitions and users, is placed with it.
@@ -62,9 +62,9 @@ public class ApplicationStoreProvisioner {
      */
     public Future<Application> provision(Application application) {
         String organizationId = application.getOrganizationId();
-        return relationships.ensure(PLATFORM, List.of(containment(organizationId, application.getId())))
+        return relationships.ensure(SYSTEM, List.of(containment(organizationId, application.getId())))
                             .compose(v -> directory.findSystemDefinitions())
-                            .map(platform -> generator.applicationModel(platform, List.of()))
+                            .map(system -> generator.applicationModel(system, List.of()))
                             .compose(kernel -> provision(application, kernel))
                             .compose(v -> placeHoldings(application))
                             .map(application);
@@ -109,7 +109,7 @@ public class ApplicationStoreProvisioner {
     }
 
     /**
-     * The tuple placing an application under its organization in the platform's store.
+     * The tuple placing an application under its organization in the system's store.
      *
      * @param organizationId the application's organization
      * @param applicationId  the application
@@ -159,11 +159,11 @@ public class ApplicationStoreProvisioner {
         String applicationId = application.getId();
         String store = DomainUtil.authzApplicationId(organizationId, applicationId);
         return eachPage(pageable -> projects.findAllForApplication(applicationId, organizationId, pageable),
-                        page -> relationships.ensure(PLATFORM, page.stream().map(DefaultProjectService::containment).toList()))
+                        page -> relationships.ensure(SYSTEM, page.stream().map(DefaultProjectService::containment).toList()))
                 .compose(v -> eachPage(pageable -> entityDefinitions.findAllForApplication(applicationId, organizationId, pageable),
                                        page -> {
                                            List<RelationshipTuple> placed = page.stream().map(DefaultEntityDefinitionService::containment).toList();
-                                           return relationships.ensure(PLATFORM, placed).compose(w -> relationships.ensure(store, placed));
+                                           return relationships.ensure(SYSTEM, placed).compose(w -> relationships.ensure(store, placed));
                                        }))
                 .compose(v -> eachPage(pageable -> identities.findApplicationUsers(organizationId, applicationId, pageable),
                                        page -> {
@@ -174,7 +174,7 @@ public class ApplicationStoreProvisioner {
                                                endUsers.add(tuples.getFirst());
                                                inApplication.addAll(tuples);
                                            });
-                                           return relationships.ensure(PLATFORM, endUsers).compose(w -> relationships.ensure(store, inApplication));
+                                           return relationships.ensure(SYSTEM, endUsers).compose(w -> relationships.ensure(store, inApplication));
                                        }));
     }
 

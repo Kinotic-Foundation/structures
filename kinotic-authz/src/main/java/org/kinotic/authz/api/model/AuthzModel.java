@@ -21,7 +21,7 @@ import java.util.TreeSet;
  * @param roles       the built-in roles the model implies, each role's id to the model names of the permissions it
  *                    bundles: a viewer, an editor and an admin of every type with permissions, the admin holding
  *                    the type's own and everything inside it, the roles the type's services declare, and for a
- *                    platform store the application developer and the platform maintainer and support; a role's
+ *                    system store the application developer and the system maintainer and support; a role's
  *                    id starts with its home type, {@code project.editor}
  * @param bindable    for each resource type, the home types of the roles a binding on a resource of it may grant:
  *                    the type and the types inside it within its trust boundary, which the engine enforces

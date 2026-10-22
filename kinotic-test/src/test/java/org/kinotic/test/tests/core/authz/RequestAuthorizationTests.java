@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies a request is authorized as the gateway and the MCP endpoint authorize it, against the contracts the
- * directory holds and the platform store: Sally, an editor of project A, edits A and is refused on B, with the
+ * directory holds and the system store: Sally, an editor of project A, edits A and is refused on B, with the
  * positional body a STOMP request carries and the named one a tool call carries; a delegate of hers acts as
  * her; a member with no grant is refused the organization's members and its viewer is not; a check naming an
  * application the member's scope lacks is made on the organization; a function with no check passes on its
@@ -102,10 +102,10 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     private String modelId;
 
     @BeforeEach
-    public void awaitPlatformModel() throws Exception {
-        AuthzModel model = modelGenerator.platformModel(await(serviceDirectory.findSystemDefinitions()));
-        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the platform store never reconciled to the directory's model");
-        modelId = await(storeService.modelId(AuthzStoreService.PLATFORM));
+    public void awaitSystemModel() throws Exception {
+        AuthzModel model = modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
+        assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
+        modelId = await(storeService.modelId(AuthzStoreService.SYSTEM));
     }
 
     @Test
@@ -205,12 +205,12 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         RelationshipTuple manages = new RelationshipTuple(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID),
                                                           AuthzUtil.permissionName(AuthzUtil.ORGANIZATION_TYPE, "can_manage_access"),
                                                           organization);
-        assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.PLATFORM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
+        assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.SYSTEM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
                    "the creator was never bound as the administrator");
 
         // every server that started swept the organization, and found it administered after the first
         Subject creator = new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
-        long creatorBindings = await(relationships.findGrants(AuthzStoreService.PLATFORM, organization))
+        long creatorBindings = await(relationships.findGrants(AuthzStoreService.SYSTEM, organization))
                 .stream()
                 .filter(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))
                 .count();
@@ -248,7 +248,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
 
 
     private boolean reconciledTo(String hash) throws Exception {
-        AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));
+        AuthzStore store = await(stores.findById(AuthzStore.SYSTEM));
         ReconcileState<AuthzModelRevision> state = store.getState();
         return state.isReconciled() && state.getObserved() != null && hash.equals(state.getObserved().hash());
     }

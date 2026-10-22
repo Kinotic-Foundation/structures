@@ -29,7 +29,7 @@ import java.util.List;
  * and updating reading; creating stands alone. A tenant's user is checked on the
  * definition within its tenant, so a grant made on the tenant, on the definition, on the definition within the
  * tenant or on the application reaches it; a caller above every application is checked on the definition in
- * the platform's store.
+ * the system's store.
  */
 @Publish
 @Zone(DomainUtil.APP_API_ZONE)

@@ -195,12 +195,12 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         });
     }
 
-    // The model the application's store runs: the platform's services its users call and the services its
+    // The model the application's store runs: the system's services its users call and the services its
     // runtimes registered
     private Future<AuthzModel> model(Application application) {
         return directory.findSystemDefinitions()
-                        .compose(platform -> directory.findApplicationDefinitions(application.getOrganizationId(), application.getId())
-                                                      .map(services -> generator.applicationModel(platform, services)));
+                        .compose(system -> directory.findApplicationDefinitions(application.getOrganizationId(), application.getId())
+                                                      .map(services -> generator.applicationModel(system, services)));
     }
 
     // A grant in an application's store is made to one of its own users or machines

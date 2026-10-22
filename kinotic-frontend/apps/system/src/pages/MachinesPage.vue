@@ -25,6 +25,6 @@ const router = useRouter()
 
 // a machine's grants, such as the registrar role a vm-manager registers nodes with, live on the Access page
 function accessActions(machineId: string): MenuItem[] {
-  return [{ label: 'Manage access', icon: 'pi pi-key', command: () => router.push({ name: 'platform-access', query: { subject: machineId } }) }]
+  return [{ label: 'Manage access', icon: 'pi pi-key', command: () => router.push({ name: 'system-access', query: { subject: machineId } }) }]
 }
 </script>

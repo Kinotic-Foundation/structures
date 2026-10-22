@@ -3,7 +3,7 @@
     <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
     <DashboardSection :icon="ShieldCheck" :tint="TINTS.green" title="Roles" :count="loading ? undefined : roles.length"
-                      description="A role bundles permissions. The built-in roles come with the platform; your organization defines its own from the same catalog.">
+                      description="A role bundles permissions. The built-in roles come with the system; your organization defines its own from the same catalog.">
       <template #actions>
         <Button v-if="canManageAccess" label="New role" icon="pi pi-plus" size="small" @click="edit(null)" />
       </template>

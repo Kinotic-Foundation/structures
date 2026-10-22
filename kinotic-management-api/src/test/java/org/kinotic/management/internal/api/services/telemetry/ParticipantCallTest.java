@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Base of the tests that call a published service as a participant: an organization user of
- * acme, a system user granted the telemetry of every organization on the platform, and a system
+ * acme, a system user granted the telemetry of every organization on the system, and a system
  * user granted nothing, each call run on a Vert.x context with the participant bound, mirroring
  * how the gateway invokes published services.
  */
@@ -35,9 +35,9 @@ abstract class ParticipantCallTest {
 
     protected static final Participant ACME_USER =
             new DefaultOrganizationParticipant("user-1", "acme", Map.of(), List.of("USER"));
-    protected static final Participant PLATFORM_OPERATOR =
+    protected static final Participant SYSTEM_USER =
             new DefaultSystemParticipant("system-user-1", Map.of(), List.of("ADMIN"));
-    protected static final Participant PLATFORM_NEWCOMER =
+    protected static final Participant SYSTEM_NEWCOMER =
             new DefaultSystemParticipant("system-newcomer-1", Map.of(), List.of());
 
     protected static SecurityContext securityContext;
@@ -50,11 +50,11 @@ abstract class ParticipantCallTest {
         // before any Vertx instance is created
         securityContext = new SecurityContext(null);
         AuthzStoreService stores = mock(AuthzStoreService.class);
-        when(stores.modelId(AuthzStoreService.PLATFORM)).thenReturn(Future.succeededFuture("model-1"));
+        when(stores.modelId(AuthzStoreService.SYSTEM)).thenReturn(Future.succeededFuture("model-1"));
         RelationshipService relationships = mock(RelationshipService.class);
-        // the system user holds what it is asked about on the platform, the newcomer nothing
-        when(relationships.check(eq(AuthzStoreService.PLATFORM), eq("model-1"), any(), any()))
-                .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(2).user().equals(DomainUtil.authzUser(PLATFORM_OPERATOR))));
+        // the system user holds what it is asked about on the system, the newcomer nothing
+        when(relationships.check(eq(AuthzStoreService.SYSTEM), eq("model-1"), any(), any()))
+                .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(2).user().equals(DomainUtil.authzUser(SYSTEM_USER))));
         tenantAccess = new TenantAccess(securityContext, stores, relationships);
         vertx = Vertx.vertx();
     }

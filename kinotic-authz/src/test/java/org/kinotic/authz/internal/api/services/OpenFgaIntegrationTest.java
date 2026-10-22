@@ -52,10 +52,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Exercises the store and relationship services against a real OpenFGA: the platform store, created ahead of
+ * Exercises the store and relationship services against a real OpenFGA: the system store, created ahead of
  * the servers, found by name on first use, a generated model written once and reused while it is
  * unchanged, relationships written in batches, and checks answering from them. OpenFGA runs from the image the
  * dev stack declares when Docker is available, else at the URL in the {@code OPENFGA_URL} environment
@@ -94,21 +94,21 @@ class OpenFgaIntegrationTest {
             openfga.start();
             apiUrl = "http://" + openfga.getHost() + ":" + openfga.getMappedPort(8080);
         }
-        createPlatformStoreAheadOfTheServers();
+        createSystemStoreAheadOfTheServers();
     }
 
     /**
-     * The role terraform or the dev stack plays before a server starts: the one store of the platform's name.
+     * The role terraform or the dev stack plays before a server starts: the one store of the system's name.
      */
-    private static void createPlatformStoreAheadOfTheServers() throws Exception {
+    private static void createSystemStoreAheadOfTheServers() throws Exception {
         KinoticAuthzProperties properties = new KinoticAuthzProperties();
         properties.getAuthz().setApiUrl(apiUrl);
         OpenFgaService fga = new OpenFgaService(properties);
-        boolean exists = await(fga.listStores(100, null, DefaultAuthzStoreService.PLATFORM_STORE_NAME))
+        boolean exists = await(fga.listStores(100, null, DefaultAuthzStoreService.SYSTEM_STORE_NAME))
                 .getStores().stream()
-                .anyMatch(store -> DefaultAuthzStoreService.PLATFORM_STORE_NAME.equals(store.getName()));
+                .anyMatch(store -> DefaultAuthzStoreService.SYSTEM_STORE_NAME.equals(store.getName()));
         if (!exists) {
-            await(fga.createStore(new CreateStoreRequest().name(DefaultAuthzStoreService.PLATFORM_STORE_NAME)));
+            await(fga.createStore(new CreateStoreRequest().name(DefaultAuthzStoreService.SYSTEM_STORE_NAME)));
         }
     }
 
@@ -125,17 +125,17 @@ class OpenFgaIntegrationTest {
     }
 
     @Test
-    void platformModelGoesToTheStoreOfThePlatformsName() throws Exception {
-        AuthzModel model = generator.platformModel(List.of(projectService()));
+    void systemModelGoesToTheStoreOfTheSystemsName() throws Exception {
+        AuthzModel model = generator.systemModel(List.of(projectService()));
 
-        String modelId = await(storeService.ensureModel(PLATFORM, model));
+        String modelId = await(storeService.ensureModel(SYSTEM, model));
 
-        assertEquals(modelId, await(storeService.ensureModel(PLATFORM, model)));
+        assertEquals(modelId, await(storeService.ensureModel(SYSTEM, model)));
         // every node resolves the same store
-        assertEquals(modelId, await(new DefaultAuthzStoreService(fga, properties, vertx).ensureModel(PLATFORM, model)));
-        String platformStoreId = await(fga.listStores(100, null, DefaultAuthzStoreService.PLATFORM_STORE_NAME))
+        assertEquals(modelId, await(new DefaultAuthzStoreService(fga, properties, vertx).ensureModel(SYSTEM, model)));
+        String systemStoreId = await(fga.listStores(100, null, DefaultAuthzStoreService.SYSTEM_STORE_NAME))
                 .getStores().getFirst().getId();
-        assertEquals(modelId, await(fga.readAuthorizationModels(platformStoreId, 1, null))
+        assertEquals(modelId, await(fga.readAuthorizationModels(systemStoreId, 1, null))
                 .getAuthorizationModels().getFirst().getId());
     }
 
@@ -144,21 +144,21 @@ class OpenFgaIntegrationTest {
         KinoticAuthzProperties unreachable = new KinoticAuthzProperties();
         unreachable.getAuthz().setApiUrl("http://127.0.0.1:1");
         DefaultAuthzStoreService node = new DefaultAuthzStoreService(new OpenFgaService(unreachable), unreachable, vertx);
-        AuthzModel model = generator.platformModel(List.of(projectService()));
+        AuthzModel model = generator.systemModel(List.of(projectService()));
 
-        assertThrows(ExecutionException.class, () -> await(node.ensureModel(PLATFORM, model)));
-        assertThrows(ExecutionException.class, () -> await(node.ensureModel(PLATFORM, model)));
+        assertThrows(ExecutionException.class, () -> await(node.ensureModel(SYSTEM, model)));
+        assertThrows(ExecutionException.class, () -> await(node.ensureModel(SYSTEM, model)));
     }
 
     @Test
     void modelIsWrittenOnceAndReusedWhileUnchanged() throws Exception {
         await(storeService.ensureStore("model-test"));
-        AuthzModel model = generator.platformModel(List.of(projectService()));
+        AuthzModel model = generator.systemModel(List.of(projectService()));
 
         String modelId = await(storeService.ensureModel("model-test", model));
 
         assertEquals(modelId, await(storeService.ensureModel("model-test", model)));
-        AuthzModel grown = generator.platformModel(List.of(projectService(), vmNodeService()));
+        AuthzModel grown = generator.systemModel(List.of(projectService(), vmNodeService()));
         assertNotEquals(modelId, await(storeService.ensureModel("model-test", grown)));
     }
 
@@ -262,7 +262,7 @@ class OpenFgaIntegrationTest {
 
     @Test
     void checksAnswerFromWrittenRelationships() throws Exception {
-        String modelId = await(storeService.ensureModel(PLATFORM, generator.platformModel(List.of(projectService()))));
+        String modelId = await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
         List<RelationshipTuple> written = List.of(
                 new RelationshipTuple("user:sally-checks", "member", "organization:acme-checks"),
                 new RelationshipTuple("organization:acme-checks", "organization", "application:crm-checks"),
@@ -272,129 +272,129 @@ class OpenFgaIntegrationTest {
                 new RelationshipTuple("project_role:project.editor_checks", "role", "project_role_binding:sally_edits_billing_checks"),
                 new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"),
                 new RelationshipTuple("project_role_binding:sally_edits_billing_checks", "role_binding", "project:billing-checks"));
-        await(relationshipService.write(PLATFORM, written, List.of()));
+        await(relationshipService.write(SYSTEM, written, List.of()));
 
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
         // editing implies reading
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_delete", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:shipping-checks"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_delete", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:shipping-checks"), Consistency.HIGHER_CONSISTENCY)));
         assertEquals(List.of("project:billing-checks"),
-                     await(relationshipService.listObjects(PLATFORM, modelId, "user:sally-checks", "project_can_read", "project", Consistency.HIGHER_CONSISTENCY)));
+                     await(relationshipService.listObjects(SYSTEM, modelId, "user:sally-checks", "project_can_read", "project", Consistency.HIGHER_CONSISTENCY)));
 
-        await(relationshipService.write(PLATFORM, List.of(), List.of(
+        await(relationshipService.write(SYSTEM, List.of(), List.of(
                 new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"))));
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
         // the store is shared with the other tests and with a run against a persistent engine, so nothing written here stays
-        await(relationshipService.remove(PLATFORM, written));
+        await(relationshipService.remove(SYSTEM, written));
     }
 
     @Test
     void builtInRolesAreSeededByDifferenceAndBindingsGrantThem() throws Exception {
-        AuthzModel model = generator.platformModel(List.of(projectService()));
-        String modelId = await(storeService.ensureModel(PLATFORM, model));
+        AuthzModel model = generator.systemModel(List.of(projectService()));
+        String modelId = await(storeService.ensureModel(SYSTEM, model));
 
-        await(relationshipService.ensureRoles(PLATFORM, model.roles()));
-        List<RelationshipTuple> editor = await(relationshipService.read(PLATFORM, AuthzUtil.roleObject("project.editor")));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
+        List<RelationshipTuple> editor = await(relationshipService.read(SYSTEM, AuthzUtil.roleObject("project.editor")));
         assertEquals(Set.of("project_can_edit", "project_can_read"),
                      editor.stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
         // in step already: nothing is written, and nothing fails on a tuple held already
-        await(relationshipService.ensureRoles(PLATFORM, model.roles()));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
         // a permission the role no longer bundles is removed, one it lacks is added
-        await(relationshipService.ensureRoles(PLATFORM, Map.of("project.editor", Set.of("project_can_read", "project_can_delete"))));
+        await(relationshipService.ensureRoles(SYSTEM, Map.of("project.editor", Set.of("project_can_read", "project_can_delete"))));
         assertEquals(Set.of("project_can_delete", "project_can_read"),
-                     await(relationshipService.read(PLATFORM, AuthzUtil.roleObject("project.editor"))).stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
-        await(relationshipService.ensureRoles(PLATFORM, model.roles()));
+                     await(relationshipService.read(SYSTEM, AuthzUtil.roleObject("project.editor"))).stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
 
-        await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("application:crm-roles", "application", "project:billing-roles"))));
-        String bindingId = await(relationshipService.bind(PLATFORM, "project.editor", "user:sally-roles", "project:billing-roles"));
-        assertTrue(await(relationshipService.holds(PLATFORM, new RelationshipTuple(AuthzUtil.bindingObject("project:billing-roles", bindingId), "role_binding", "project:billing-roles"))));
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-roles", "project_can_edit", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
+        await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("application:crm-roles", "application", "project:billing-roles"))));
+        String bindingId = await(relationshipService.bind(SYSTEM, "project.editor", "user:sally-roles", "project:billing-roles"));
+        assertTrue(await(relationshipService.holds(SYSTEM, new RelationshipTuple(AuthzUtil.bindingObject("project:billing-roles", bindingId), "role_binding", "project:billing-roles"))));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-roles", "project_can_edit", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         // a binding of the organization admin on the organization reaches the project inside it
-        await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("organization:acme-roles", "organization", "application:crm-roles"))));
-        await(relationshipService.bind(PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "organization:acme-roles"));
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:marcus-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
+        await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("organization:acme-roles", "organization", "application:crm-roles"))));
+        await(relationshipService.bind(SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "organization:acme-roles"));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:marcus-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         // the engine refuses a role homed above the resource, and a binding attached to a resource of another type
         assertThrows(ExecutionException.class,
-                     () -> await(relationshipService.bind(PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "project:billing-roles")));
-        assertThrows(ExecutionException.class, () -> await(relationshipService.write(PLATFORM, List.of(
+                     () -> await(relationshipService.bind(SYSTEM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "project:billing-roles")));
+        assertThrows(ExecutionException.class, () -> await(relationshipService.write(SYSTEM, List.of(
                 new RelationshipTuple("organization_role_binding:misplaced-roles", "role_binding", "project:billing-roles")), List.of())));
     }
 
     @Test
     void ensureAndRemoveAreIdempotent() throws Exception {
-        await(storeService.ensureModel(PLATFORM, generator.platformModel(List.of(projectService()))));
+        await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
         RelationshipTuple contained = new RelationshipTuple("application:crm-ensure", "application", "project:billing-ensure");
         RelationshipTuple member = new RelationshipTuple("user:sally-ensure", "member", "organization:acme-ensure");
 
-        await(relationshipService.ensure(PLATFORM, List.of(contained, member)));
-        await(relationshipService.ensure(PLATFORM, List.of(contained, member)));
-        assertTrue(await(relationshipService.holds(PLATFORM, contained)));
-        assertTrue(await(relationshipService.holds(PLATFORM, member)));
-        await(relationshipService.remove(PLATFORM, List.of(contained)));
-        await(relationshipService.remove(PLATFORM, List.of(contained, member)));
-        assertFalse(await(relationshipService.holds(PLATFORM, contained)));
-        assertFalse(await(relationshipService.holds(PLATFORM, member)));
+        await(relationshipService.ensure(SYSTEM, List.of(contained, member)));
+        await(relationshipService.ensure(SYSTEM, List.of(contained, member)));
+        assertTrue(await(relationshipService.holds(SYSTEM, contained)));
+        assertTrue(await(relationshipService.holds(SYSTEM, member)));
+        await(relationshipService.remove(SYSTEM, List.of(contained)));
+        await(relationshipService.remove(SYSTEM, List.of(contained, member)));
+        assertFalse(await(relationshipService.holds(SYSTEM, contained)));
+        assertFalse(await(relationshipService.holds(SYSTEM, member)));
         // two writers at once, as two servers provisioning one application are, each find the other's work done
-        await(Future.all(relationshipService.ensure(PLATFORM, List.of(contained)), relationshipService.ensure(PLATFORM, List.of(contained))));
-        assertTrue(await(relationshipService.holds(PLATFORM, contained)));
-        await(Future.all(relationshipService.remove(PLATFORM, List.of(contained)), relationshipService.remove(PLATFORM, List.of(contained))));
-        assertFalse(await(relationshipService.holds(PLATFORM, contained)));
+        await(Future.all(relationshipService.ensure(SYSTEM, List.of(contained)), relationshipService.ensure(SYSTEM, List.of(contained))));
+        assertTrue(await(relationshipService.holds(SYSTEM, contained)));
+        await(Future.all(relationshipService.remove(SYSTEM, List.of(contained)), relationshipService.remove(SYSTEM, List.of(contained))));
+        assertFalse(await(relationshipService.holds(SYSTEM, contained)));
     }
 
     @Test
     void writesBeyondOneRequestAreBatched() throws Exception {
-        String modelId = await(storeService.ensureModel(PLATFORM, generator.platformModel(List.of(projectService()))));
+        String modelId = await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
         List<RelationshipTuple> members = new ArrayList<>();
         for (int i = 0; i < 250; i++) {
             members.add(new RelationshipTuple("user:member" + i, "member", "group:everyone-batch"));
         }
 
-        await(relationshipService.write(PLATFORM, members, List.of()));
+        await(relationshipService.write(SYSTEM, members, List.of()));
 
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:member249", "member", "group:everyone-batch"), Consistency.HIGHER_CONSISTENCY)));
-        await(relationshipService.write(PLATFORM, List.of(), members));
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:member249", "member", "group:everyone-batch"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:member249", "member", "group:everyone-batch"), Consistency.HIGHER_CONSISTENCY)));
+        await(relationshipService.write(SYSTEM, List.of(), members));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:member249", "member", "group:everyone-batch"), Consistency.HIGHER_CONSISTENCY)));
     }
 
     @Test
-    void platformModelIdIsTheVersionTheStoreRuns() throws Exception {
-        String modelId = await(storeService.ensureModel(PLATFORM, generator.platformModel(List.of(projectService()))));
+    void systemModelIdIsTheVersionTheStoreRuns() throws Exception {
+        String modelId = await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
 
-        assertEquals(modelId, await(storeService.modelId(PLATFORM)));
+        assertEquals(modelId, await(storeService.modelId(SYSTEM)));
     }
 
     @Test
     void unbindLeavesNothingOfABindingAndReadsByUserFindItsHolders() throws Exception {
-        AuthzModel model = generator.platformModel(List.of(projectService()));
-        String modelId = await(storeService.ensureModel(PLATFORM, model));
-        await(relationshipService.ensureRoles(PLATFORM, model.roles()));
-        await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
-        String bindingId = await(relationshipService.bind(PLATFORM, "project.editor", "user:sally-unbind", "project:billing-unbind"));
+        AuthzModel model = generator.systemModel(List.of(projectService()));
+        String modelId = await(storeService.ensureModel(SYSTEM, model));
+        await(relationshipService.ensureRoles(SYSTEM, model.roles()));
+        await(relationshipService.ensure(SYSTEM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
+        String bindingId = await(relationshipService.bind(SYSTEM, "project.editor", "user:sally-unbind", "project:billing-unbind"));
         String binding = AuthzUtil.bindingObject("project:billing-unbind", bindingId);
-        assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-unbind", "project_can_edit", "project:billing-unbind"), Consistency.HIGHER_CONSISTENCY)));
-        assertTrue(await(relationshipService.readByUser(PLATFORM, AuthzUtil.roleObject("project.editor"), "project_role_binding")).stream()
+        assertTrue(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-unbind", "project_can_edit", "project:billing-unbind"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.readByUser(SYSTEM, AuthzUtil.roleObject("project.editor"), "project_role_binding")).stream()
                         .anyMatch(tuple -> tuple.object().equals(binding)));
 
-        await(relationshipService.unbind(PLATFORM, bindingId, "project:billing-unbind"));
+        await(relationshipService.unbind(SYSTEM, bindingId, "project:billing-unbind"));
 
-        assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-unbind", "project_can_edit", "project:billing-unbind"), Consistency.HIGHER_CONSISTENCY)));
-        assertTrue(await(relationshipService.read(PLATFORM, binding)).isEmpty());
-        assertFalse(await(relationshipService.holds(PLATFORM, new RelationshipTuple(binding, "role_binding", "project:billing-unbind"))));
+        assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-unbind", "project_can_edit", "project:billing-unbind"), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationshipService.read(SYSTEM, binding)).isEmpty());
+        assertFalse(await(relationshipService.holds(SYSTEM, new RelationshipTuple(binding, "role_binding", "project:billing-unbind"))));
         // a binding already gone leaves nothing to remove
-        await(relationshipService.unbind(PLATFORM, bindingId, "project:billing-unbind"));
-        await(relationshipService.remove(PLATFORM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
+        await(relationshipService.unbind(SYSTEM, bindingId, "project:billing-unbind"));
+        await(relationshipService.remove(SYSTEM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
     }
 
     @Test
     void theStoreResolvedOnOneContextKeepsLaterCallersOnTheirOwn() throws Exception {
         // the store is resolved once and kept, so every caller after the first composes on a kept result
         DefaultAuthzStoreService node = new DefaultAuthzStoreService(fga, properties, vertx);
-        await(onContext(vertx.getOrCreateContext(), () -> node.modelId(PLATFORM)));
+        await(onContext(vertx.getOrCreateContext(), () -> node.modelId(SYSTEM)));
         Context later = vertx.getOrCreateContext();
 
-        boolean stayed = await(onContext(later, () -> node.modelId(PLATFORM).map(id -> Vertx.currentContext() == later)));
+        boolean stayed = await(onContext(later, () -> node.modelId(SYSTEM).map(id -> Vertx.currentContext() == later)));
         assertTrue(stayed, "a continuation composed on the kept result left the caller's context");
     }
 
@@ -427,15 +427,15 @@ class OpenFgaIntegrationTest {
                        function("findById", "report", "report", "can_read"));
     }
 
-    // the platform's entities repository, whose declaration gives a definition's rows their permissions
+    // the system's entities repository, whose declaration gives a definition's rows their permissions
     private static ServiceDefinition entitiesRepository() {
         return service("JsonEntitiesRepository", "entity_definition", "application",
                        function("findById", "entity_definition", "entity_definition", "can_read"));
     }
 
     private static ServiceDefinition vmNodeService() {
-        return service("VmNodeService", "vm_node", "platform",
-                       function("register", "platform", "vm_node", "can_register_node"));
+        return service("VmNodeService", "vm_node", "system",
+                       function("register", "system", "vm_node", "can_register_node"));
     }
 
     private static ServiceDefinition service(String name, String type, String parent, FunctionDefinition... functions) {

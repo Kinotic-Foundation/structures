@@ -21,18 +21,18 @@ import java.util.List;
  * {@link VmNode#getState() state} until its next heartbeat, and takes no workloads meanwhile.
  * <p>
  * A machine registers a node with the {@link #REGISTRAR_ROLE registrar} role granted on the
- * platform, and reports for the node it registered with the {@link #AGENT_ROLE agent} role the
+ * system, and reports for the node it registered with the {@link #AGENT_ROLE agent} role the
  * registration grants it on that node.
  * <p>
  * For querying nodes (findById, findAll, search) use {@link VmNodeService} directly.
  */
 @Publish
-@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.PLATFORM_TYPE,
+@AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.SYSTEM_TYPE,
                roles = {@AuthzRole(id = VmNodeOrchestrationService.REGISTRAR_ROLE, permissions = AuthzUtil.CAN_REGISTER_NODE),
                         @AuthzRole(id = VmNodeOrchestrationService.AGENT_ROLE, permissions = {AuthzUtil.CAN_REPORT, AuthzUtil.CAN_READ})})
 public interface VmNodeOrchestrationService {
 
-    /** The role a platform machine registers nodes with, granted on the platform. */
+    /** The role a system machine registers nodes with, granted on the system. */
     String REGISTRAR_ROLE = VmNodeService.RESOURCE_TYPE + ".registrar";
 
     /** The role a registered node's machine reports with, granted on the node by its registration. */
@@ -47,7 +47,7 @@ public interface VmNodeOrchestrationService {
      * @param registration the node registration info
      * @return a future that will complete with the registered node
      */
-    @AuthzCheck(resource = AuthzUtil.PLATFORM_TYPE, permission = AuthzUtil.CAN_REGISTER_NODE)
+    @AuthzCheck(resource = AuthzUtil.SYSTEM_TYPE, permission = AuthzUtil.CAN_REGISTER_NODE)
     Future<VmNode> registerNode(VmNodeRegistration registration);
 
     /**

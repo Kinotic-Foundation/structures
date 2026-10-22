@@ -11,7 +11,7 @@ import org.kinotic.system.api.model.cluster.KinoticClusterInfo;
  * Provides information about the ignite Kinotic cluster.
  */
 @Publish
-@AuthzResource(value = AuthzUtil.PLATFORM_TYPE, resourceId = AuthzUtil.PLATFORM_OBJECT_ID)
+@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID)
 public interface KinoticClusterInfoService {
     
     /**

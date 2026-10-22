@@ -17,7 +17,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
  */
 @Publish
 @Version("1.0.0")
-@AuthzResource(value = AuthzUtil.PLATFORM_TYPE, resourceId = AuthzUtil.PLATFORM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_CLUSTER)
+@AuthzResource(value = AuthzUtil.SYSTEM_TYPE, resourceId = AuthzUtil.SYSTEM_OBJECT_ID, permission = AuthzUtil.CAN_MANAGE_CLUSTER)
 public interface LogManager {
 
     @Scope

@@ -10,7 +10,7 @@ export interface PermissionName {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  platform: 'Platform',
+  system: 'System',
   organization: 'Organization',
   application: 'Application',
   project: 'Project',

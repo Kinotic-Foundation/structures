@@ -80,7 +80,7 @@ import java.util.Set;
 public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializingSingleton {
 
     private static final String LIVENESS_SINGLETON_NAME = "kinotic-service-liveness-updater";
-    // the platform publishes a few dozen services, so its definitions are read in a page or two
+    // the system publishes a few dozen services, so its definitions are read in a page or two
     private static final int DEFINITIONS_PAGE_SIZE = 200;
 
     // A strategy pattern is used, to favor composition over inheritance

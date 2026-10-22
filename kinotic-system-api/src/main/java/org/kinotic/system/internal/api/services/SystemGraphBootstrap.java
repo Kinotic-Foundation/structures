@@ -21,24 +21,24 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places the platform's staff and nodes in the authorization graph when the platform has no administrator, once
- * the server is up and the platform store runs a model: every node on the platform, every enabled platform
- * machine as a registrar of nodes, and every enabled system user as the platform's administrator. A
- * platform a migration seeds has system users, a vm-manager and nodes but no tuples, and this gives it the ones it
- * needs to be run; a platform with an administrator, whatever else was granted or revoked since, is left as it is.
+ * Places the system's staff and nodes in the authorization graph when the system has no administrator, once
+ * the server is up and the system store runs a model: every node on the system, every enabled system
+ * machine as a registrar of nodes, and every enabled system user as the system's administrator. A
+ * system a migration seeds has system users, a vm-manager and nodes but no tuples, and this gives it the ones it
+ * needs to be run; a system with an administrator, whatever else was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PlatformGraphBootstrap {
+public class SystemGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
-    // The platform's system users, machines and nodes fit one page: a platform has a handful of each
+    // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
-    private static final String PLATFORM_OBJECT = AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID);
+    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID);
 
     private final Vertx vertx;
     private final ParticipantIdentityService identities;
@@ -52,25 +52,25 @@ public class PlatformGraphBootstrap {
     }
 
     private void run() {
-        stores.modelId(PLATFORM)
+        stores.modelId(SYSTEM)
               .compose(modelId -> administered())
               .compose(administered -> administered ? Future.succeededFuture(0) : placeStaff())
               .onSuccess(bound -> {
                   if (bound > 0) {
-                      log.info("Bound {} system user(s) and machine(s) as the platform's staff", bound);
+                      log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
                   }
               })
-              // the reconciler writes the platform model shortly after the servers start, so a store that runs
+              // the reconciler writes the system model shortly after the servers start, so a store that runs
               // none yet, like one that cannot be reached, is asked again
               .onFailure(e -> {
-                  log.debug("The platform staff sweep waits: {}", e.getMessage());
+                  log.debug("The system staff sweep waits: {}", e.getMessage());
                   vertx.setTimer(RETRY_MILLIS, t -> run());
               });
     }
 
     private Future<Boolean> administered() {
-        return relationships.findGrants(PLATFORM, PLATFORM_OBJECT)
-                            .map(grants -> grants.stream().anyMatch(grant -> AuthzUtil.PLATFORM_ADMIN_ROLE.equals(grant.roleId())));
+        return relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
+                            .map(grants -> grants.stream().anyMatch(grant -> AuthzUtil.SYSTEM_ADMIN_ROLE.equals(grant.roleId())));
     }
 
     private Future<Integer> placeStaff() {
@@ -78,8 +78,8 @@ public class PlatformGraphBootstrap {
         // an administrator ends the sweep for every server, so the nodes and machines are placed before it: a sweep
         // cut short before the administrator leaves none, and the next sweep places everything again
         return nodes.findAll(page)
-                    .compose(found -> relationships.ensure(PLATFORM, found.getContent().stream()
-                                                                         .map(node -> DomainUtil.containment(PLATFORM_OBJECT,
+                    .compose(found -> relationships.ensure(SYSTEM, found.getContent().stream()
+                                                                         .map(node -> DomainUtil.containment(SYSTEM_OBJECT,
                                                                                                              AuthzUtil.object(VmNodeService.RESOURCE_TYPE, node.getId())))
                                                                          .toList()))
                     .compose(v -> identities.findMachinesByScope(null, null, page))
@@ -93,7 +93,7 @@ public class PlatformGraphBootstrap {
                                                                                 .filter(SystemParticipantIdentity::isEnabled)
                                                                                 .map(user -> AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId()))
                                                                                 .toList(),
-                                                                           AuthzUtil.PLATFORM_ADMIN_ROLE))
+                                                                           AuthzUtil.SYSTEM_ADMIN_ROLE))
                                                 .map(more -> bound + more));
     }
 
@@ -102,7 +102,7 @@ public class PlatformGraphBootstrap {
         Future<Integer> ret = Future.succeededFuture(0);
         for (String user : users) {
             String bindingId = roleId + "-of-" + AuthzUtil.idOf(user);
-            ret = ret.compose(count -> relationships.ensureBound(PLATFORM, bindingId, roleId, user, PLATFORM_OBJECT).map(count + 1));
+            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT).map(count + 1));
         }
         return ret;
     }

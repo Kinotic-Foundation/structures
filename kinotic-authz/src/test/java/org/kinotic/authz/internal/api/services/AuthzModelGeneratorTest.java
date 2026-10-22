@@ -36,7 +36,7 @@ public class AuthzModelGeneratorTest {
     public void aFunctionMarkedUncheckedAddsNoPermission() {
         FunctionDefinition ping = new FunctionDefinition().setName("ping");
         ping.setDecorators(List.of(new AuthzCheckC3Decorator().setUnchecked(true)));
-        AuthzModel model = generator.platformModel(List.of(service("ReportService", "report", "organization",
+        AuthzModel model = generator.systemModel(List.of(service("ReportService", "report", "organization",
                                                                    function("findReports", "report", "report", "can_read"), ping)));
 
         assertEquals(Set.of("can_read"), model.permissions().get("report"));
@@ -46,7 +46,7 @@ public class AuthzModelGeneratorTest {
         return service(name, type, parent, List.of(), functions);
     }
 
-    // the platform's entities repository as the directory holds it: the rows' permissions, a ladder but for creating
+    // the system's entities repository as the directory holds it: the rows' permissions, a ladder but for creating
     private static ServiceDefinition entitiesRepository() {
         return service("JsonEntitiesRepository", "entity_definition", "application",
                        function("count", "entity_definition", "entity_definition", "can_read"),
@@ -90,24 +90,24 @@ public class AuthzModelGeneratorTest {
         return ret;
     }
 
-    private static List<ServiceDefinition> platformServices() {
+    private static List<ServiceDefinition> systemServices() {
         return List.of(service("ProjectService", "project", "application",
                                function("findById", "project", "project", "can_read"),
                                function("save", "project", "project", "can_edit"),
                                function("deleteById", "project", "project", "can_delete"),
                                function("deploy", "project", "project", "can_deploy", "can_read"),
                                function("count", "application", "project", "can_read")),
-                       service("VmNodeService", "vm_node", "platform",
+                       service("VmNodeService", "vm_node", "system",
                                List.of(role("vm_node.registrar", "can_register_node"), role("vm_node.agent", "can_report", "can_read")),
-                               function("register", "platform", "vm_node", "can_register_node"),
+                               function("register", "system", "vm_node", "can_register_node"),
                                function("heartbeat", "vm_node", "vm_node", "can_report"),
                                function("findById", "vm_node", "vm_node", "can_read")),
                        service("MemberService", "organization", null,
                                function("findMembers", "organization", "organization", "can_read_members"),
                                function("removeMember", "organization", "organization", "can_manage_members")),
-                       service("ClusterService", "platform", null,
-                               function("getClusterInfo", "platform", "platform", "can_read_cluster"),
-                               function("createMachine", "platform", "platform", "can_manage_machines")));
+                       service("ClusterService", "system", null,
+                               function("getClusterInfo", "system", "system", "can_read_cluster"),
+                               function("createMachine", "system", "system", "can_manage_machines")));
     }
 
     private static JsonNode type(AuthzModel model, String name) {
@@ -175,11 +175,11 @@ public class AuthzModelGeneratorTest {
     }
 
     @Test
-    public void platformModelHasTheKernelAndOneTypePerService() {
-        AuthzModel model = generator.platformModel(platformServices());
+    public void systemModelHasTheKernelAndOneTypePerService() {
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals("1.1", model.definition().get("schema_version").asString());
-        assertEquals(withRoleTypes("application", "organization", "platform", "project", "tenant", "vm_node"), typeNames(model));
+        assertEquals(withRoleTypes("application", "organization", "system", "project", "tenant", "vm_node"), typeNames(model));
         assertEquals(List.of("application"), directTypes(type(model, "project"), "application"));
         assertEquals(List.of("user"), directTypes(type(model, "organization"), "member"));
         assertEquals(List.of("user"), directTypes(type(model, "application"), "end_user"));
@@ -188,22 +188,22 @@ public class AuthzModelGeneratorTest {
 
     @Test
     public void everyAncestorCarriesADescendantsPermissions() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(List.of("ttu:role_binding->project_can_edit", "computed:project_can_delete", "ttu:application->project_can_edit"),
                      children(type(model, "project"), "project_can_edit", "union"));
         assertEquals(List.of("ttu:role_binding->project_can_edit", "computed:project_can_delete", "ttu:organization->project_can_edit"),
                      children(type(model, "application"), "project_can_edit", "union"));
-        assertEquals(List.of("ttu:role_binding->project_can_edit", "computed:project_can_delete", "ttu:platform->project_can_edit"),
+        assertEquals(List.of("ttu:role_binding->project_can_edit", "computed:project_can_delete", "ttu:system->project_can_edit"),
                      children(type(model, "organization"), "project_can_edit", "union"));
         assertEquals(List.of("ttu:role_binding->project_can_edit", "computed:project_can_delete"),
-                     children(type(model, "platform"), "project_can_edit", "union"));
+                     children(type(model, "system"), "project_can_edit", "union"));
         assertFalse(type(model, "tenant").get("relations").has("project_can_edit"));
     }
 
     @Test
     public void declaredAndDerivedImplicationsFormTheLattice() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(List.of("ttu:role_binding->project_can_read", "computed:project_can_deploy", "computed:project_can_edit",
                              "ttu:application->project_can_read"),
@@ -211,7 +211,7 @@ public class AuthzModelGeneratorTest {
         assertEquals(List.of("ttu:role_binding->project_can_delete", "ttu:application->project_can_delete"),
                      children(type(model, "project"), "project_can_delete", "union"));
         // a single source is the relation itself, as the engine refuses a union of one
-        JsonNode registerNode = type(model, "platform").get("relations").get("vm_node_can_register_node");
+        JsonNode registerNode = type(model, "system").get("relations").get("vm_node_can_register_node");
         assertFalse(registerNode.has("union"));
         assertEquals("role_binding", registerNode.get("tupleToUserset").get("tupleset").get("relation").asString());
         assertEquals("vm_node_can_register_node", registerNode.get("tupleToUserset").get("computedUserset").get("relation").asString());
@@ -219,15 +219,15 @@ public class AuthzModelGeneratorTest {
 
     @Test
     public void rolesBundleTheirHomesPermissionsAndBindingsNarrowThemToMembers() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(List.of("user:*"), directTypes(type(model, "project_role"), "grant"));
         assertEquals(List.of("user:*"), directTypes(type(model, "project_role"), "project_can_deploy"));
         // a role homed at a type bundles only the permissions of the type and of the types inside it
         assertFalse(type(model, "project_role").get("relations").has("organization_can_read_members"));
-        assertFalse(type(model, "organization_role").get("relations").has("platform_can_read_cluster"));
-        assertEquals(List.of("user:*"), directTypes(type(model, "platform_role"), "project_can_deploy"));
-        assertEquals(List.of("user:*"), directTypes(type(model, "platform_role"), "vm_node_can_register_node"));
+        assertFalse(type(model, "organization_role").get("relations").has("system_can_read_cluster"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "system_role"), "project_can_deploy"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "system_role"), "vm_node_can_register_node"));
         assertEquals(List.of("user", "group#member", "organization#member", "application#end_user", "tenant#member"),
                      directTypes(type(model, "project_role_binding"), "member"));
         assertEquals(List.of("computed:member", "ttu:role->project_can_deploy"),
@@ -239,21 +239,21 @@ public class AuthzModelGeneratorTest {
 
     @Test
     public void aBindingGrantsOnlyRolesHomedAtItsTypeOrInsideItWithinItsTrustBoundary() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(List.of("project_role"), directTypes(type(model, "project_role_binding"), "role"));
         assertEquals(List.of("application_role", "project_role"), directTypes(type(model, "application_role_binding"), "role"));
-        // an organization grants none of a tenant's roles, and the platform none of an organization's
+        // an organization grants none of a tenant's roles, and the system none of an organization's
         assertEquals(List.of("application_role", "organization_role", "project_role"),
                      directTypes(type(model, "organization_role_binding"), "role"));
-        assertEquals(List.of("platform_role", "vm_node_role"), directTypes(type(model, "platform_role_binding"), "role"));
+        assertEquals(List.of("system_role", "vm_node_role"), directTypes(type(model, "system_role_binding"), "role"));
         assertEquals(List.of("tenant_role"), directTypes(type(model, "tenant_role_binding"), "role"));
         assertTrue(model.grantable("project.editor", "organization"));
         assertFalse(model.grantable(AuthzUtil.ORGANIZATION_ADMIN_ROLE, "project"));
-        assertFalse(model.grantable("project.editor", "platform"));
+        assertFalse(model.grantable("project.editor", "system"));
         assertFalse(model.grantable("tenant.admin", "organization"));
         assertEquals(Set.of("application", "organization", "project"), model.grantableOn("project", "organization"));
-        assertEquals(Set.of(), model.grantableOn(AuthzUtil.PLATFORM_TYPE, "organization"));
+        assertEquals(Set.of(), model.grantableOn(AuthzUtil.SYSTEM_TYPE, "organization"));
         assertEquals(Set.of("organization", "project"), model.catalog("organization").keySet());
     }
 
@@ -274,18 +274,18 @@ public class AuthzModelGeneratorTest {
 
     @Test
     public void catalogListsTheShortPermissionsOfEachType() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(Map.of("project", Set.of("can_delete", "can_deploy", "can_edit", "can_read"),
                             "vm_node", Set.of("can_register_node", "can_report", "can_read"),
                             "organization", Set.of("can_read_members", "can_manage_members"),
-                            "platform", Set.of("can_read_cluster", "can_manage_machines")),
+                            "system", Set.of("can_read_cluster", "can_manage_machines")),
                      model.permissions());
     }
 
     @Test
     public void builtInRolesFollowTheTypesAndTheTree() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(Set.of("project_can_read"), model.roles().get("project.viewer"));
         assertEquals(Set.of("project_can_read", "project_can_edit", "project_can_deploy"), model.roles().get("project.editor"));
@@ -300,14 +300,14 @@ public class AuthzModelGeneratorTest {
         assertEquals(Set.of("organization_can_read_members"), model.roles().get("organization.viewer"));
         assertEquals(Set.of("organization_can_read_members", "organization_can_manage_members"), model.roles().get("organization.editor"));
         // a type with no reading permission has no viewer, and a role bundling nothing is not a role
-        assertEquals(Set.of("platform_can_read_cluster", "platform_can_manage_machines"), model.roles().get("platform.editor"));
+        assertEquals(Set.of("system_can_read_cluster", "system_can_manage_machines"), model.roles().get("system.editor"));
         assertFalse(model.roles().containsKey("tenant.viewer"));
         assertFalse(model.roles().containsKey("tenant.admin"));
     }
 
     @Test
     public void declaredRolesBundleTheirTypesPermissions() {
-        AuthzModel model = generator.platformModel(platformServices());
+        AuthzModel model = generator.systemModel(systemServices());
 
         assertEquals(Set.of("vm_node_can_register_node"), model.roles().get("vm_node.registrar"));
         assertEquals(Set.of("vm_node_can_report", "vm_node_can_read"), model.roles().get("vm_node.agent"));
@@ -316,67 +316,67 @@ public class AuthzModelGeneratorTest {
     }
 
     @Test
-    public void thePlatformsStaffRolesSpanEverythingOnIt() {
-        AuthzModel model = generator.platformModel(platformServices());
+    public void theSystemsStaffRolesSpanEverythingOnIt() {
+        AuthzModel model = generator.systemModel(systemServices());
 
         // the administrator holds everything in the model
         Set<String> everything = new TreeSet<>();
         model.permissions().forEach((type, permissions) -> permissions.forEach(permission -> everything.add(AuthzUtil.permissionName(type, permission))));
-        assertEquals(everything, model.roles().get(AuthzUtil.PLATFORM_ADMIN_ROLE));
-        // the maintainer holds the platform's own permissions and reads everything on it
-        assertEquals(Set.of("platform_can_read_cluster", "platform_can_manage_machines",
+        assertEquals(everything, model.roles().get(AuthzUtil.SYSTEM_ADMIN_ROLE));
+        // the maintainer holds the system's own permissions and reads everything on it
+        assertEquals(Set.of("system_can_read_cluster", "system_can_manage_machines",
                             "organization_can_read_members", "project_can_read", "vm_node_can_read"),
-                     model.roles().get(AuthzUtil.PLATFORM_MAINTAINER_ROLE));
-        // support reads the platform and everything on it
-        assertEquals(Set.of("platform_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
-                     model.roles().get(AuthzUtil.PLATFORM_SUPPORT_ROLE));
+                     model.roles().get(AuthzUtil.SYSTEM_MAINTAINER_ROLE));
+        // support reads the system and everything on it
+        assertEquals(Set.of("system_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
+                     model.roles().get(AuthzUtil.SYSTEM_SUPPORT_ROLE));
         assertFalse(model.roles().containsKey("application.maintainer"));
     }
 
     @Test
     public void aDeclaredRoleBundlingAPermissionNoFunctionRequiresFails() {
-        List<ServiceDefinition> services = List.of(service("VmNodeService", "vm_node", "platform",
+        List<ServiceDefinition> services = List.of(service("VmNodeService", "vm_node", "system",
                                                            List.of(role("vm_node.registrar", "can_fly")),
-                                                           function("register", "platform", "vm_node", "can_register_node")));
+                                                           function("register", "system", "vm_node", "can_register_node")));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("can_fly"), e.getMessage());
     }
 
     @Test
     public void aDeclaredRoleTheModelAlreadyDefinesFails() {
-        List<ServiceDefinition> services = List.of(service("VmNodeService", "vm_node", "platform",
+        List<ServiceDefinition> services = List.of(service("VmNodeService", "vm_node", "system",
                                                            List.of(role("vm_node.editor", "can_register_node")),
-                                                           function("register", "platform", "vm_node", "can_register_node")));
+                                                           function("register", "system", "vm_node", "can_register_node")));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("vm_node.editor"), e.getMessage());
     }
 
     @Test
     public void twoServicesDeclaringOneRoleMustAgreeOnIt() {
-        List<ServiceDefinition> agreeing = List.of(service("VmNodeService", "vm_node", "platform",
+        List<ServiceDefinition> agreeing = List.of(service("VmNodeService", "vm_node", "system",
                                                            List.of(role("vm_node.registrar", "can_register_node")),
-                                                           function("register", "platform", "vm_node", "can_register_node")),
-                                                   service("VmNodeAdminService", "vm_node", "platform",
+                                                           function("register", "system", "vm_node", "can_register_node")),
+                                                   service("VmNodeAdminService", "vm_node", "system",
                                                            List.of(role("vm_node.registrar", "can_register_node"))));
         List<ServiceDefinition> disagreeing = List.of(agreeing.getFirst(),
-                                                      service("VmNodeAdminService", "vm_node", "platform",
+                                                      service("VmNodeAdminService", "vm_node", "system",
                                                               List.of(role("vm_node.registrar", "can_register_node", "can_read")),
                                                               function("findById", "vm_node", "vm_node", "can_read")));
 
-        assertEquals(Set.of("vm_node_can_register_node"), generator.platformModel(agreeing).roles().get("vm_node.registrar"));
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(disagreeing));
+        assertEquals(Set.of("vm_node_can_register_node"), generator.systemModel(agreeing).roles().get("vm_node.registrar"));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(disagreeing));
         assertTrue(e.getMessage().contains("VmNodeAdminService"), e.getMessage());
     }
 
     @Test
     public void hashIdentifiesTheDefinition() {
-        AuthzModel model = generator.platformModel(platformServices());
-        AuthzModel same = generator.platformModel(platformServices());
-        AuthzModel other = generator.platformModel(List.of(platformServices().getFirst()));
+        AuthzModel model = generator.systemModel(systemServices());
+        AuthzModel same = generator.systemModel(systemServices());
+        AuthzModel other = generator.systemModel(List.of(systemServices().getFirst()));
 
         assertEquals(model.hash(), same.hash());
         assertEquals(32, model.hash().length());
@@ -430,15 +430,15 @@ public class AuthzModelGeneratorTest {
     }
 
     @Test
-    public void anApplicationModelCarriesThePlatformServicesDeclaredOnTheTenant() {
-        List<ServiceDefinition> platform = List.of(service("TenantMemberService", "tenant", "application",
+    public void anApplicationModelCarriesTheSystemServicesDeclaredOnTheTenant() {
+        List<ServiceDefinition> system = List.of(service("TenantMemberService", "tenant", "application",
                                                            function("findMembers", "tenant", "tenant", "can_read_members")),
                                                    service("ApplicationService", "application", "organization",
                                                            function("findById", "application", "application", "can_read")),
                                                    service("ProjectService", "project", "application",
                                                            function("findById", "project", "project", "can_read")),
                                                    entitiesRepository());
-        AuthzModel model = generator.applicationModel(platform, List.of());
+        AuthzModel model = generator.applicationModel(system, List.of());
 
         assertEquals(applicationTypes(), typeNames(model));
         assertEquals(Set.of("can_read_members"), model.permissions().get("tenant"));
@@ -449,12 +449,12 @@ public class AuthzModelGeneratorTest {
     }
 
     @Test
-    public void aServiceOnTheDefinitionTypeAddsItsPermissionsToThePlatformsDefinition() {
+    public void aServiceOnTheDefinitionTypeAddsItsPermissionsToTheSystemsDefinition() {
         ServiceDefinition entities = service("JsonEntitiesRepository", "entity_definition", "application",
                                              function("findById", "entity_definition", "entity_definition", "can_read"));
-        List<ServiceDefinition> platform = new ArrayList<>(platformServices());
-        platform.add(entities);
-        AuthzModel model = generator.platformModel(platform);
+        List<ServiceDefinition> system = new ArrayList<>(systemServices());
+        system.add(entities);
+        AuthzModel model = generator.systemModel(system);
 
         assertTrue(type(model, "entity_definition").get("relations").has("entity_definition_can_read"));
         assertTrue(type(model, "organization").get("relations").has("entity_definition_can_read"));
@@ -466,7 +466,7 @@ public class AuthzModelGeneratorTest {
         List<ServiceDefinition> services = List.of(service("WidgetService", "widget", "galaxy",
                                                            function("findById", "widget", "widget", "can_read")));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("galaxy"));
     }
@@ -476,7 +476,7 @@ public class AuthzModelGeneratorTest {
         List<ServiceDefinition> services = List.of(service("ProjectService", "project", "application"),
                                                    service("OtherProjectService", "project", "organization"));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("OtherProjectService"));
     }
@@ -486,7 +486,7 @@ public class AuthzModelGeneratorTest {
         List<ServiceDefinition> services = List.of(service("ProjectService", "project", "application",
                                                            function("audit", "project", "ledger", "can_read")));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("ledger"));
     }
@@ -497,7 +497,7 @@ public class AuthzModelGeneratorTest {
                                                            function("audit", "a_very_long_resource_type_name_indeed",
                                                                     "a_very_long_resource_type_name_indeed", "can_do_something_long")));
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.platformModel(services));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> generator.systemModel(services));
 
         assertTrue(e.getMessage().contains("50"));
     }

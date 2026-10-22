@@ -153,7 +153,7 @@ public class DefaultSignUpService implements SignUpService {
                                                                      // the founder administers the organization: a binding of the organization
                                                                      // admin role on it, which reaches everything inside it
                                                                      return organizationService.save(savedOrg)
-                                                                                               .compose(v -> relationships.bind(AuthzStoreService.PLATFORM,
+                                                                                               .compose(v -> relationships.bind(AuthzStoreService.SYSTEM,
                                                                                                                                 AuthzUtil.ORGANIZATION_ADMIN_ROLE,
                                                                                                                                 DomainUtil.authzMember(founder.getId(), savedOrg.getId()),
                                                                                                                                 AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, savedOrg.getId())))

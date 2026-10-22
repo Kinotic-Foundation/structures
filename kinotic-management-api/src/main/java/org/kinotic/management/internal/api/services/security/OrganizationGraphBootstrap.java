@@ -23,11 +23,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
  * Places every organization that has no administrator in the authorization graph, once the server is up and the
- * platform store runs a model: the organization on the platform, its enabled members as its members, and the
+ * system store runs a model: the organization on the system, its enabled members as its members, and the
  * membership of its creator as its administrator. A sign-up does the same for the organization it creates; an
  * organization a migration seeds has records but no tuples, and this gives it the ones a sign-up would have. An
  * organization with an administrator, whatever else was granted or revoked since, is left as it is.
@@ -52,14 +52,14 @@ public class OrganizationGraphBootstrap {
     }
 
     private void run() {
-        stores.modelId(PLATFORM)
+        stores.modelId(SYSTEM)
               .compose(modelId -> page(null, 0))
               .onSuccess(placed -> {
                   if (placed > 0) {
                       log.info("Placed {} organization(s) in the authorization graph", placed);
                   }
               })
-              // the reconciler writes the platform model shortly after the servers start, so a store that runs
+              // the reconciler writes the system model shortly after the servers start, so a store that runs
               // none yet, like one that cannot be reached, is asked again
               .onFailure(e -> {
                   log.debug("The organization graph sweep waits: {}", e.getMessage());
@@ -87,12 +87,12 @@ public class OrganizationGraphBootstrap {
         String object = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organization.getId());
         return administered(object).compose(administered -> administered
                 ? Future.succeededFuture(false)
-                : relationships.ensure(PLATFORM, List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID),
+                : relationships.ensure(SYSTEM, List.of(DomainUtil.containment(AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID),
                                                                                 object)))
                                .compose(v -> members(organization.getId(), 0))
                                .compose(v -> organization.getCreatedBy() == null
                                        ? Future.succeededFuture()
-                                       : relationships.bind(PLATFORM,
+                                       : relationships.bind(SYSTEM,
                                                             AuthzUtil.ORGANIZATION_ADMIN_ROLE,
                                                             DomainUtil.authzMember(organization.getCreatedBy(), organization.getId()),
                                                             object).mapEmpty())
@@ -107,13 +107,13 @@ public class OrganizationGraphBootstrap {
                                                                                        AuthzUtil.MEMBER_RELATION,
                                                                                        AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId)))
                                                   .toList();
-            Future<Void> ret = relationships.ensure(PLATFORM, enabled);
+            Future<Void> ret = relationships.ensure(SYSTEM, enabled);
             return page.getContent().size() < PAGE_SIZE ? ret : ret.compose(v -> members(organizationId, pageNumber + 1));
         });
     }
 
     private Future<Boolean> administered(String object) {
-        return relationships.findGrants(PLATFORM, object)
+        return relationships.findGrants(SYSTEM, object)
                             .map(grants -> grants.stream().anyMatch(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId())));
     }
 }

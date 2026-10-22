@@ -5,20 +5,20 @@ import org.kinotic.authz.api.model.AuthzModel;
 
 /**
  * The stores of the authorization engine and the model each one runs. Every operation names its store the
- * way the store's record is named, {@link #PLATFORM} for the platform's and an application's id for its own,
+ * way the store's record is named, {@link #SYSTEM} for the system's and an application's id for its own,
  * and the engine's own id is resolved from the name.
  * Created by Navíd Mitchell 🤪on 10/4/26
  */
 public interface AuthzStoreService {
 
     /**
-     * The name of the platform's store, the id of its record. An application's store is named by the
+     * The name of the system's store, the id of its record. An application's store is named by the
      * application's id.
      */
-    String PLATFORM = "platform";
+    String SYSTEM = "system";
 
     /**
-     * Makes the store exist in the engine. The platform's store is created ahead of the servers and never by
+     * Makes the store exist in the engine. The system's store is created ahead of the servers and never by
      * one, so for it this is a lookup that fails when there is none; an application's store is created when
      * the engine has none of its name. A store found or created is kept, and a lookup that fails, because the
      * engine is unreachable, fails the caller and is made again by the next one.

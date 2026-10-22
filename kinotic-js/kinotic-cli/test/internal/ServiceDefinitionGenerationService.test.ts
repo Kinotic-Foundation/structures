@@ -290,7 +290,7 @@ describe('ServiceDefinitionGenerationService', () => {
         expect(check.unchecked).to.equal(false)
 
         expect((fn(reports, 'ping').decorators![0] as AuthzCheckDecorator).unchecked).to.equal(true)
-        // a function declaring nothing carries no check, which the platform derives when the service registers
+        // a function declaring nothing carries no check, which the system derives when the service registers
         expect(fn(reports, 'findReports').decorators).to.not.exist
         expect(fn(reports, 'countReports').decorators).to.not.exist
 

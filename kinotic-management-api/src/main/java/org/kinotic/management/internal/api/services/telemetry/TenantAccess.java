@@ -17,22 +17,22 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.telemetry.TelemetryTenant;
 import org.springframework.stereotype.Component;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
  * Decides which telemetry tenant a caller may read. Every organization's workload logs,
  * traces, and metrics live in a tenant named by the organization id, and the platform's own
  * in {@link TelemetryTenant#SYSTEM}; an organization participant reads its own organization's
- * tenant alone, a platform participant any tenant once granted the telemetry of organizations on
- * the platform.
+ * tenant alone, a system participant any tenant once granted the telemetry of organizations on
+ * the system.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TenantAccess {
 
-    // the permission a platform grant must carry to read any tenant: the one the telemetry services require
-    // of an organization's members, held on the platform, which every organization is on
+    // the permission a system grant must carry to read any tenant: the one the telemetry services require
+    // of an organization's members, held on the system, which every organization is on
     private static final String READS_TELEMETRY = AuthzUtil.permissionName(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.CAN_READ_TELEMETRY);
 
     private final SecurityContext securityContext;
@@ -65,9 +65,9 @@ public class TenantAccess {
         Future<String> ret;
         if (participant instanceof SystemParticipant) {
             RelationshipTuple reads = new RelationshipTuple(DomainUtil.authzUser(participant), READS_TELEMETRY,
-                                                            AuthzUtil.object(AuthzUtil.PLATFORM_TYPE, AuthzUtil.PLATFORM_OBJECT_ID));
-            ret = stores.modelId(PLATFORM)
-                        .compose(modelId -> relationships.check(PLATFORM, modelId, reads, Consistency.MINIMIZE_LATENCY))
+                                                            AuthzUtil.object(AuthzUtil.SYSTEM_TYPE, AuthzUtil.SYSTEM_OBJECT_ID));
+            ret = stores.modelId(SYSTEM)
+                        .compose(modelId -> relationships.check(SYSTEM, modelId, reads, Consistency.MINIMIZE_LATENCY))
                         .map(allowed -> {
                             if (!allowed) {
                                 throw denied(participant, organizationId);

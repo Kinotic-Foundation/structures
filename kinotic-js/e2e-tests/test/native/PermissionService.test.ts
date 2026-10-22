@@ -46,9 +46,9 @@ describe('Kinotic JS', () => {
         expect(editor?.builtIn).toBe(true)
         expect(editor?.permissions).toContain('project_can_edit')
         expect(editor?.grantableOn.sort()).toEqual(['application', 'organization', 'project'])
-        // the platform's own roles and a tenant's are not the organization's to grant
+        // the system's own roles and a tenant's are not the organization's to grant
         expect(roles.every(role => ['organization', 'application', 'project', 'entity_definition'].includes(role.resourceType))).toBe(true)
-        expect(catalog.platform).toBeUndefined()
+        expect(catalog.system).toBeUndefined()
     })
 
     it('defines a custom role from the catalog and deletes it once unused', async () => {

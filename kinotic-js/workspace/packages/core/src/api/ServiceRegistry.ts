@@ -104,7 +104,7 @@ function servedFunctions(serviceInstance: object): string[] {
 /**
  * The directory entry of a service registered in an application's zone: the definition the project declared
  * for it, which names exactly the functions the instance serves, with what the registration adds. Null for a
- * service in no application's zone, or one the project declared no definition for, which the platform refuses
+ * service in no application's zone, or one the project declared no definition for, which the system refuses
  * to serve, since no contract says how.
  * @throws when the definition declares other functions than the instance serves, or the service declares a
  *         resource or is marked unchecked and the project declares no definition for it

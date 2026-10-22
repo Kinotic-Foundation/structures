@@ -7,11 +7,11 @@ import lombok.experimental.Accessors;
 import org.kinotic.authz.api.services.AuthzStoreService;
 
 /**
- * The authorization store of one scope: the platform's, which every platform service's contract belongs to, or
+ * The authorization store of one scope: the system's, which every system service's contract belongs to, or
  * an application's. The model a store should run is the one generated from the directory entries that belong
  * to it, so the record is reconciled when the engine runs that model and falls out of its desired state when an
- * entry of the store is published. One row per store; the platform's row exists before any server does, as the
- * platform's store in the engine does.
+ * entry of the store is published. One row per store; the system's row exists before any server does, as the
+ * system's store in the engine does.
  */
 @Getter
 @Setter
@@ -19,21 +19,21 @@ import org.kinotic.authz.api.services.AuthzStoreService;
 @NoArgsConstructor
 public class AuthzStore implements Reconcilable<AuthzModelRevision> {
     /**
-     * The id of the platform's store record.
+     * The id of the system's store record.
      */
-    public static final String PLATFORM = AuthzStoreService.PLATFORM;
+    public static final String SYSTEM = AuthzStoreService.SYSTEM;
 
     /**
-     * {@link #PLATFORM} for the platform's store, or the application's id in the stores,
+     * {@link #SYSTEM} for the system's store, or the application's id in the stores,
      * {@link org.kinotic.domain.api.utils.DomainUtil#authzApplicationId}.
      */
     private String id;
     /**
-     * The owning organization, or null for the platform's store.
+     * The owning organization, or null for the system's store.
      */
     private String organizationId;
     /**
-     * The owning application, or null for the platform's store.
+     * The owning application, or null for the system's store.
      */
     private String applicationId;
     /**

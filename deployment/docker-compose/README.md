@@ -30,7 +30,7 @@ the commit under test rather than whatever the published tag currently holds.
 | `compose.kibana.yml` | Kibana (depends on Elasticsearch) | `kinotic-kibana:5601` |
 | `compose.kinotic-migration.yml` | Runs `kinotic-migration` once against ES, then exits | One-shot job — `service_completed_successfully` is what the servers wait on |
 | `compose.kinotic-servers.yml` | The three Kinotic servers, one Ignite cluster | `kinotic-server-management:9090/58503` (portal, REST and STOMP), `kinotic-server-system:58504`, `kinotic-server-app:58505` |
-| `compose.openfga.yml` | OpenFGA, the authorization engine, with its Postgres, its schema migration and `openfga-init`, which creates the platform store | `openfga:8080`; one-shot `openfga-init`, whose `service_completed_successfully` the servers wait on |
+| `compose.openfga.yml` | OpenFGA, the authorization engine, with its Postgres, its schema migration and `openfga-init`, which creates the system store | `openfga:8080`; one-shot `openfga-init`, whose `service_completed_successfully` the servers wait on |
 | `compose-otel.yml` | OpenTelemetry collector + Grafana + Tempo + Loki + Mimir | `grafana:3000`, `loki:3100`, `tempo:3200`, `mimir:9009` |
 | `compose.gen-schemas.yml` | Load-generator container that pre-populates schemas | One-shot when `compose.yml` brings up the full stack |
 | `compose.keycloak.yml` | Local Keycloak as a social sign-in OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |

@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
+import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 @Component
 @RequiredArgsConstructor
@@ -119,7 +119,7 @@ public class DefaultPermissionService implements PermissionService {
                 existing.setName(role.name()).setDescription(role.description()).setUpdated(new Date());
                 // the row first, then its permissions: a role whose permissions failed to write exists and grants nothing
                 return roles.saveSync(existing, organizationId)
-                            .compose(saved -> relationships.ensureRoles(PLATFORM, Map.of(saved.getId(), role.permissions())).map(saved));
+                            .compose(saved -> relationships.ensureRoles(SYSTEM, Map.of(saved.getId(), role.permissions())).map(saved));
             }).map(saved -> new RoleDefinition(saved.getId(), saved.getName(), saved.getDescription(), false, home,
                                                model.grantableOn(home, ORGANIZATION), Set.copyOf(role.permissions())));
         });
@@ -133,9 +133,9 @@ public class DefaultPermissionService implements PermissionService {
         return requireRole(roleId, organizationId)
                 .compose(row -> model())
                 .compose(model -> requireUnused(role, model.grantableOn(AuthzUtil.roleHome(roleId), ORGANIZATION), "Role " + roleId))
-                .compose(v -> relationships.read(PLATFORM, role))
+                .compose(v -> relationships.read(SYSTEM, role))
                 // its permissions first, then the row: a role whose row outlives its permissions grants nothing
-                .compose(held -> relationships.remove(PLATFORM, held))
+                .compose(held -> relationships.remove(SYSTEM, held))
                 .compose(v -> roles.deleteByIdSync(roleId, organizationId));
     }
 
@@ -167,9 +167,9 @@ public class DefaultPermissionService implements PermissionService {
         return requireGroup(groupId, organizationId)
                 .compose(row -> model())
                 .compose(model -> requireUnused(membersOf(group), model.tier(ORGANIZATION), "Group " + groupId))
-                .compose(v -> relationships.read(PLATFORM, group))
+                .compose(v -> relationships.read(SYSTEM, group))
                 // its membership first, then the row: a group whose row outlives its members reaches nobody
-                .compose(held -> relationships.remove(PLATFORM, held))
+                .compose(held -> relationships.remove(SYSTEM, held))
                 .compose(v -> groups.deleteByIdSync(groupId, organizationId));
     }
 
@@ -178,7 +178,7 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(groupId, "groupId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireGroup(groupId, organizationId)
-                .compose(row -> relationships.read(PLATFORM, AuthzUtil.object(AuthzUtil.GROUP_TYPE, groupId)))
+                .compose(row -> relationships.read(SYSTEM, AuthzUtil.object(AuthzUtil.GROUP_TYPE, groupId)))
                 .compose(held -> {
                     List<Future<ParticipantIdentity>> members = new ArrayList<>();
                     for (RelationshipTuple tuple : held) {
@@ -202,7 +202,7 @@ public class DefaultPermissionService implements PermissionService {
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireGroup(groupId, organizationId)
                 .compose(row -> requireMember(userId, organizationId))
-                .compose(v -> relationships.ensure(PLATFORM, List.of(membership(DomainUtil.authzMember(userId, organizationId), groupId))));
+                .compose(v -> relationships.ensure(SYSTEM, List.of(membership(DomainUtil.authzMember(userId, organizationId), groupId))));
     }
 
     @Override
@@ -211,7 +211,7 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(userId, "userId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireGroup(groupId, organizationId)
-                .compose(row -> relationships.remove(PLATFORM, List.of(membership(DomainUtil.authzMember(userId, organizationId), groupId))));
+                .compose(row -> relationships.remove(SYSTEM, List.of(membership(DomainUtil.authzMember(userId, organizationId), groupId))));
     }
 
     @Override
@@ -223,7 +223,7 @@ public class DefaultPermissionService implements PermissionService {
         return requireGrantable(roleId, resource.type(), organizationId)
                 .compose(v -> requireSubject(subject, organizationId))
                 .compose(stored -> requireInOrganization(resource, organizationId)
-                        .compose(lineage -> relationships.bind(PLATFORM, roleId, userOf(stored), DomainUtil.authzObject(organizationId, resource))))
+                        .compose(lineage -> relationships.bind(SYSTEM, roleId, userOf(stored), DomainUtil.authzObject(organizationId, resource))))
                 .map(bindingId -> new Grant(bindingId, roleId, subject, resource));
     }
 
@@ -233,7 +233,7 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(grantId, "grantId cannot be blank");
         String organizationId = requireOrgParticipant().getOrganizationId();
         return requireInOrganization(resource, organizationId)
-                .compose(lineage -> relationships.revoke(PLATFORM, grantId, DomainUtil.authzObject(organizationId, resource)));
+                .compose(lineage -> relationships.revoke(SYSTEM, grantId, DomainUtil.authzObject(organizationId, resource)));
     }
 
     @Override
@@ -249,8 +249,8 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(type, "type cannot be blank");
         Validate.notBlank(permission, "permission cannot be blank");
         OrganizationParticipant participant = requireOrgParticipant();
-        return stores.modelId(PLATFORM)
-                     .compose(modelId -> relationships.listObjects(PLATFORM, modelId,
+        return stores.modelId(SYSTEM)
+                     .compose(modelId -> relationships.listObjects(SYSTEM, modelId,
                                                                    DomainUtil.authzUser(participant),
                                                                    AuthzUtil.permissionName(type, permission), type,
                                                                    Consistency.MINIMIZE_LATENCY))
@@ -266,13 +266,13 @@ public class DefaultPermissionService implements PermissionService {
         String name = AuthzUtil.permissionName(resource.type(), permission);
         return requireSubject(subject, organizationId).compose(stored -> requireInOrganization(resource, organizationId)
                 .compose(this::grantsOn)
-                .compose(grants -> stores.modelId(PLATFORM).compose(modelId -> {
+                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> {
                     String user = userOf(stored);
                     // an admin asks after changing access, so the answer must not predate the change
-                    Future<Boolean> allowed = relationships.check(PLATFORM, modelId,
+                    Future<Boolean> allowed = relationships.check(SYSTEM, modelId,
                                                                   new RelationshipTuple(user, name, DomainUtil.authzObject(organizationId, resource)),
                                                                   Consistency.HIGHER_CONSISTENCY);
-                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(PLATFORM, modelId, grant, stored, name)).toList();
+                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(SYSTEM, modelId, grant, stored, name)).toList();
                     return Future.all(explains).compose(results -> allowed.map(held -> {
                         List<Grant> through = new ArrayList<>();
                         for (int i = 0; i < grants.size(); i++) {
@@ -287,7 +287,7 @@ public class DefaultPermissionService implements PermissionService {
 
     // The grants made on each resource of a lineage, the resource's own first
     private Future<List<Grant>> grantsOn(List<String> lineage) {
-        List<Future<List<Grant>>> perResource = lineage.stream().map(object -> relationships.findGrants(PLATFORM, object)).toList();
+        List<Future<List<Grant>>> perResource = lineage.stream().map(object -> relationships.findGrants(SYSTEM, object)).toList();
         return Future.all(perResource).map(all -> {
             List<Grant> ret = new ArrayList<>();
             for (int i = 0; i < lineage.size(); i++) {
@@ -316,7 +316,7 @@ public class DefaultPermissionService implements PermissionService {
     // binding's attachment names the binding's type the same way and is not one
     private Future<List<String>> lineage(String object, List<String> collected) {
         collected.add(object);
-        return relationships.read(PLATFORM, object).compose(held -> {
+        return relationships.read(SYSTEM, object).compose(held -> {
             String parent = null;
             for (RelationshipTuple tuple : held) {
                 if (!AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())
@@ -412,7 +412,7 @@ public class DefaultPermissionService implements PermissionService {
     // on each type it may be granted on, since a binding is typed by what it is attached to
     private Future<Void> requireUnused(String user, Set<String> boundOn, String what) {
         List<Future<List<RelationshipTuple>>> reads = boundOn.stream()
-                                                             .map(type -> relationships.readByUser(PLATFORM, user, AuthzUtil.roleBindingType(type)))
+                                                             .map(type -> relationships.readByUser(SYSTEM, user, AuthzUtil.roleBindingType(type)))
                                                              .toList();
         return Future.all(reads).map(all -> {
             int bindings = 0;
@@ -428,7 +428,7 @@ public class DefaultPermissionService implements PermissionService {
 
     private Future<RoleDefinition> defined(Role role, AuthzModel model) {
         String home = AuthzUtil.roleHome(role.getId());
-        return relationships.read(PLATFORM, AuthzUtil.roleObject(role.getId())).map(held -> {
+        return relationships.read(SYSTEM, AuthzUtil.roleObject(role.getId())).map(held -> {
             Set<String> permissions = new TreeSet<>();
             for (RelationshipTuple tuple : held) {
                 if (AuthzUtil.EVERYONE.equals(tuple.user())) {
@@ -441,7 +441,7 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     private Future<AuthzModel> model() {
-        return directory.findSystemDefinitions().map(generator::platformModel);
+        return directory.findSystemDefinitions().map(generator::systemModel);
     }
 
     private OrganizationParticipant requireOrgParticipant() {
