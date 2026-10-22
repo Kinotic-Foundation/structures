@@ -1,5 +1,6 @@
 package org.kinotic.management.api.repositories;
 
+import co.elastic.clients.elasticsearch._types.Conflicts;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.CursorPageable;
@@ -38,8 +39,10 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
         Validate.notBlank(projectId, "projectId cannot be blank");
         Validate.notBlank(orgId, "orgId cannot be blank");
         Validate.notBlank(dependencyHash, "dependencyHash cannot be blank");
+        // a tree rewritten while the delete runs lists newer dependencies, so it is kept rather than failing the delete
         return crudServiceTemplate.deleteByQuery(indexName, b -> b.routing(orgId)
                                                                  .refresh(true)
+                                                                 .conflicts(Conflicts.Proceed)
                                                                  .query(composeOrgFilter(orgId,
                                                                                          termFilter("id", projectId),
                                                                                          termFilter("dependencyHash", dependencyHash))))

@@ -72,6 +72,9 @@ public class CrudServiceTemplate {
     // Ids one search of findAllByIds asks for
     private static final int IDS_PER_SEARCH = 1_000;
 
+    // How long each shard may take to list the values of termsEnum
+    private static final String TERMS_ENUM_TIMEOUT = "30s";
+
     private static final Logger log = LoggerFactory.getLogger(CrudServiceTemplate.class);
 
     private final ElasticsearchAsyncClient esAsyncClient;
@@ -1061,7 +1064,9 @@ public class CrudServiceTemplate {
                                                      b.index(indexName)
                                                       .field(field)
                                                       .string(prefix)
-                                                      .size(size);
+                                                      .size(size)
+                                                      // Elasticsearch's default of one second fails the listing of a large index under load
+                                                      .timeout(t -> t.time(TERMS_ENUM_TIMEOUT));
                                                      if (searchAfter != null) {
                                                          b.searchAfter(searchAfter);
                                                      }

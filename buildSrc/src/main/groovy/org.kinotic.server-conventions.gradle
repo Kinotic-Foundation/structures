@@ -34,16 +34,20 @@ tasks.register('otelAgentJar', Sync) {
 def serverComponents = tasks.register('serverComponents') {
     def runtime = configurations.runtimeClasspath
     def outputFile = layout.buildDirectory.file('server-components/components.txt')
-    inputs.files(runtime)
+    // read from the dependency graph rather than the classpath files, so the listing builds no jar of
+    // the projects on the classpath, and with them no frontend
+    def purls = provider {
+        runtime.incoming.resolutionResult.allComponents
+               .collect { it.id }
+               .findAll { it instanceof ModuleComponentIdentifier }
+               // percent-encoded, as a package URL carries its version
+               .collect { "pkg:maven/${it.group}/${it.module}@${URLEncoder.encode(it.version, 'UTF-8')}".toString() }
+               .toSorted()
+    }
+    inputs.property('purls', purls)
     outputs.file(outputFile)
     doLast {
-        def purls = runtime.incoming.resolutionResult.allComponents
-                           .collect { it.id }
-                           .findAll { it instanceof ModuleComponentIdentifier }
-                           // percent-encoded, as a package URL carries its version
-                           .collect { "pkg:maven/${it.group}/${it.module}@${URLEncoder.encode(it.version, 'UTF-8')}".toString() }
-                           .toSorted()
-        outputFile.get().asFile.text = purls.join('\n') + '\n'
+        outputFile.get().asFile.text = purls.get().join('\n') + '\n'
     }
 }
 
