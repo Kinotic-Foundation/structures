@@ -203,6 +203,46 @@ describe('connection lifecycle', () => {
         expect(bus.isConnectionActive()).toBe(false)
     }, 20_000)
 
+    it('reports each attempt that cannot reach the server while connect() keeps trying, and connects once it can', async () => {
+        const server = new FakeStompServer()
+        server.unreachable = true
+        const bus = new EventBus()
+        const failed = failures(bus)
+        let attemptsFailed = 0
+        bus.connectionAttemptFailed.subscribe(() => attemptsFailed++)
+        const connecting = bus.connect(options(server))
+
+        const deadline = Date.now() + 5_000
+        while (attemptsFailed === 0 && Date.now() < deadline) {
+            await sleep(20)
+        }
+        expect(attemptsFailed).toBe(1)
+        expect(bus.isConnectionActive()).toBe(true)
+
+        // rx-stomp retries after its reconnect delay, and that attempt reaches the server
+        server.unreachable = false
+        const connected = await connecting
+        expect(connected.replyToId).toBe('reply-2')
+        await bus.disconnect()
+        expect(attemptsFailed).toBe(1)
+        expect(failed).toEqual([])
+    }, 15_000)
+
+    it('reports the attempt that exhausts the budget as the end of the connection', async () => {
+        const server = new FakeStompServer()
+        server.unreachable = true
+        const bus = new EventBus()
+        const failed = failures(bus)
+        let attemptsFailed = 0
+        bus.connectionAttemptFailed.subscribe(() => attemptsFailed++)
+
+        await expect(bus.connect(options(server, { maxConnectionAttempts: 1 })))
+            .rejects.toThrow('Max number of reconnection attempts reached')
+        await sleep(50)
+        expect(attemptsFailed).toBe(0)
+        expect(failed.map(reason => reason.message)).toEqual(['Max number of reconnection attempts reached'])
+    })
+
     it('reports no failure when disconnect() closes a socket that was still connecting on the last attempt of the budget', async () => {
         const server = new FakeStompServer()
         server.openDelayMs = 200

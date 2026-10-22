@@ -96,6 +96,14 @@ export interface IEventBus {
     connectionEstablished: Observable<ConnectedInfo>
 
     /**
+     * Emits each time an attempt to connect fails before the server accepts the connection and the client
+     * will try again: the server could not be reached, or it closed the socket before answering. This
+     * covers the attempts of a pending {@link connect} as well as the reconnects after a connection ends.
+     * An attempt that ends the connection for good is reported by {@link connectionEnded} instead.
+     */
+    connectionAttemptFailed: Observable<void>
+
+    /**
      * The {@link ServerInfo} used when connecting, if connected or null
      */
     serverInfo: ServerInfo | null

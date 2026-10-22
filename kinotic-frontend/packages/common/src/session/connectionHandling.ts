@@ -63,6 +63,11 @@ export function installConnectionHandler(router: Router,
         }
     })
 
+    // the client retries a failed attempt, during login() as well as while reconnecting, so the app waits on the server
+    Kinotic.eventBus.connectionAttemptFailed.subscribe(() => {
+        CONNECTION_STATE.reachable = false
+    })
+
     Kinotic.eventBus.connectionEstablished.subscribe((connectedInfo: ConnectedInfo) => {
         CONNECTION_STATE.reachable = true
         // each connection is issued a session view of its own, and the one login() stored ended with its

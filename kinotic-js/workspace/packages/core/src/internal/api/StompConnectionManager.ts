@@ -52,6 +52,7 @@ export class StompConnectionManager {
     private connectionAttempts: number = 0
     private debugLogger = debug('kinotic:stomp')
     private readonly connectionEstablishedSubject: Subject<ConnectedInfo> = new Subject<ConnectedInfo>()
+    private readonly connectionAttemptFailedSubject: Subject<void> = new Subject<void>()
     private initialConnectionSuccessful: boolean = false
     private rxStompHasConnected: boolean = false
 
@@ -87,6 +88,15 @@ export class StompConnectionManager {
      */
     public get connectionEstablished(): Observable<ConnectedInfo> {
         return this.connectionEstablishedSubject.asObservable()
+    }
+
+    /**
+     * Emits each time an attempt to connect fails before the server accepts the connection and the client
+     * will try again: the server could not be reached, or it closed the socket before answering CONNECT. An
+     * attempt that ends the connection for good is reported to {@link connectionEndedHandler} instead.
+     */
+    public get connectionAttemptFailed(): Observable<void> {
+        return this.connectionAttemptFailedSubject.asObservable()
     }
 
     public async activate(options: ConnectOptions): Promise<ConnectedInfo> {
@@ -265,13 +275,17 @@ export class StompConnectionManager {
             }))
 
             // An open socket dropping: the socket and everything the server held behind it are gone. A failed
-            // reconnect attempt also ends in CLOSED, but from CONNECTING, and loses nothing new. A close that
-            // deactivate() itself causes is reported by deactivate().
+            // attempt also ends in CLOSED, but from CONNECTING, and loses nothing new. A close that
+            // deactivate() itself causes passes through CLOSING and is reported by deactivate().
             let previousState: RxStompState = this.rxStomp.connectionState$.getValue()
             activation.own(this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
-                if (state === RxStompState.CLOSED && previousState === RxStompState.OPEN && this.activation === activation) {
-                    // the client reconnects from here, so the end carries no reason
-                    this.connectionEndedHandler?.(null)
+                if (state === RxStompState.CLOSED && this.activation === activation) {
+                    if (previousState === RxStompState.OPEN) {
+                        // the client reconnects from here, so the end carries no reason
+                        this.connectionEndedHandler?.(null)
+                    } else if (previousState === RxStompState.CONNECTING) {
+                        this.connectionAttemptFailedSubject.next()
+                    }
                 }
                 previousState = state
             }))
