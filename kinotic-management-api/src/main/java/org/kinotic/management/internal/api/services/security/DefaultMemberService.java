@@ -12,11 +12,11 @@ import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIde
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.InviteService;
-import org.kinotic.domain.api.services.security.MemberInvitationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.model.PendingInviteSummary;
+import org.kinotic.management.api.services.security.MemberInvitationService;
 import org.kinotic.management.api.services.security.MemberService;
 import org.springframework.stereotype.Component;
 

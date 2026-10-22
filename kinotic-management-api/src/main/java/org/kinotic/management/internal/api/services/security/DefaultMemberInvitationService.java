@@ -1,4 +1,4 @@
-package org.kinotic.domain.internal.api.services.security;
+package org.kinotic.management.internal.api.services.security;
 
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
@@ -13,11 +13,11 @@ import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIde
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.security.InviteService;
-import org.kinotic.domain.api.services.security.MemberInvitationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.management.api.services.security.MemberInvitationService;
 import org.springframework.stereotype.Component;
 
 @Component

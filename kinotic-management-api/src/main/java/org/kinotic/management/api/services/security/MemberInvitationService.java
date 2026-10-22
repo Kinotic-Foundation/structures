@@ -1,4 +1,4 @@
-package org.kinotic.domain.api.services.security;
+package org.kinotic.management.api.services.security;
 
 import io.vertx.core.Future;
 import org.kinotic.domain.api.model.EmailTemplate;
