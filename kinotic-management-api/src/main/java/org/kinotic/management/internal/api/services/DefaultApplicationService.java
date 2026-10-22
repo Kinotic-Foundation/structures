@@ -141,7 +141,13 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         // a caller with no tenancy opinion, such as the CLI ensuring the app row exists,
                         // omits the argument and leaves tenants to their administrators
                         newApplication.setTenantManagement(tenantManagement != null ? tenantManagement : TenantManagement.TENANT_ADMINISTRATORS);
-                        ret = save(newApplication).compose(this::provisioned);
+                        // a create, which fails on an existing id, so of two callers racing only the one that wrote
+                        // the record provisions it, or deletes it when provisioning fails
+                        ret = super.create(newApplication)
+                                   .compose(this::provisioned)
+                                   .recover(ex -> AlreadyExistsException.isCause(ex)
+                                           ? super.findById(applicationId)
+                                           : Future.failedFuture(ex));
                     }
                     return ret;
                 });

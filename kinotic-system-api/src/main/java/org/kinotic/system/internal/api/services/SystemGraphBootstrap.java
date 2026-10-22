@@ -26,11 +26,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places the system's staff and nodes in the authorization graph when the system holds no grant, once the server
- * is up and the system store runs a model: every node on the system, every enabled system machine as a registrar
- * of nodes, and every enabled system user as the system's administrator. A system a migration seeds has system
- * users, a vm-manager and nodes but no tuples, and this gives it the ones it needs to be run; a system holding a
- * grant, whatever else was granted or revoked since, is left as it is.
+ * Places the system's staff and nodes in the authorization graph when the system has no administrator, once the
+ * server is up and the system store runs a model: every node on the system, every enabled system machine as a
+ * registrar of nodes, and every enabled system user as the system's administrator. A system a migration seeds has
+ * system users, a vm-manager and nodes but no tuples, and this gives it the ones it needs to be run; a system with
+ * an administrator, whatever else was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -60,7 +60,8 @@ public class SystemGraphBootstrap {
         stores.modelId(SYSTEM)
               .compose(modelId -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT))
               .onSuccess(grants -> {
-                  if (grants.isEmpty()) {
+                  // the administrators are bound last, so a sweep cut short before them is made again
+                  if (grants.stream().noneMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId()))) {
                       place(RETRY_MILLIS);
                   }
               })
@@ -72,7 +73,7 @@ public class SystemGraphBootstrap {
               });
     }
 
-    // The first grant ends the sweep for every later start, so a sweep that fails part way is made again here,
+    // The first administrator ends the sweep for every later start, so a sweep that fails part way is made again here,
     // without asking the store, until it places everything; every binding has an id of its own, so one made twice is held once
     private void place(long failedDelay) {
         AtomicInteger failed = new AtomicInteger();

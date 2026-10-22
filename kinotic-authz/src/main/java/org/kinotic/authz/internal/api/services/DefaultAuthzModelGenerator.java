@@ -413,12 +413,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             ResourceType about = types.get(carried);
             for (Map.Entry<String, Set<String>> permission : new TreeMap<>(about.permissions).entrySet()) {
                 ObjectNode bundled = direct(List.of(USER + ":*"));
-                List<ObjectNode> sources = new ArrayList<>();
-                for (Map.Entry<String, Set<String>> other : new TreeMap<>(about.permissions).entrySet()) {
-                    if (other.getValue().contains(permission.getKey())) {
-                        sources.add(computed(AuthzUtil.permissionName(about.name, other.getKey())));
-                    }
-                }
+                List<ObjectNode> sources = implying(about, permission.getKey());
                 ObjectNode relation = bundled;
                 if (!sources.isEmpty()) {
                     // the subject types stay on the relation, where typeDefinition reads them, not on the union's child
@@ -472,11 +467,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                 String name = AuthzUtil.permissionName(about.name, permission.getKey());
                 List<ObjectNode> sources = new ArrayList<>();
                 sources.add(tupleToUserset(ROLE_BINDING, name));
-                for (Map.Entry<String, Set<String>> other : new TreeMap<>(about.permissions).entrySet()) {
-                    if (other.getValue().contains(permission.getKey())) {
-                        sources.add(computed(AuthzUtil.permissionName(about.name, other.getKey())));
-                    }
-                }
+                sources.addAll(implying(about, permission.getKey()));
                 if (type.parent != null) {
                     sources.add(tupleToUserset(type.parent, name));
                 }
@@ -503,16 +494,23 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             String name = AuthzUtil.permissionName(definition.name, permission.getKey());
             List<ObjectNode> sources = new ArrayList<>();
             sources.add(tupleToUserset(ROLE_BINDING, name));
-            for (Map.Entry<String, Set<String>> other : new TreeMap<>(definition.permissions).entrySet()) {
-                if (other.getValue().contains(permission.getKey())) {
-                    sources.add(computed(AuthzUtil.permissionName(definition.name, other.getKey())));
-                }
-            }
+            sources.addAll(implying(definition, permission.getKey()));
             sources.add(tupleToUserset(DEFINITION, name));
             sources.add(intersection(List.of(tupleToUserset(TENANT, name), computed(PLACED))));
             relations.put(name, union(sources));
         }
         return typeDefinition(TENANT_DEFINITION, relations);
+    }
+
+    // The permissions of a type that imply one of its permissions, each as a relation of the same object
+    private static List<ObjectNode> implying(ResourceType type, String permission) {
+        List<ObjectNode> ret = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> other : new TreeMap<>(type.permissions).entrySet()) {
+            if (other.getValue().contains(permission)) {
+                ret.add(computed(AuthzUtil.permissionName(type.name, other.getKey())));
+            }
+        }
+        return ret;
     }
 
     private static ObjectNode typeDefinition(String name, Map<String, ObjectNode> relations) {

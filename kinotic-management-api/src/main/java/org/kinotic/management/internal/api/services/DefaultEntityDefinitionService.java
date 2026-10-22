@@ -144,11 +144,23 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
                 .map(entityDefinition);
     }
 
-    // The definition leaves both stores with every grant made on it, so one created again under its id starts with none
+    // The definition leaves both stores with every grant made on it and on its rows within each tenant placed in the
+    // application's store, so one created again under its id starts with none
     private Future<Void> removed(EntityDefinition entityDefinition) {
         String object = containment(entityDefinition).object();
+        String store = storeOf(entityDefinition);
         return relationships.removeObject(AuthzStoreService.SYSTEM, object)
-                            .compose(v -> relationships.removeObject(storeOf(entityDefinition), object));
+                            .compose(v -> relationships.removeObject(store, object))
+                            .compose(v -> relationships.readByUser(store, AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, store), AuthzConstants.TENANT_TYPE))
+                            .compose(placed -> {
+                                Future<Void> ret = Future.succeededFuture();
+                                for (RelationshipTuple tenant : placed) {
+                                    String within = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE,
+                                                                     AuthzUtil.tenantDefinitionId(entityDefinition.getId(), AuthzUtil.idOf(tenant.object())));
+                                    ret = ret.compose(w -> relationships.removeObject(store, within));
+                                }
+                                return ret;
+                            });
     }
 
     private static String storeOf(EntityDefinition entityDefinition) {

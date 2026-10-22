@@ -22,17 +22,21 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places every organization that is not yet on the system in the authorization graph, once the server is up and
- * the system store runs a model: the organization on the system, its enabled members as its members, and the
- * membership of its creator as its administrator. A sign-up does the same for the organization it creates; an
- * organization a migration seeds has records but no tuples, and this gives it the ones a sign-up would have. An
- * organization on the system, whatever was granted or revoked since, is left as it is.
+ * Places every organization that is not yet on the system, or holds no grant though it has a creator, in the
+ * authorization graph, once the server is up and the system store runs a model: the organization on the system,
+ * its enabled members as its members, and the membership of its creator as its administrator. A sign-up does the
+ * same for the organization it creates; an organization a migration seeds has records but no tuples, and this
+ * gives it the ones a sign-up would have. An organization on the system holding a grant, whatever was granted or
+ * revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -100,40 +104,54 @@ public class OrganizationGraphBootstrap {
         return page instanceof CursorPage<Organization> cursorPage && !page.getContent().isEmpty() ? cursorPage.getCursor() : null;
     }
 
+    // An organization is placed when it is not on the system, or when its creator's sign-up stopped before binding
+    // it, leaving the organization with no grant
     private Future<Boolean> place(Organization organization) {
         String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
         RelationshipTuple containment = DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), object);
-        // the containment is written last, so a sweep cut short places the organization again, and the creator's
-        // membership is bound under an id of its own, so every server sweeping at once binds it once
-        return relationships.read(SYSTEM, object).compose(held -> held.contains(containment)
-                ? Future.succeededFuture(false)
-                : members(organization.getId(), 0)
-                        .compose(v -> {
-                            Future<Void> ret = Future.succeededFuture();
-                            if (organization.getCreatedBy() != null) {
-                                String creator = DomainUtil.authzMember(organization.getCreatedBy(), organization.getId());
-                                ret = relationships.ensureBound(SYSTEM,
-                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + AuthzUtil.idOf(creator),
-                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE,
-                                                                creator,
-                                                                object);
-                            }
-                            return ret;
-                        })
-                        .compose(v -> relationships.ensure(SYSTEM, List.of(containment)))
-                        .map(true));
+        return relationships.holds(SYSTEM, containment)
+                            .compose(held -> held && organization.getCreatedBy() != null
+                                    ? relationships.findGrants(SYSTEM, object).map(grants -> !grants.isEmpty())
+                                    : Future.succeededFuture(held))
+                            .compose(done -> done ? Future.succeededFuture(false) : placed(organization, object, containment));
     }
 
-    private Future<Void> members(String organizationId, int pageNumber) {
+    // The containment is written last, so a sweep cut short places the organization again, and the creator's
+    // membership is bound under an id of its own, so every server sweeping at once binds it once
+    private Future<Boolean> placed(Organization organization, String object, RelationshipTuple containment) {
+        Set<String> enabled = new HashSet<>();
+        return members(organization.getId(), 0, enabled)
+                .compose(v -> {
+                    Future<Void> ret = Future.succeededFuture();
+                    // a creator who has since left the organization is not made its administrator
+                    if (organization.getCreatedBy() != null && enabled.contains(organization.getCreatedBy())) {
+                        String creator = DomainUtil.authzMember(organization.getCreatedBy(), organization.getId());
+                        ret = relationships.ensureBound(SYSTEM,
+                                                        AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + AuthzUtil.idOf(creator),
+                                                        AuthzConstants.ORGANIZATION_ADMIN_ROLE,
+                                                        creator,
+                                                        object);
+                    }
+                    return ret;
+                })
+                .compose(v -> relationships.ensure(SYSTEM, List.of(containment)))
+                .map(true);
+    }
+
+    // Makes the enabled members the organization's members, collecting their ids
+    private Future<Void> members(String organizationId, int pageNumber, Set<String> enabled) {
         return memberships.findMembers(organizationId, Pageable.create(pageNumber, PAGE_SIZE, null)).compose(page -> {
-            List<RelationshipTuple> enabled = page.getContent().stream()
-                                                  .filter(OrganizationMember::enabled)
-                                                  .map(member -> new RelationshipTuple(DomainUtil.authzMember(member.id(), organizationId),
-                                                                                       AuthzConstants.MEMBER_RELATION,
-                                                                                       AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId)))
-                                                  .toList();
-            Future<Void> ret = relationships.ensure(SYSTEM, enabled);
-            return page.getContent().size() < PAGE_SIZE ? ret : ret.compose(v -> members(organizationId, pageNumber + 1));
+            List<RelationshipTuple> tuples = new ArrayList<>();
+            for (OrganizationMember member : page.getContent()) {
+                if (member.enabled()) {
+                    enabled.add(member.id());
+                    tuples.add(new RelationshipTuple(DomainUtil.authzMember(member.id(), organizationId),
+                                                     AuthzConstants.MEMBER_RELATION,
+                                                     AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId)));
+                }
+            }
+            Future<Void> ret = relationships.ensure(SYSTEM, tuples);
+            return page.getContent().size() < PAGE_SIZE ? ret : ret.compose(v -> members(organizationId, pageNumber + 1, enabled));
         });
     }
 }
