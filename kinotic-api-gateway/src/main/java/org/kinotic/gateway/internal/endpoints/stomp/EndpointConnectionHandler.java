@@ -24,7 +24,6 @@ import org.kinotic.core.internal.utils.EventUtil;
 import org.kinotic.gateway.internal.endpoints.Services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.core.JacksonException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -120,19 +119,24 @@ public class EndpointConnectionHandler {
                 if (connectedInfo.getReplyToId() == null) {
                     connectedInfo.setReplyToId(UUID.randomUUID().toString());
                 }
-                stompAuthorizer = services.stompAuthorizerFactory.create(connectedInfo);
+                ret = services.stompAuthorizerFactory
+                        .create(connectedInfo)
+                        .recover(throwable -> Future.failedFuture(throwable instanceof IllegalArgumentException
+                                                                          ? new AuthenticationException("Invalid CONNECT frame", throwable)
+                                                                          : throwable))
+                        .compose(authorizer -> {
+                            stompAuthorizer = authorizer;
 
-                signalActivity();
-                if (sessionKeepAliveMode == SessionKeepAliveMode.CONNECTION) {
-                    // the upgrade response never reaches the store, so the connection's first write is this one
-                    touchSession();
-                    startSessionTouchTimer();
-                }
-                ret = Future.succeededFuture(Map.of(EventConstants.CONNECTED_INFO_HEADER,
-                                                    services.jsonMapper.writeValueAsString(connectedInfo)));
+                            signalActivity();
+                            if (sessionKeepAliveMode == SessionKeepAliveMode.CONNECTION) {
+                                // the upgrade response never reaches the store, so the connection's first write is this one
+                                touchSession();
+                                startSessionTouchTimer();
+                            }
+                            return Future.succeededFuture(Map.of(EventConstants.CONNECTED_INFO_HEADER,
+                                                                 services.jsonMapper.writeValueAsString(connectedInfo)));
+                        });
             }
-        } catch (JacksonException e) {
-            ret = Future.failedFuture(e);
         } catch (IllegalArgumentException e) {
             ret = Future.failedFuture(new AuthenticationException("Invalid CONNECT frame", e));
         }
@@ -200,8 +204,13 @@ public class EndpointConnectionHandler {
                 }
 
                 incomingInvocationTracker.requestSent(incomingEvent);
-                return services.eventBusService
-                        .sendWithAck(incomingEvent)
+                // the zone admitted the destination; the function's own check decides the caller may invoke it
+                return services.requestAuthorizer
+                        .authorize(incomingEvent.cri(),
+                                   connectedInfo.getParticipant(),
+                                   incomingEvent.metadata().get(EventConstants.CONTENT_TYPE_HEADER),
+                                   incomingEvent.data())
+                        .compose(v -> services.eventBusService.sendWithAck(incomingEvent))
                         .onSuccess(nodeId -> incomingInvocationTracker.requestAccepted(correlationId, nodeId, incomingEvent.cri()))
                         .recover(throwable -> {
                             // no reply will come for a request that never left

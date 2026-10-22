@@ -24,6 +24,9 @@ const SERVER_PORTS = {
 /** A server of the e2e compose stack, by its compose service name. */
 export type KinoticServerName = keyof typeof SERVER_PORTS
 
+/** The port OpenFGA serves its HTTP API on, where its health endpoint answers. */
+const OPENFGA_PORT = 8080
+
 /** How long a server may take to answer /health, matching the start_period of its compose healthcheck. */
 const SERVER_STARTUP_TIMEOUT_MS = 120_000
 
@@ -45,8 +48,8 @@ export interface GlobalSetup {
  * Builds the globalSetup of a suite that runs against the compose stack in
  * deployment/docker-compose/compose.kinotic-e2e-test.yml. With VITE_USE_KINOTIC_DOCKER=true the
  * setup brings up Elasticsearch, OpenFGA, the migration and the given servers, and provides KINOTIC_HOST plus
- * KINOTIC_PORTS, the mapped REST and STOMP port of each server by name. Otherwise it points the suite
- * at 127.0.0.1 on the ports the compose file publishes, for a stack started by hand.
+ * KINOTIC_PORTS, the mapped REST and STOMP port of each server by name. Otherwise it points the suite at
+ * 127.0.0.1 on the ports the compose file publishes, for a stack started by hand.
  * @param serverNames the servers to start
  */
 export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup {
@@ -63,7 +66,7 @@ export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup
                 let compose = new DockerComposeEnvironment(resolvedPath, files)
                     .withWaitStrategy('kinotic-elasticsearch', Wait.forHttp('/_cluster/health', 9200))
                     // the OpenFGA image has no shell, which the default port wait strategy needs
-                    .withWaitStrategy('openfga', Wait.forHttp('/healthz', 8080))
+                    .withWaitStrategy('openfga', Wait.forHttp('/healthz', OPENFGA_PORT))
                     .withEnvironmentFile(path.resolve('../../', 'gradle.properties'))
                 for(const serverName of serverNames){
                     compose = compose.withWaitStrategy(serverName, Wait.forHttp('/health', SERVER_PORTS[serverName])

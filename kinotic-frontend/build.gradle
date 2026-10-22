@@ -53,7 +53,15 @@ task copyDist(type: Copy){
     dependsOn 'pnpmBuild'
 }
 
+// Branch-only, with the overrides in pnpm-workspace.yaml: builds the linked first-party packages
+// from kinotic-js/workspace with bun. Never merge into develop.
+task buildJsWorkspace(type: Exec) {
+    workingDir "${project.projectDir.parent}/kinotic-js/workspace"
+    commandLine 'sh', '-c', 'bun install --frozen-lockfile && bunx bunup'
+}
+
 task pnpmBuild(type: PnpmTask) {
+    dependsOn 'buildJsWorkspace'
     String frontendMode = project.findProperty('frontendMode') ?: ''
     if(frontendMode == 'development') {
         println "frontendMode=development, using build:dev (bakes .env.development values)"

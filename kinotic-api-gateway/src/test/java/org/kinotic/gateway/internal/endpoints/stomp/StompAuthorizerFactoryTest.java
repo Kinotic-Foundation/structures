@@ -1,9 +1,11 @@
 package org.kinotic.gateway.internal.endpoints.stomp;
 
+import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.event.CRI;
 import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.core.api.security.ConnectedInfo;
+import org.kinotic.domain.api.model.security.ZoneRules;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
@@ -19,13 +21,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the zone routing rules enforced per participant type: the verb x participant x zone
  * matrix, dot-boundary prefix safety, and rejection of ids that cannot form a valid zone, on a server
- * that serves every zone; and how a server's zone partitioning narrows them.
+ * that serves every zone; and how a server's zone partitioning narrows them. The organization participant
+ * hosts the services of {@link #HOSTED_ZONE}.
  */
 public class StompAuthorizerFactoryTest {
 
     private static final String REPLY_TO_ID = "reply-to-1";
+    private static final String HOSTED_ZONE = "app.acme-org.orders-app";
 
-    private StompAuthorizerFactory factory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"));
+    private StompAuthorizerFactory factory = factory(ZonePartitioningService.everyZone("test"));
+
+    // the rules a ZoneRulesService derives for a participant hosting the services of HOSTED_ZONE
+    private static StompAuthorizerFactory factory(ZonePartitioningService partitioning) {
+        return new StompAuthorizerFactory(participant -> Future.succeededFuture(
+                ZoneRules.from(participant, participant instanceof DefaultOrganizationParticipant organization
+                                                    && organization.getOrganizationId().equals("acme-org")
+                                            ? List.of(HOSTED_ZONE)
+                                            : List.of())
+                         .restrictedTo(partitioning)));
+    }
 
     private StompAuthorizer applicationAuthorizer(String organizationId, String applicationId) {
         DefaultApplicationParticipant participant = DefaultApplicationParticipant.builder()
@@ -35,7 +49,7 @@ public class StompAuthorizerFactoryTest {
                                                                                  .metadata(Map.of())
                                                                                  .roles(List.of())
                                                                                  .build();
-        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null));
+        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null)).await();
     }
 
     private StompAuthorizer organizationAuthorizer(String organizationId) {
@@ -45,7 +59,7 @@ public class StompAuthorizerFactoryTest {
                                                                                    .metadata(Map.of())
                                                                                    .roles(List.of())
                                                                                    .build();
-        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null));
+        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null)).await();
     }
 
     private StompAuthorizer systemAuthorizer() {
@@ -54,7 +68,7 @@ public class StompAuthorizerFactoryTest {
                                                                        .metadata(Map.of())
                                                                        .roles(List.of())
                                                                        .build();
-        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null));
+        return factory.create(new ConnectedInfo(participant, REPLY_TO_ID, null)).await();
     }
 
     @Test
@@ -90,7 +104,7 @@ public class StompAuthorizerFactoryTest {
         assertTrue(applicationAuthorizer("acme-corp", "orders-app")
                            .sendAllowed(CRI.create("srv://app.acme-corp.orders-app~OrderService/create#1.0.0")));
         assertTrue(organizationAuthorizer("acme-corp")
-                           .subscribeAllowed(CRI.create("srv://app.acme-corp.orders-app~OrderService#1.0.0")));
+                           .sendAllowed(CRI.create("srv://app.acme-corp.orders-app~OrderService/create#1.0.0")));
         assertFalse(applicationAuthorizer("acme-corp", "orders-app")
                             .sendAllowed(CRI.create("srv://app.acme-corp.other_app~OrderService/create#1.0.0")));
     }
@@ -122,14 +136,18 @@ public class StompAuthorizerFactoryTest {
     }
 
     @Test
-    public void organizationParticipantSubscribesWithinItsOwnAppZones() {
+    public void organizationParticipantSubscribesWithinTheZonesItHosts() {
         StompAuthorizer authorizer = organizationAuthorizer("acme-org");
 
-        // every application zone under the organization, sub-zones included, srv and stream
+        // the hosted application's zone, sub-zones included
         assertTrue(authorizer.subscribeAllowed(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0")));
         assertTrue(authorizer.subscribeAllowed(CRI.create("srv://node1@app.acme-org.orders-app~OrderService#1.0.0")));
         assertTrue(authorizer.subscribeAllowed(CRI.create("srv://app.acme-org.orders-app.billing~InvoiceService#1.0.0")));
 
+        // never another application of the organization, though the participant may send to it
+        assertFalse(authorizer.subscribeAllowed(CRI.create("srv://app.acme-org.other-app~OrderService#1.0.0")));
+        assertTrue(authorizer.sendAllowed(CRI.create("srv://app.acme-org.other-app~OrderService/create#1.0.0")));
+        assertFalse(organizationAuthorizer("other-org").subscribeAllowed(CRI.create("srv://app.other-org.orders-app~OrderService#1.0.0")));
         assertFalse(authorizer.subscribeAllowed(CRI.create("srv://app.other-org.orders-app~OrderService#1.0.0")));
         assertFalse(authorizer.subscribeAllowed(CRI.create("srv://app-api~org.kinotic.persistence.api.services.JsonEntitiesRepository#1.0.0")));
         assertFalse(authorizer.subscribeAllowed(CRI.create("srv://management-api~org.kinotic.management.api.services.iam.MemberService#1.0.0")));
@@ -188,9 +206,9 @@ public class StompAuthorizerFactoryTest {
 
     @Test
     public void theManagementServerRoutesOnlyToZonesItReaches() {
-        factory = new StompAuthorizerFactory(ZonePartitioningService.of("management",
-                                                                        Set.of("management-api"),
-                                                                        Set.of("management-api", "system-api", "app-api")));
+        factory = factory(ZonePartitioningService.of("management",
+                                                     Set.of("management-api"),
+                                                     Set.of("management-api", "system-api", "app-api")));
         StompAuthorizer organization = organizationAuthorizer("acme-org");
 
         assertTrue(organization.sendAllowed(CRI.create("srv://management-api~org.kinotic.management.api.services.iam.MemberService/findMembers#1.0.0")));
@@ -205,7 +223,7 @@ public class StompAuthorizerFactoryTest {
 
     @Test
     public void theAppServerHostsApplicationZonesOnly() {
-        factory = new StompAuthorizerFactory(ZonePartitioningService.of("app", Set.of("app-api", "app"), Set.of("app-api", "app")));
+        factory = factory(ZonePartitioningService.of("app", Set.of("app-api", "app"), Set.of("app-api", "app")));
         StompAuthorizer organization = organizationAuthorizer("acme-org");
 
         assertTrue(organization.subscribeAllowed(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0")));
@@ -266,6 +284,21 @@ public class StompAuthorizerFactoryTest {
 
         // a grant authorizes exactly one send
         assertFalse(authorizer.sendAllowed(CRI.create(replyDestination)));
+    }
+
+    @Test
+    public void aHostedZoneOutsideTheOrganizationIsRejected() {
+        DefaultOrganizationParticipant participant = DefaultOrganizationParticipant.builder()
+                                                                                   .id("org-user")
+                                                                                   .organizationId("acme-org")
+                                                                                   .metadata(Map.of())
+                                                                                   .roles(List.of())
+                                                                                   .build();
+
+        assertThrows(IllegalArgumentException.class, () -> ZoneRules.from(participant, List.of("app.other-org.orders-app")));
+        // a zone that merely begins with the organization's id is another organization's
+        assertThrows(IllegalArgumentException.class, () -> ZoneRules.from(participant, List.of("app.acme-org-2.orders-app")));
+        assertThrows(IllegalArgumentException.class, () -> ZoneRules.from(participant, List.of("management-api")));
     }
 
     @Test

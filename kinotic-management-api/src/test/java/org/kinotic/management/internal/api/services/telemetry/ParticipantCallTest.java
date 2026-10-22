@@ -6,27 +6,39 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
+import org.kinotic.domain.api.utils.DomainUtil;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 /**
  * Base of the tests that call a published service as a participant: an organization user of
- * acme and a system user, each call run on a Vert.x context with the participant bound,
- * mirroring how the gateway invokes published services.
+ * acme, a system user granted the telemetry of every organization on the system, and a system
+ * user granted nothing, each call run on a Vert.x context with the participant bound, mirroring
+ * how the gateway invokes published services.
  */
 abstract class ParticipantCallTest {
 
     protected static final Participant ACME_USER =
             new DefaultOrganizationParticipant("user-1", "acme", Map.of(), List.of("USER"));
-    protected static final Participant PLATFORM_OPERATOR =
+    protected static final Participant SYSTEM_USER =
             new DefaultSystemParticipant("system-user-1", Map.of(), List.of("ADMIN"));
+    protected static final Participant SYSTEM_NEWCOMER =
+            new DefaultSystemParticipant("system-newcomer-1", Map.of(), List.of());
 
     protected static SecurityContext securityContext;
     protected static TenantAccess tenantAccess;
@@ -37,7 +49,13 @@ abstract class ParticipantCallTest {
         // No Vertx provider, since callAs is unused. SecurityContext registers its ContextLocal at class load, which must happen
         // before any Vertx instance is created
         securityContext = new SecurityContext(null);
-        tenantAccess = new TenantAccess(securityContext);
+        AuthzStoreService stores = mock(AuthzStoreService.class);
+        when(stores.modelId(AuthzStoreService.SYSTEM)).thenReturn(Future.succeededFuture("model-1"));
+        RelationshipService relationships = mock(RelationshipService.class);
+        // the system user holds what it is asked about on the system, the newcomer nothing
+        when(relationships.check(eq(AuthzStoreService.SYSTEM), eq("model-1"), any(), any()))
+                .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(2).user().equals(DomainUtil.authzUser(SYSTEM_USER))));
+        tenantAccess = new TenantAccess(securityContext, stores, relationships);
         vertx = Vertx.vertx();
     }
 

@@ -5,7 +5,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Library entry point for the kinotic-authz module: the relationships the platform's authorization engine
+ * Library entry point for the kinotic-authz module: the relationships the system's authorization engine
  * holds, and the checks it answers from them.
  * Created by Navíd Mitchell 🤪on 10/4/26
  */

@@ -186,7 +186,7 @@ uploaded them.
    ./bootstrap-identities.sh you@example.com kinotic@<node ip>=dev-node-1 kinotic@<worker ip>=dev-node-2
    ```
 
-   Further operators and machines come from the system console's **Members** pages.
+   Further system users and machines come from the system console's **Members** pages.
 
    The node appears `ONLINE` in the console with no health message. A first deployment lands
    on the first `ONLINE` node with room for it.

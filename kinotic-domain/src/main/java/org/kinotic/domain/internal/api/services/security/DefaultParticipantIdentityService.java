@@ -2,6 +2,9 @@ package org.kinotic.domain.internal.api.services.security;
 
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
@@ -52,13 +55,15 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     private final OrganizationMembershipRepository membershipRepository;
     private final ApplicationRepository applicationRepository;
     private final OrganizationMembershipService membershipService;
+    private final RelationshipService relationships;
 
     public DefaultParticipantIdentityService(ParticipantIdentityRepository repository,
                                              IdentityCredentialRepository credentialRepository,
                                              OidcBindingRepository bindingRepository,
                                              OrganizationMembershipRepository membershipRepository,
                                              ApplicationRepository applicationRepository,
-                                             OrganizationMembershipService membershipService) {
+                                             OrganizationMembershipService membershipService,
+                                             RelationshipService relationships) {
         super(repository);
         this.identityRepository = repository;
         this.credentialRepository = credentialRepository;
@@ -66,6 +71,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         this.membershipRepository = membershipRepository;
         this.applicationRepository = applicationRepository;
         this.membershipService = membershipService;
+        this.relationships = relationships;
     }
 
     @Override
@@ -397,7 +403,24 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 .recover(err -> err instanceof AlreadyExistsException ? Future.failedFuture(emailTaken(user)) : Future.failedFuture(err))
                 .compose(saved -> password != null
                         ? saveCredential(user.getId(), password).map(user)
-                        : Future.succeededFuture(user));
+                        : Future.succeededFuture(user))
+                .compose(this::endUser);
+    }
+
+    // An application's user is an end user of its application, in the system's store and in the application's
+    // own, where its tenant is also placed under the application with the user as a member
+    private <T extends UserParticipantIdentity> Future<T> endUser(T user) {
+        Future<Void> written;
+        if (user instanceof ApplicationParticipantIdentity applicationUser) {
+            List<RelationshipTuple> inApplication = DomainUtil.applicationUserTuples(applicationUser);
+            written = relationships.ensure(AuthzStoreService.SYSTEM, List.of(inApplication.getFirst()))
+                                   .compose(v -> relationships.ensure(DomainUtil.authzApplicationId(applicationUser.getOrganizationId(),
+                                                                                                    applicationUser.getApplicationId()),
+                                                                      inApplication));
+        } else {
+            written = Future.succeededFuture();
+        }
+        return written.map(user);
     }
 
     @Override
@@ -622,7 +645,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 .compose(v -> bindingRepository.findByIdentity(id))
                 .compose(bindings -> Future.all(bindings.stream().map(binding -> bindingRepository.deleteById(binding.getId())).toList()))
                 .compose(v -> membershipRepository.findByOrganizationUser(id))
-                .compose(memberships -> Future.all(memberships.stream().map(membership -> membershipRepository.deleteById(membership.getId())).toList()))
+                .compose(memberships -> Future.all(memberships.stream()
+                                                              .map(membership -> membershipService.removeMembership(id, membership.getOrganizationId()))
+                                                              .toList()))
                 .compose(v -> identityRepository.findAllDelegatesByOwner(id, Pageable.create(0, 1000, Sort.by("created"))))
                 .compose(delegates -> {
                     List<Future<Void>> deletes = delegates.getContent().stream()

@@ -1,7 +1,7 @@
 # Debugging Guide for the Kinotic Frontend
 
 Covers `kinotic-frontend/apps/portal` (the dashboard) and `kinotic-frontend/apps/system`
-(the operator console). Both are Vite + Vue 3 apps in the same pnpm workspace.
+(the system console). Both are Vite + Vue 3 apps in the same pnpm workspace.
 
 ## Prerequisites
 

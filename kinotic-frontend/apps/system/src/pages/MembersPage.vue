@@ -59,13 +59,20 @@
         <span v-if="selectedMember" class="truncate text-sm font-medium text-surface-950 dark:text-surface-0">{{ selectedMember.displayName || selectedMember.email }}</span>
       </template>
       <MemberDetail v-if="selectedMember" :member="selectedMember" :tint="scopeTint(scope)" :index="position - 1" />
+      <!-- a system user's grants live on the Access page; an organization's people are granted in the portal -->
+      <div v-if="selectedMember && !selectedMember.invite && !organizationId" class="mt-4 flex justify-end">
+        <Button label="Manage access" icon="pi pi-key" size="small" severity="secondary" outlined
+                @click="router.push({ name: 'system-access', query: { subject: selectedMember.id } })" />
+      </div>
     </SteppingDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Users } from '@lucide/vue'
+import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 
 import {
@@ -104,6 +111,8 @@ const props = defineProps<{
   organizationId?: string
   applicationId?: string
 }>()
+
+const router = useRouter()
 
 /** How many pending invitations the first page lists ahead of the members. */
 const INVITE_PAGE_SIZE = 100

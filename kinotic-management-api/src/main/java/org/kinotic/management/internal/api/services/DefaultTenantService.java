@@ -19,13 +19,16 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
 
     private final TenantRepository tenantRepository;
     private final ApplicationRepository applications;
+    private final ApplicationStoreProvisioner provisioner;
 
     public DefaultTenantService(TenantRepository repository,
                                 ApplicationRepository applications,
+                                ApplicationStoreProvisioner provisioner,
                                 SecurityContext securityContext) {
         super(repository, securityContext);
         this.tenantRepository = repository;
         this.applications = applications;
+        this.provisioner = provisioner;
     }
 
     @Override
@@ -64,6 +67,14 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
                            .compose(stored -> stored != null
                                    ? requireOfApplication(stored, entity.getApplicationId()).mapEmpty()
                                    : Future.succeededFuture());
+    }
+
+    // the graph first, then the record: a record that outlives its graph is deleted again, while grants that outlived
+    // their record would come back with a tenant created under the same id
+    @Override
+    protected Future<Void> beforeDelete(String id) {
+        return tenantRepository.findById(id, requireOrganizationId())
+                               .compose(tenant -> tenant == null ? Future.succeededFuture() : provisioner.removeTenant(tenant));
     }
 
     private static Future<Tenant> requireOfApplication(Tenant stored, String applicationId) {

@@ -31,6 +31,20 @@ public interface ServiceDirectoryStrategy {
                                                             Pageable pageable);
 
     /**
+     * Returns the entries of the system's own services, the ones no organization owns.
+     * @param pageable the page settings to use
+     * @return a page of the system-scoped entries
+     */
+    Future<Page<ServiceDirectoryEntry>> findSystemEntries(Pageable pageable);
+
+    /**
+     * The entry with the given id, or null when there is none.
+     * @param entryId the entry's id, {@code <zone>~<namespace>.<Name>}
+     * @return the entry or null
+     */
+    Future<ServiceDirectoryEntry> findEntry(String entryId);
+
+    /**
      * Resolves the online MCP tool with the given name callable by the given scope.
      * @param toolName the MCP tool name to resolve
      * @param organizationId the calling scope's organization, or null for a system scope

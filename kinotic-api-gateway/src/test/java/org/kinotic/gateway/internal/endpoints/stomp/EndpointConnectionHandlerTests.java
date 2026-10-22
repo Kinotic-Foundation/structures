@@ -28,11 +28,13 @@ import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.event.EventConsumer;
 import org.kinotic.core.api.event.ListenerStatus;
 import org.kinotic.core.api.event.Metadata;
-import org.kinotic.core.api.event.ZonePartitioningService;
+import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.internal.api.service.json.JacksonExceptionConverter;
+import org.kinotic.domain.api.model.security.ZoneRules;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
+import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.gateway.internal.endpoints.Services;
 import org.mockito.ArgumentCaptor;
@@ -65,8 +67,8 @@ import static org.mockito.Mockito.when;
  * cluster is answered on the client's reply destination with the typed error, a reply that settles a
  * request releases it, a session under an open connection outlives its timeout, and a connection that closes
  * answers every invocation still outstanding on the services it published, a stream whose requester is
- * gone is cancelled on the connection producing it, and a sender header a client wrote never leaves the
- * connection.
+ * gone is cancelled on the connection producing it, a sender header a client wrote never leaves the
+ * connection, and a request the authorizer refuses is answered with the refusal and never sent.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -129,9 +131,13 @@ public class EndpointConnectionHandlerTests {
         services.apiGatewayProperties.setSessionTimeout(SESSION_TIMEOUT_MS);
         services.jsonMapper = jsonMapper;
         services.exceptionConverter = new JacksonExceptionConverter(new KinoticProperties(), jsonMapper);
-        services.stompAuthorizerFactory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"));
+        // the organization participant hosts the services of the application its tests subscribe in
+        services.stompAuthorizerFactory = new StompAuthorizerFactory(
+                participant -> Future.succeededFuture(ZoneRules.from(participant, List.of("app.acme-org.orders-app"))));
         services.securityService = mock(SecurityService.class);
         when(services.securityService.authenticate(any())).thenReturn(Future.succeededFuture(participant()));
+        services.requestAuthorizer = mock(RequestAuthorizer.class);
+        when(services.requestAuthorizer.authorize(any(), any(), any(), any())).thenReturn(Future.succeededFuture());
         services.eventBusService = eventBusService;
         services.requestLivenessWatcher = requestLivenessWatcher;
         services.serviceDirectoryProvider = mock(ObjectProvider.class);
@@ -156,6 +162,27 @@ public class EndpointConnectionHandlerTests {
         Assertions.assertEquals("corr-1", errorReply.metadata().get(EventConstants.CORRELATION_ID_HEADER));
         Assertions.assertTrue(errorReply.metadata().get(EventConstants.ERROR_HEADER).contains("node-2"));
         Assertions.assertTrue(new String(errorReply.data(), StandardCharsets.UTF_8).contains("RpcServiceUnavailableException"));
+    }
+
+    @Test
+    public void testRefusedRequestIsAnsweredOnTheReplyDestination() throws Exception {
+        when(services.requestAuthorizer.authorize(any(), any(), any(), any()))
+                .thenReturn(Future.failedFuture(new AuthorizationException("Not authorized")));
+        EndpointConnectionHandler handler = connect(Map.of());
+        String replyTo = subscribeReplies(handler);
+
+        handler.send(request(replyTo, "corr-0")).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+        // the check is made with the connection's participant and the request's body, before anything is sent
+        verify(services.requestAuthorizer).authorize(eq(CRI.create(SERVICE_DESTINATION)), eq(participant()), any(), any());
+        verify(eventBusService, never()).sendWithAck(any());
+        verify(requestLivenessWatcher, never()).watch(any(), any(), any());
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).send(sent.capture());
+        Event<byte[]> errorReply = sent.getValue();
+        Assertions.assertEquals(replyTo, errorReply.cri().raw());
+        Assertions.assertEquals("corr-0", errorReply.metadata().get(EventConstants.CORRELATION_ID_HEADER));
+        Assertions.assertTrue(new String(errorReply.data(), StandardCharsets.UTF_8).contains("AuthorizationException"));
     }
 
     @Test

@@ -50,14 +50,14 @@ class DefaultLogServiceTest extends ParticipantCallTest {
 
     @Test
     void systemParticipantReadsAnyOrganizationsWorkload() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.history(query("acme", "wl-acme")));
+        callAs(SYSTEM_USER, () -> service.history(query("acme", "wl-acme")));
 
         assertEquals("acme", lokiClient.tenant);
     }
 
     @Test
     void platformWorkloadsResolveToTheSystemTenant() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.history(query(null, "wl-platform")));
+        callAs(SYSTEM_USER, () -> service.history(query(null, "wl-platform")));
 
         assertEquals(TelemetryTenant.SYSTEM, lokiClient.tenant);
     }
@@ -88,7 +88,7 @@ class DefaultLogServiceTest extends ParticipantCallTest {
 
     @Test
     void systemParticipantReadsServerLogsFromTheSystemTenant() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.serverHistory(serverQuery("kinotic-server-system", null)));
+        callAs(SYSTEM_USER, () -> service.serverHistory(serverQuery("kinotic-server-system", null)));
 
         assertEquals(TelemetryTenant.SYSTEM, lokiClient.tenant);
         assertEquals("{service_name=\"kinotic-server-system\"}", lokiClient.query);
@@ -105,7 +105,7 @@ class DefaultLogServiceTest extends ParticipantCallTest {
 
     @Test
     void serverInstanceNarrowsTheSelectorToOneNode() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.serverHistory(serverQuery("kinotic-server-app", "kinotic-server-app-7d9f8-x2k4q")));
+        callAs(SYSTEM_USER, () -> service.serverHistory(serverQuery("kinotic-server-app", "kinotic-server-app-7d9f8-x2k4q")));
 
         assertEquals(TelemetryTenant.SYSTEM, lokiClient.tenant);
         assertEquals("{service_name=\"kinotic-server-app\", service_instance_id=\"kinotic-server-app-7d9f8-x2k4q\"}",
@@ -114,14 +114,14 @@ class DefaultLogServiceTest extends ParticipantCallTest {
 
     @Test
     void serverInstanceIsQuotedIntoTheSelector() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> service.serverHistory(serverQuery("svc", "node\"} or {workload_id=~\".+")));
+        callAs(SYSTEM_USER, () -> service.serverHistory(serverQuery("svc", "node\"} or {workload_id=~\".+")));
 
         assertEquals("{service_name=\"svc\", service_instance_id=\"node\\\"} or {workload_id=~\\\".+\"}", lokiClient.query);
     }
 
     @Test
     void serverTailResolvesTheSystemTenantAndQuery() throws Throwable {
-        callAs(PLATFORM_OPERATOR, () -> Future.fromCompletionStage(service.tailServer("kinotic-server-app", "kinotic-server-app-7d9f8-x2k4q", 1_000L)
+        callAs(SYSTEM_USER, () -> Future.fromCompletionStage(service.tailServer("kinotic-server-app", "kinotic-server-app-7d9f8-x2k4q", 1_000L)
                                                                           .collectList()
                                                                           .toFuture(),
                                                                    vertx.getOrCreateContext()));

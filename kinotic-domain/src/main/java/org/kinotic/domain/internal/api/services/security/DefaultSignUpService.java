@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.services.AuthzStoreService;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
@@ -20,6 +22,8 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.internal.api.repositories.PendingSignUpRepository;
 import org.kinotic.domain.internal.api.services.EmailService;
+import org.kinotic.idl.api.utils.AuthzConstants;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -39,6 +43,7 @@ public class DefaultSignUpService implements SignUpService {
     private final OrganizationService organizationService;
     private final EmailService emailService;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
+    private final RelationshipService relationships;
     private final KinoticDomainProperties domainProperties;
 
     @Override
@@ -146,7 +151,13 @@ public class DefaultSignUpService implements SignUpService {
                             .compose(founder -> membershipService.addMembership(founder.getId(), savedOrg.getId())
                                                                  .compose(membership -> {
                                                                      savedOrg.setCreatedBy(founder.getId());
+                                                                     // the founder administers the organization: a binding of the organization
+                                                                     // admin role on it, which reaches everything inside it
                                                                      return organizationService.save(savedOrg)
+                                                                                               .compose(v -> relationships.bind(AuthzStoreService.SYSTEM,
+                                                                                                                                AuthzConstants.ORGANIZATION_ADMIN_ROLE,
+                                                                                                                                DomainUtil.authzMember(founder.getId(), savedOrg.getId()),
+                                                                                                                                AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, savedOrg.getId())))
                                                                                                .map(DomainUtil.createParticipant(founder, membership));
                                                                  })
                                                                  // a founder whose membership or organization could not be
