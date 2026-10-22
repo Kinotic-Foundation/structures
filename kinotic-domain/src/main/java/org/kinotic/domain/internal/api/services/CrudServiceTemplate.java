@@ -137,8 +137,8 @@ public class CrudServiceTemplate {
     }
 
     /**
-     * Applies the operations in one bulk request, without waiting for them to be visible in search
-     * results.
+     * Applies the operations in one bulk request; they become visible in search results with the
+     * index's next refresh.
      *
      * @param operations the operations, each naming its index, id and routing
      * @return a {@link Future} that will complete when every operation is applied, or fail with the reasons the

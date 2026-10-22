@@ -254,7 +254,8 @@ public class ProjectDeployOrchestrator implements Reconciler<ProjectDeployment> 
                                 .compose(v -> stop(current.getUiPublishWorkloadId()))
                                 .compose(v -> stop(current.getSbomWorkloadId()))
                                 .compose(v -> removeMachine(current.getSyncMachineIdentityId()))
-                                .compose(v -> projectDependenciesRepository.deleteById(projectId, current.getOrganizationId()))
+                                // gone from search before the alerts, so an advisory scan running alongside raises none again
+                                .compose(v -> projectDependenciesRepository.deleteByIdSync(projectId, current.getOrganizationId()))
                                 .compose(v -> vulnerabilityAlertRepository.deleteAllForProject(projectId, current.getOrganizationId()))
                                 .compose(v -> projectDeploymentRepository.deleteByIdSync(projectId, current.getOrganizationId()))
                                 .map(Requeue.NONE);

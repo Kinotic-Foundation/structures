@@ -3,6 +3,7 @@ package org.kinotic.core.api.crud;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,21 +70,29 @@ public class CursorPage<T> extends Page<T> {
                                                int pageSize,
                                                Sort sort,
                                                Function<List<T>, Future<Void>> action) {
-        return forEachPage(listing, pageSize, sort, action, null);
+        Promise<Void> ret = Promise.promise();
+        readPage(listing, pageSize, sort, action, null, ret);
+        return ret.future();
     }
 
-    private static <T> Future<Void> forEachPage(Function<CursorPageable, Future<Page<T>>> listing,
-                                                int pageSize,
-                                                Sort sort,
-                                                Function<List<T>, Future<Void>> action,
-                                                String cursor) {
-        return listing.apply(Pageable.create(cursor, pageSize, sort))
-                      .compose(page -> {
-                          String next = page instanceof CursorPage<T> cursorPage ? cursorPage.getCursor() : null;
-                          return action.apply(page.getContent())
-                                       .compose(v -> page.getContent().size() < pageSize || next == null
-                                               ? Future.<Void>succeededFuture()
-                                               : forEachPage(listing, pageSize, sort, action, next));
-                      });
+    // Each page is read from the callback of the one before rather than composed into its future, so
+    // a listing of any length nests no futures and its completion unwinds no stack of them
+    private static <T> void readPage(Function<CursorPageable, Future<Page<T>>> listing,
+                                     int pageSize,
+                                     Sort sort,
+                                     Function<List<T>, Future<Void>> action,
+                                     String cursor,
+                                     Promise<Void> done) {
+        listing.apply(Pageable.create(cursor, pageSize, sort))
+               .compose(page -> action.apply(page.getContent()).map(page))
+               .onSuccess(page -> {
+                   String next = page instanceof CursorPage<T> cursorPage ? cursorPage.getCursor() : null;
+                   if (page.getContent().size() < pageSize || next == null) {
+                       done.complete();
+                   } else {
+                       readPage(listing, pageSize, sort, action, next, done);
+                   }
+               })
+               .onFailure(done::fail);
     }
 }
