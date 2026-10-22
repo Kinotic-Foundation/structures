@@ -357,15 +357,15 @@ class DefaultRequestAuthorizerTest {
 
     @Test
     void aSystemParticipantIsCheckedOnThePlatformAndNamesNoProject() throws Exception {
-        Participant operator = DefaultSystemParticipant.builder().id("ops").metadata(Map.of()).roles(List.of()).build();
+        Participant systemUser = DefaultSystemParticipant.builder().id("ops").metadata(Map.of()).roles(List.of()).build();
 
-        // a project is named within an organization, which an operator has none of
-        AuthorizationException refused = refused("save", operator, EventConstants.CONTENT_TYPE_JSON, "[{\"id\":\"proj-b\"}]");
+        // a project is named within an organization, which a system user has none of
+        AuthorizationException refused = refused("save", systemUser, EventConstants.CONTENT_TYPE_JSON, "[{\"id\":\"proj-b\"}]");
         assertTrue(refused.getMessage().contains("project proj-b"), refused.getMessage());
 
         // a check on the caller's organization is made on the platform
-        authorize("findMembers", operator, EventConstants.CONTENT_TYPE_JSON, "[]");
-        assertEquals(new RelationshipTuple("user:ops@system", "organization_can_read_members", "platform:kinotic"), checked(Consistency.MINIMIZE_LATENCY));
+        authorize("findMembers", systemUser, EventConstants.CONTENT_TYPE_JSON, "[]");
+        assertEquals(new RelationshipTuple("user:ops", "organization_can_read_members", "platform:kinotic"), checked(Consistency.MINIMIZE_LATENCY));
     }
 
     @Test
