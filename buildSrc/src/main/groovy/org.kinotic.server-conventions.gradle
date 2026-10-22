@@ -1,6 +1,7 @@
 // A deployable Kinotic server: a Spring Boot application whose jar embeds the OpenTelemetry Java
 // agent as BOOT-INF/classes/opentelemetry-javaagent.jar, the path the docker-compose -javaagent
-// arguments point at.
+// arguments point at, and lists the libraries it runs in META-INF/kinotic/components.txt, which the
+// system console checks against the vulnerability advisories (ServerComponentsTask reads it).
 plugins {
     id 'org.kinotic.java-application-conventions'
 }
@@ -28,6 +29,26 @@ tasks.register('otelAgentJar', Sync) {
     into layout.buildDirectory.dir('otel-agent')
 }
 
+// One package URL per line for every library on the runtime classpath, sorted, so the listing of a
+// build changes only when its libraries do
+def serverComponents = tasks.register('serverComponents') {
+    def runtime = configurations.runtimeClasspath
+    def outputFile = layout.buildDirectory.file('server-components/components.txt')
+    inputs.files(runtime)
+    outputs.file(outputFile)
+    doLast {
+        def purls = runtime.incoming.resolutionResult.allComponents
+                           .collect { it.id }
+                           .findAll { it instanceof ModuleComponentIdentifier }
+                           .collect { "pkg:maven/${it.group}/${it.module}@${it.version}".toString() }
+                           .toSorted()
+        outputFile.get().asFile.text = purls.join('\n') + '\n'
+    }
+}
+
 tasks.named('processResources') {
     from(tasks.named('otelAgentJar'))
+    from(serverComponents) {
+        into 'META-INF/kinotic'
+    }
 }

@@ -2,6 +2,7 @@ package org.kinotic.management.internal.api.services.deployment;
 
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.core.api.utils.ZoneUtil;
@@ -15,6 +16,7 @@ import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.repositories.ProjectDependenciesRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.services.deployment.ProjectArtifactService;
+import org.kinotic.management.api.services.vulnerability.VulnerabilityScanner;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -22,12 +24,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultProjectArtifactService implements ProjectArtifactService {
 
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final ProjectDependenciesRepository projectDependenciesRepository;
+    private final VulnerabilityScanner vulnerabilityScanner;
     private final SecurityContext securityContext;
 
     @Override
@@ -66,7 +70,14 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
                                 .setOrganizationId(organizationId)
                                 .setApplicationId(deployment.getApplicationId());
                     return projectDependenciesRepository.save(dependencies, organizationId)
-                            .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId));
+                            .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId))
+                            // the SBOM stands once stored; alerts a failed scan leaves behind are corrected by the
+                            // next scan of every project
+                            .compose(v -> vulnerabilityScanner.scanProject(dependencies)
+                                                              .recover(error -> {
+                                                                  log.error("Could not scan the SBOM of project {} for vulnerabilities", projectId, error);
+                                                                  return Future.succeededFuture();
+                                                              }));
                 });
     }
 

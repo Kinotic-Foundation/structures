@@ -132,6 +132,33 @@ public class CrudServiceTemplate {
     }
 
     /**
+     * Applies the operations in one bulk request, without waiting for them to be visible in search
+     * results.
+     *
+     * @param operations the operations, each naming its index, id and routing
+     * @return a {@link Future} that will complete when every operation is applied, or fail with the reasons the
+     * operations that failed give; deleting a document that does not exist is not a failure
+     */
+    public Future<Void> bulk(List<BulkOperation> operations) {
+        if (operations.isEmpty()) {
+            // Elasticsearch rejects a bulk request with no operations
+            return Future.succeededFuture();
+        }
+        return KinoticUtil.toFuture(esAsyncClient.bulk(br -> br.operations(operations)))
+                          .compose(response -> {
+                              List<String> failures = new ArrayList<>();
+                              for (BulkResponseItem item : response.items()) {
+                                  if (item.error() != null && item.status() != 404) {
+                                      failures.add(item.index() + "/" + item.id() + ": " + item.error().reason());
+                                  }
+                              }
+                              return failures.isEmpty()
+                                      ? Future.<Void>succeededFuture()
+                                      : Future.<Void>failedFuture(new IllegalStateException("Bulk request failed for " + failures));
+                          });
+    }
+
+    /**
      * Builds a bool query whose {@code filter} clauses are the supplied {@code filters}.
      * Convenience for callers that compose specialized queries from one or more term
      * filters. Requires at least one non-null filter.
@@ -981,6 +1008,36 @@ public class CrudServiceTemplate {
     /** Builds a {@code term} query for {@code field} equal to {@code value}. */
     public Query termFilter(String field, double value) {
         return TermQuery.of(t -> t.field(field).value(value))._toQuery();
+    }
+
+    /**
+     * Lists, in ascending order, the distinct values of a keyword field that start with a prefix, as
+     * the index's term dictionary holds them. A value whose documents were all deleted can be listed
+     * until their segments merge.
+     *
+     * @param indexName   name of the index
+     * @param field       the keyword field
+     * @param prefix      the start every value listed has
+     * @param searchAfter the value to list after, or null to list from the first
+     * @param size        the most values to list
+     * @return a {@link Future} that will complete with the values, fewer than {@code size} only once no more follow
+     */
+    public Future<List<String>> termsEnum(String indexName, String field, String prefix, String searchAfter, int size) {
+        return KinoticUtil.toFuture(esAsyncClient.termsEnum(b -> {
+                                                     b.index(indexName)
+                                                      .field(field)
+                                                      .string(prefix)
+                                                      .size(size);
+                                                     if (searchAfter != null) {
+                                                         b.searchAfter(searchAfter);
+                                                     }
+                                                     return b;
+                                                 }))
+                          .compose(response -> response.complete()
+                                  ? Future.succeededFuture(response.terms())
+                                  // a shard that timed out leaves the list short, which would read as the end
+                                  : Future.failedFuture(new IllegalStateException("Listing the values of " + field + " in "
+                                                                                          + indexName + " timed out")));
     }
 
     public Future<Void> updateIndexMapping(String indexName,

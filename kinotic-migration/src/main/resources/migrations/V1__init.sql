@@ -105,6 +105,51 @@ CREATE TABLE IF NOT EXISTS kinotic_project_dependencies (
     edges JSON NOT INDEXED
 );
 
+-- Vulnerability advisories read from OSV, one row per advisory, shared by every organization.
+-- packages lists the package URL, without a version, of every package the advisory affects, so
+-- the advisories of an SBOM's packages are one terms query; affected holds which versions of each,
+-- read whole and never searched. withdrawn is set once OSV withdraws the advisory.
+CREATE TABLE IF NOT EXISTS kinotic_vulnerability_advisory (
+    id KEYWORD,
+    aliases KEYWORD,
+    summary TEXT,
+    kind KEYWORD,
+    severity KEYWORD,
+    cvss KEYWORD NOT INDEXED,
+    published DATE,
+    modified DATE,
+    withdrawn DATE,
+    packages KEYWORD,
+    affected JSON NOT INDEXED
+);
+
+-- How far the advisories of each package ecosystem have been read from OSV; id is the ecosystem.
+CREATE TABLE IF NOT EXISTS kinotic_vulnerability_feed (
+    id KEYWORD,
+    syncedThrough DATE,
+    checked DATE
+);
+
+-- The advisories affecting each project's SBOM, one row per project and advisory while the advisory
+-- affects the SBOM; the rows of an organization are its vulnerability inbox. id is
+-- <projectId>~<advisoryId>.
+CREATE TABLE IF NOT EXISTS kinotic_vulnerability_alert (
+    id KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
+    projectId KEYWORD,
+    finding OBJECT (
+        advisoryId KEYWORD,
+        aliases KEYWORD,
+        summary TEXT,
+        kind KEYWORD,
+        severity KEYWORD,
+        packages JSON NOT INDEXED
+    ),
+    created DATE,
+    acknowledged BOOLEAN
+);
+
 -- Microservice deployments: one row per microservice artifact a project deployment has ensured.
 -- state.desired is running the commit its project's last deployment asked for, or left as the
 -- commit dropped it; failureMessage keeps why it is not running as it should; restartAt is when

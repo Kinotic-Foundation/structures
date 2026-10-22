@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <PageHeader title="SBOM"
-                description="The project's software bill of materials: every package its bun.lock installs and how the project depends on it. The last step of a deployment reads it whenever the dependencies changed.">
+                description="The project's software bill of materials: every package its bun.lock installs and how the project depends on it. The last step of a deployment reads it whenever the dependencies changed, and every package is checked against the OSV advisories.">
       <template #actions>
         <Button v-if="dependencies" label="Download" icon="pi pi-download" severity="secondary" outlined @click="download" />
       </template>
@@ -15,7 +15,7 @@
                          title="No SBOM yet" hint="The last step of a deployment reads it from the project's bun.lock whenever the dependencies change." />
 
     <template v-else>
-      <div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard :icon="GitCommitHorizontal" :tint="TINTS.purple" label="Commit" detail="the last synced commit">
           <span class="font-mono text-2xl font-semibold tracking-tight text-surface-950 dark:text-surface-0"
                 v-tooltip.top="commitSha || undefined">{{ commitSha ? shortSha(commitSha) : '—' }}</span>
@@ -26,7 +26,15 @@
                   detail="reached by production dependencies" />
         <StatCard :icon="Wrench" :tint="TINTS.purple" label="Development" :value="countOf(PackageScope.DEVELOPMENT)"
                   detail="only used to build and test" />
+        <StatCard :icon="ShieldAlert" :tint="alerts.length ? TINTS.red : TINTS.green" label="Vulnerabilities" :value="alerts.length"
+                  :detail="`${countSevere(alerts.map(alert => alert.finding))} critical or high`" />
       </div>
+
+      <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
+                        description="Advisories from OSV that affect the packages above, the most severe first. They are checked whenever the SBOM is read and whenever an advisory is published or changes."
+                        class="mb-4">
+        <VulnerabilityFindingsTable :items="alerts" data-key="id" />
+      </DashboardSection>
 
       <DashboardSection :icon="ListTree" :tint="TINTS.purple" title="Packages" :count="visibleRows.length"
                         description="Search by name, or filter by how the project reaches each package. Download saves the SBOM as a CycloneDX 1.6 document, the dependency graph included.">
@@ -39,18 +47,24 @@
         </div>
 
         <DataTable :value="pageRows" size="small" data-key="purl">
-          <Column header="Package" style="width: 45%">
+          <Column header="Package" style="width: 40%">
             <template #body="{ data }"><span class="font-mono text-sm break-all">{{ data.name }}</span></template>
           </Column>
           <Column header="Version" style="width: 20%">
             <template #body="{ data }"><span class="font-mono text-sm break-all">{{ data.version }}</span></template>
           </Column>
-          <Column header="Scope" style="width: 15%">
+          <Column header="Scope" style="width: 12%">
             <template #body="{ data }">
               <Tag :value="data.scope" :severity="data.scope === PackageScope.RUNTIME ? 'info' : 'secondary'" />
             </template>
           </Column>
-          <Column header="Dependency" style="width: 20%">
+          <Column header="Advisories" style="width: 10%">
+            <template #body="{ data }">
+              <Tag v-if="advisoriesByPurl.get(data.purl)" :value="String(advisoriesByPurl.get(data.purl))" severity="danger"
+                   v-tooltip.top="'Advisories affecting this version'" />
+            </template>
+          </Column>
+          <Column header="Dependency" style="width: 18%">
             <template #body="{ data }">
               <span :class="['text-sm', data.direct ? 'text-surface-950 dark:text-surface-0' : 'text-muted-color']">{{ data.direct ? 'Direct' : 'Transitive' }}</span>
             </template>
@@ -80,15 +94,15 @@ import Message from 'primevue/message'
 import type { PageState } from 'primevue/paginator'
 import SelectButton from 'primevue/selectbutton'
 import Tag from 'primevue/tag'
-import { GitCommitHorizontal, ListTree, Package, Server, Wrench } from '@lucide/vue'
-import { DashboardSection, errorMessage, PageHeader, shortSha, StatCard, TablePaginator, TINTS, EmptyChartCharacter } from '@kinotic-ai/frontend-common'
+import { GitCommitHorizontal, ListTree, Package, Server, ShieldAlert, Wrench } from '@lucide/vue'
+import { countSevere, DashboardSection, errorMessage, PageHeader, shortSha, StatCard, TablePaginator, TINTS, EmptyChartCharacter, VulnerabilityFindingsTable } from '@kinotic-ai/frontend-common'
 import { Kinotic } from '@kinotic-ai/core'
-import type { ProjectDependencies, ProjectDeployment } from '@kinotic-ai/management-api'
+import type { ProjectDependencies, ProjectDeployment, VulnerabilityAlert } from '@kinotic-ai/management-api'
 
 /**
  * The project's SBOM, the one of the dependencies of the last synced commit: how many packages it
- * holds and how the project reaches them, then every package its bun.lock installs, searchable by
- * name and filtered by how the project uses it. Download saves it as a CycloneDX 1.6 document, the
+ * holds and how the project reaches them, the advisories affecting them, then every package its
+ * bun.lock installs, searchable by name and filtered by how the project uses it. Download saves it as a CycloneDX 1.6 document, the
  * dependency graph included.
  */
 const props = defineProps<{
@@ -120,6 +134,7 @@ const PURL_PREFIX = 'pkg:npm/'
 
 const deployment = ref<ProjectDeployment | null>(null)
 const dependencies = ref<ProjectDependencies | null>(null)
+const alerts = ref<VulnerabilityAlert[]>([])
 const search = ref('')
 const scope = ref<string>(ALL_SCOPES)
 const first = ref(0)
@@ -149,6 +164,17 @@ const rows = computed<PackageRow[]>(() => {
   return ret
 })
 
+/** How many advisories affect each package version, by package URL. */
+const advisoriesByPurl = computed(() => {
+  const ret = new Map<string, number>()
+  for (const alert of alerts.value) {
+    for (const pkg of alert.finding.packages) {
+      ret.set(pkg.purl, (ret.get(pkg.purl) ?? 0) + 1)
+    }
+  }
+  return ret
+})
+
 const visibleRows = computed(() => {
   const needle = search.value.trim().toLowerCase()
   return rows.value.filter(row => (scope.value === ALL_SCOPES || row.scope === scope.value)
@@ -164,10 +190,12 @@ watch([search, scope], () => {
 
 async function load(): Promise<void> {
   try {
-    const [found, tree] = await Promise.all([Kinotic.projects.findDeployment(props.projectId),
-                                             Kinotic.projects.findDependencies(props.projectId)])
+    const [found, tree, raised] = await Promise.all([Kinotic.projects.findDeployment(props.projectId),
+                                                     Kinotic.projects.findDependencies(props.projectId),
+                                                     Kinotic.vulnerabilityAlerts.findAllForProject(props.projectId)])
     deployment.value = found
     dependencies.value = tree
+    alerts.value = raised
   } catch (err) {
     error.value = errorMessage(err, 'The SBOM could not be loaded')
   } finally {

@@ -36,8 +36,9 @@ public interface ProjectArtifactService {
      * @param dependencies   the dependency tree, stored under the project's id, organization and
      *                       application whatever ids it carries; no package may be listed twice,
      *                       and every position must name one of its packages
-     * @return a future completing once the tree is stored and the deployment record says the
-     *         project has an SBOM of its dependencies
+     * @return a future completing once the tree is stored, the deployment record says the
+     *         project has an SBOM of its dependencies, and the tree has been checked against the
+     *         vulnerability advisories, raising an alert for each advisory that affects it
      */
     Future<Void> recordSbom(String projectId, String dependencyHash, ProjectDependencies dependencies);
 
