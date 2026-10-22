@@ -37,8 +37,6 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation,
                                                 EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
-        // checked before provision() saves the organization user and membership the invitation is for
-        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         String address = DomainUtil.normalizeEmail(email);
         return identityService.findOrganizationUserByEmail(address)
@@ -56,6 +54,10 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     private Future<OrganizationMember> provision(OrganizationParticipant inviter, String address, String displayName,
                                                  boolean sendInvitation, EmailTemplate emailTemplate) {
         String organizationId = inviter.getOrganizationId();
+        if (sendInvitation) {
+            // checked before the organization user and membership the invitation is for are saved
+            emailService.validateTemplate(emailTemplate);
+        }
         Future<Void> admissible = sendInvitation ? Future.succeededFuture() : requireOwnProvider(organizationId);
         OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
         user.setEmail(address)

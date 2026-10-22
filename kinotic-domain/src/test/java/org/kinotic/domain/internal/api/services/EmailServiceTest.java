@@ -24,7 +24,8 @@ class EmailServiceTest {
     void aUiBaseUrlLinksCannotBeAppendedToIsRejected() {
         for (String url : new String[]{null, "", "https://builder.example.com/", "https://builder.example.com?x=1",
                                        "https://builder.example.com#top", "builder.example.com", "ftp://builder.example.com",
-                                       " https://builder.example.com"}) {
+                                       " https://builder.example.com", "https://builder.example.com@attacker.example",
+                                       "https://builder.example.com:abc"}) {
             assertThrows(IllegalArgumentException.class, () -> emailService.validateTemplate(template(url)), String.valueOf(url));
         }
     }

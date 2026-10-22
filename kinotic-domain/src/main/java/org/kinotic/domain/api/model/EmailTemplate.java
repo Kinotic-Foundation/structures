@@ -12,9 +12,9 @@ import lombok.experimental.Accessors;
  * {@code acceptUrl} and {@code expiresInDays} for an invitation, and {@code displayName} and {@code verificationUrl}
  * for a verification.
  * <p>
- * A call passing a template fails with {@link IllegalArgumentException}, before it saves anything, unless
- * {@code uiBaseUrl} is an absolute http or https URL with no query, fragment or trailing slash and every source is
- * present and compiles and renders.
+ * A call that would send an email with a template fails with {@link IllegalArgumentException}, before it saves
+ * anything, unless {@code uiBaseUrl} is an absolute http or https URL naming a host, with no user info, query,
+ * fragment or trailing slash, and every source is present and compiles and renders.
  */
 @Getter
 @Setter

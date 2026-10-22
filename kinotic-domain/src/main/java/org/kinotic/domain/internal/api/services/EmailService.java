@@ -226,8 +226,8 @@ public class EmailService {
     public void validateTemplate(EmailTemplate template) {
         if (template != null) {
             Validate.isTrue(isBaseUrl(template.getUiBaseUrl()),
-                            "The email template's uiBaseUrl must be an absolute http or https URL with no query, fragment"
-                                    + " or trailing slash");
+                            "The email template's uiBaseUrl must be an absolute http or https URL naming a host, with no"
+                                    + " user info, query, fragment or trailing slash");
             validateTemplateSources(template.getSubject(), template.getHtmlBody(), template.getTextBody());
         }
     }
@@ -268,7 +268,8 @@ public class EmailService {
             try {
                 URI uri = new URI(url);
                 ret = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
-                        && uri.getRawAuthority() != null
+                        && uri.getHost() != null
+                        && uri.getRawUserInfo() == null
                         && uri.getRawQuery() == null
                         && uri.getRawFragment() == null;
             } catch (URISyntaxException e) {
