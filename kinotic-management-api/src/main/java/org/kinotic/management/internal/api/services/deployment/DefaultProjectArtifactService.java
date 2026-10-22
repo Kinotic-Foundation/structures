@@ -19,6 +19,8 @@ import org.kinotic.management.api.services.deployment.ProjectArtifactService;
 import org.kinotic.management.api.services.vulnerability.VulnerabilityScanner;
 import org.springframework.stereotype.Component;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -124,6 +126,9 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
         List<String> packages = dependencies.getPackages();
         Validate.notNull(packages, "dependencies.packages is required");
         Validate.noNullElements(packages, "dependencies.packages holds null at position %d");
+        for (String purl : packages) {
+            Validate.isTrue(isVersionedPackageUrl(purl), "dependencies.packages holds %s, which is not a package URL with a version", purl);
+        }
         Validate.isTrue(new HashSet<>(packages).size() == packages.size(), "dependencies.packages lists a package twice");
         int count = packages.size();
         requirePositions(dependencies.getDirect(), count, "direct");
@@ -134,6 +139,21 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
             Validate.isTrue(edge != null && edge.length == 2 && isPosition(edge[0], count) && isPosition(edge[1], count),
                             "dependencies.edges holds an edge that is not two positions in packages");
         }
+    }
+
+    // Every scan of every organization decodes the versions the trees list, so one that does not
+    // decode would fail them all
+    private static boolean isVersionedPackageUrl(String purl) {
+        int lastSlash = purl.lastIndexOf('/');
+        boolean ret = purl.startsWith("pkg:") && lastSlash > 0 && purl.lastIndexOf('@') > lastSlash;
+        if (ret) {
+            try {
+                URLDecoder.decode(purl, StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                ret = false;
+            }
+        }
+        return ret;
     }
 
     private static void requirePositions(List<Integer> positions, int count, String name) {
