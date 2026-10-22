@@ -11,7 +11,6 @@ export * from '@/api/model/workload/VmNodeRegistration'
 export * from '@/api/model/workload/WorkloadStatusReport'
 export * from '@/api/model/llm/LlmConfiguration'
 export * from '@/api/model/llm/LlmProviderType'
-export * from '@/api/model/email/EmailTemplateType'
 export * from '@/api/model/email/SystemEmailTemplate'
 
 // Services

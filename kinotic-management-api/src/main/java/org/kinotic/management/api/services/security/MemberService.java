@@ -14,8 +14,7 @@ import org.kinotic.management.api.model.PendingInviteSummary;
  * call, and a supplied {@code applicationId} must belong to that organization. The organization's members are
  * {@link OrganizationMember}s; an application's members are its {@link ApplicationParticipantIdentity}s.
  * Invitations are scoped: {@code applicationId} null addresses the organization's, set addresses that
- * application's. A method that emails an invitation sends the
- * {@link org.kinotic.domain.api.model.EmailTemplateType#INVITATION}
+ * application's. A method that emails an invitation sends the invitation
  * {@link org.kinotic.domain.api.model.SystemEmailTemplate} its {@code emailTemplateId} names, or the default one
  * when it is null; the email's accept link opens {@code /invite/accept?token=} on that template's UI.
  */

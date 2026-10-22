@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.SystemEmailTemplate;
 
 /**
@@ -23,22 +22,22 @@ public interface SystemEmailTemplateService {
     Future<SystemEmailTemplate> findById(String id);
 
     /**
-     * Saves a template, new or changed. Its sources must render with sample values of its type's variables.
+     * Saves a template, new or changed. Its sources must render with sample values of the invitation and
+     * verification variables.
      *
      * @param template the template; when its id names an existing template, the one it replaces, keeping that one's
      *                 creation time
      * @return the template as saved, its UI base URL without a trailing slash
      * @throws IllegalArgumentException when a field is missing, the id is not lowercase letters, digits and interior
-     *                                  dashes, the UI base URL is not an http or https URL, a type's default is given
-     *                                  another type, or a source does not render
+     *                                  dashes, the UI base URL is not an http or https URL, or a source does not render
      */
     Future<SystemEmailTemplate> save(SystemEmailTemplate template);
 
     /**
      * Deletes the template {@code id}; nothing happens for an unknown id.
      *
-     * @throws IllegalArgumentException when {@code id} is a type's {@link EmailTemplateType#getDefaultTemplateId()
-     *                                  default}
+     * @throws IllegalArgumentException when {@code id} is {@link SystemEmailTemplate#DEFAULT_INVITATION_ID} or
+     *                                  {@link SystemEmailTemplate#DEFAULT_VERIFICATION_ID}
      */
     Future<Void> deleteById(String id);
 }

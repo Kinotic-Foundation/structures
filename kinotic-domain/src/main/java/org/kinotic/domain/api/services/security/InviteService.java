@@ -25,9 +25,8 @@ public interface InviteService {
      *
      * @param invite carrying email, optional displayName, scope, and inviter attribution;
      *               id, token, and expiry are assigned here
-     * @param emailTemplateId the {@link org.kinotic.domain.api.model.EmailTemplateType#INVITATION}
-     *                        {@link org.kinotic.domain.api.model.SystemEmailTemplate} to email, or {@code null} for
-     *                        the default
+     * @param emailTemplateId the invitation {@link org.kinotic.domain.api.model.SystemEmailTemplate} to email, or
+     *                        {@code null} for the default
      * @return a future emitting the saved invitation
      */
     Future<PendingInvite> createInvite(PendingInvite invite, String emailTemplateId);
@@ -94,9 +93,8 @@ public interface InviteService {
 
     /**
      * Emails the invitation {@code inviteId} of organization {@code organizationId} again, to the same address
-     * with the same accept token, using the {@link org.kinotic.domain.api.model.EmailTemplateType#INVITATION}
-     * {@link org.kinotic.domain.api.model.SystemEmailTemplate} {@code emailTemplateId}, or the default when it is
-     * {@code null}. Fails when the organization has no such invitation.
+     * with the same accept token, using the invitation {@link org.kinotic.domain.api.model.SystemEmailTemplate}
+     * {@code emailTemplateId}, or the default when it is {@code null}. Fails when the organization has no such invitation.
      */
     Future<Void> resendInvite(String inviteId, String organizationId, String emailTemplateId);
 }

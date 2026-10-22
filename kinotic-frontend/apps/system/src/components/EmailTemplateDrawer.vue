@@ -11,12 +11,6 @@
       </div>
 
       <div>
-        <label for="email-template-type" class="mb-2 block text-sm font-medium">Email</label>
-        <Select input-id="email-template-type" v-model="type" :options="TYPES" option-label="label" option-value="value"
-                :disabled="isDefault" class="w-full" />
-      </div>
-
-      <div>
         <label for="email-template-ui" class="mb-2 block text-sm font-medium">UI base URL</label>
         <InputText id="email-template-ui" v-model="uiBaseUrl" placeholder="https://builder.example.com" autocomplete="off" class="w-full font-mono" />
         <p class="mt-1.5 text-[0.8125rem] text-muted-color">
@@ -44,10 +38,10 @@
         </p>
       </div>
 
-      <div>
-        <span class="mb-2 block text-sm font-medium">Variables</span>
+      <div v-for="email in EMAILS" :key="email.label">
+        <span class="mb-2 block text-sm font-medium">{{ email.label }} variables</span>
         <div class="flex flex-wrap gap-2">
-          <code v-for="variable in EMAIL_TEMPLATE_TYPES[type].variables" :key="variable"
+          <code v-for="variable in email.variables" :key="variable"
                 class="rounded-md bg-indigo-50 px-2 py-1 font-mono text-[13px] text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{{ placeholderOf(variable) }}</code>
         </div>
       </div>
@@ -64,13 +58,11 @@
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateType, SystemEmailTemplate } from '@kinotic-ai/system-api'
+import { SystemEmailTemplate } from '@kinotic-ai/system-api'
 import { FormDrawer, showErrorToast, TemplateCodeEditor } from '@kinotic-ai/frontend-common'
-import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
 
 /**
  * Adds an email template, or edits the one given.
@@ -85,7 +77,11 @@ const emit = defineEmits<{
   (e: 'saved', template: SystemEmailTemplate): void
 }>()
 
-const TYPES = Object.values(EmailTemplateType).map(value => ({ label: EMAIL_TEMPLATE_TYPES[value].label, value }))
+// the variables each email a template may be sent as renders with
+const EMAILS = [
+  { label: 'Invitation', variables: ['inviterName', 'organizationName', 'applicationName', 'acceptUrl', 'expiresInDays'] },
+  { label: 'Sign-up verification', variables: ['displayName', 'verificationUrl'] }
+]
 
 const BODY_FORMATS = [
   { label: 'HTML', value: 'html' },
@@ -96,7 +92,6 @@ const toast = useToast()
 
 const id = ref('')
 const uiBaseUrl = ref('')
-const type = ref<EmailTemplateType>(EmailTemplateType.INVITATION)
 const subject = ref('')
 const htmlBody = ref('')
 const textBody = ref('')
@@ -104,7 +99,6 @@ const bodyFormat = ref<'html' | 'text'>('html')
 const saving = ref(false)
 
 const isNew = computed(() => props.template === null)
-const isDefault = computed(() => Object.values(DEFAULT_EMAIL_TEMPLATE_IDS).includes(id.value))
 const complete = computed(() => [id, subject, htmlBody, textBody].every(field => field.value.trim() !== ''))
 
 // the fields start from the template being edited each time the drawer opens
@@ -113,7 +107,6 @@ watch(() => props.visible, visible => {
     const template = props.template
     id.value = template?.id ?? ''
     uiBaseUrl.value = template?.uiBaseUrl ?? ''
-    type.value = template?.type ?? EmailTemplateType.INVITATION
     subject.value = template?.subject ?? ''
     htmlBody.value = template?.htmlBody ?? ''
     textBody.value = template?.textBody ?? ''
@@ -129,7 +122,7 @@ async function submit(): Promise<void> {
   if (!complete.value) {
     return
   }
-  const template = Object.assign(new SystemEmailTemplate(id.value.trim(), type.value, subject.value, htmlBody.value, textBody.value), {
+  const template = Object.assign(new SystemEmailTemplate(id.value.trim(), subject.value, htmlBody.value, textBody.value), {
     uiBaseUrl: uiBaseUrl.value.trim() || null,
     created: props.template?.created ?? null
   })

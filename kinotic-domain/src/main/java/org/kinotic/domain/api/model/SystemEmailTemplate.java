@@ -9,10 +9,10 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * An email of one {@link EmailTemplateType} that a UI built on Kinotic sends in its own name, chosen by the call that
- * sends it naming the template's {@link #id}. A call that names none sends its type's
- * {@link EmailTemplateType#getDefaultTemplateId() default}. Subject and bodies are Handlebars sources rendered with the
- * type's variables. An application's own {@link InviteEmailTemplate} takes precedence over the content of an
+ * An invitation or sign-up verification email that a UI built on Kinotic sends in its own name, chosen by the call
+ * that sends it naming the template's {@link #id}. A call that names none sends {@link #DEFAULT_INVITATION_ID} or
+ * {@link #DEFAULT_VERIFICATION_ID}. Subject and bodies are Handlebars sources rendered with the variables of the email
+ * the call sends. An application's own {@link InviteEmailTemplate} takes precedence over the content of an
  * invitation's template.
  */
 @Getter
@@ -21,10 +21,21 @@ import java.util.Date;
 @NoArgsConstructor
 public class SystemEmailTemplate implements Identifiable<String>, EmailTemplate {
 
+    /**
+     * The invitation template sent when a call names none, which cannot be deleted. Variables: {@code inviterName},
+     * {@code organizationName}, {@code applicationName} (absent for an organization invitation), {@code acceptUrl}
+     * and {@code expiresInDays}.
+     */
+    public static final String DEFAULT_INVITATION_ID = "kinotic-invitation";
+
+    /**
+     * The sign-up verification template sent when a call names none, which cannot be deleted. Variables:
+     * {@code displayName} and {@code verificationUrl}.
+     */
+    public static final String DEFAULT_VERIFICATION_ID = "kinotic-verification";
+
     /** The name callers choose the template by, such as {@code builder-invitation}. */
     private String id;
-
-    private EmailTemplateType type;
 
     /**
      * The base URL of the UI whose page the email's link opens, such as {@code https://builder.example.com}; the

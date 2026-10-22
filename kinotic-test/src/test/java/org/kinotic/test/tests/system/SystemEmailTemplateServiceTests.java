@@ -2,13 +2,13 @@ package org.kinotic.test.tests.system;
 
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
-import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.SystemEmailTemplate;
 import org.kinotic.system.api.services.SystemEmailTemplateService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Verifies what a system email template must be to be saved: a readable id, an http or https UI base URL, and
- * sources that render with the type's variables; and that the defaults every unnamed send uses stay in place.
+ * sources that render with the email variables; and that the defaults every unnamed send uses stay in place.
  */
 @SpringBootTest
 public class SystemEmailTemplateServiceTests extends KinoticTestBase {
@@ -46,13 +46,10 @@ public class SystemEmailTemplateServiceTests extends KinoticTestBase {
 
     @Test
     public void theDefaultsAreSeededAndStay() throws Exception {
-        for (EmailTemplateType type : EmailTemplateType.values()) {
-            SystemEmailTemplate seeded = await(templates.findById(type.getDefaultTemplateId()));
-            assertNotNull(seeded);
-            assertEquals(type, seeded.getType());
-            assertRefused(() -> templates.deleteById(type.getDefaultTemplateId()));
+        for (String id : List.of(SystemEmailTemplate.DEFAULT_INVITATION_ID, SystemEmailTemplate.DEFAULT_VERIFICATION_ID)) {
+            assertNotNull(await(templates.findById(id)));
+            assertRefused(() -> templates.deleteById(id));
         }
-        assertRefused(() -> templates.save(invitation(EmailTemplateType.VERIFICATION.getDefaultTemplateId())));
     }
 
     @Test
@@ -72,7 +69,6 @@ public class SystemEmailTemplateServiceTests extends KinoticTestBase {
 
     private static SystemEmailTemplate invitation(String id) {
         return new SystemEmailTemplate().setId(id)
-                                          .setType(EmailTemplateType.INVITATION)
                                           .setSubject("Join {{organizationName}}")
                                           .setHtmlBody("<a href=\"{{{acceptUrl}}}\">Accept</a>")
                                           .setTextBody("Accept: {{acceptUrl}}");

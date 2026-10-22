@@ -1,7 +1,7 @@
 -- Summit 42's invitation and verification emails, in its own style, which Summit 42 names by id in the calls
 -- that send them. Their links open http://localhost:5175, where a development stack runs Summit 42 at, its vite dev server.
 
-INSERT INTO kinotic_system_email_template (id, type, uiBaseUrl, subject, htmlBody, textBody, created, updated) VALUES ('summit-42-invitation', 'INVITATION', 'http://localhost:5175', '{{#if applicationName}}{{inviterName}} invited you to {{applicationName}}{{else}}{{inviterName}} invited you to Summit 42{{/if}}', '<!DOCTYPE html>
+INSERT INTO kinotic_system_email_template (id, uiBaseUrl, subject, htmlBody, textBody, created, updated) VALUES ('summit-42-invitation', 'http://localhost:5175', '{{#if applicationName}}{{inviterName}} invited you to {{applicationName}}{{else}}{{inviterName}} invited you to Summit 42{{/if}}', '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -97,7 +97,7 @@ This invitation expires in {{expiresInDays}} days. If you weren’t expecting it
 you can ignore this email.
 
 Summit 42', '2026-10-22T00:00:00Z', '2026-10-22T00:00:00Z') WITH REFRESH;
-INSERT INTO kinotic_system_email_template (id, type, uiBaseUrl, subject, htmlBody, textBody, created, updated) VALUES ('summit-42-verification', 'VERIFICATION', 'http://localhost:5175', 'Verify your email for Summit 42', '<!DOCTYPE html>
+INSERT INTO kinotic_system_email_template (id, uiBaseUrl, subject, htmlBody, textBody, created, updated) VALUES ('summit-42-verification', 'http://localhost:5175', 'Verify your email for Summit 42', '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

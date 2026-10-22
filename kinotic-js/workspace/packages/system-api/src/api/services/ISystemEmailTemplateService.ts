@@ -17,12 +17,11 @@ export interface ISystemEmailTemplateService {
     /**
      * Saves a template, replacing the one with its id if there is one, and resolves to it as saved, its UI base URL
      * without a trailing slash. Its id must be lowercase letters, digits and interior dashes, its UI base URL an http
-     * or https URL, a type's default must stay that type, and its sources must render with sample values of its
-     * type's variables.
+     * or https URL, and its sources must render with sample values of the invitation and verification variables.
      */
     save(template: SystemEmailTemplate): Promise<SystemEmailTemplate>
 
-    /** Deletes the template; a type's default cannot be deleted. */
+    /** Deletes the template; a default (DEFAULT_EMAIL_TEMPLATE_IDS) cannot be deleted. */
     deleteById(id: string): Promise<void>
 }
 
