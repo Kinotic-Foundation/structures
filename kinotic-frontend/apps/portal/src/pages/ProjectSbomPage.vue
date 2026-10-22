@@ -30,6 +30,8 @@
                   :detail="`${countSevere(alerts.map(alert => alert.finding))} critical or high`" />
       </div>
 
+      <Message v-if="alertsError" severity="warn" :closable="false" class="mb-4">{{ alertsError }}</Message>
+
       <DashboardSection v-if="alerts.length" :icon="ShieldAlert" :tint="TINTS.red" title="Vulnerabilities" :count="alerts.length"
                         description="Advisories from OSV that affect the packages above, the most severe first. They are checked whenever the SBOM is read and whenever an advisory is published or changes."
                         class="mb-4">
@@ -135,6 +137,7 @@ const PURL_PREFIX = 'pkg:npm/'
 const deployment = ref<ProjectDeployment | null>(null)
 const dependencies = ref<ProjectDependencies | null>(null)
 const alerts = ref<VulnerabilityAlert[]>([])
+const alertsError = ref<string | null>(null)
 const search = ref('')
 const scope = ref<string>(ALL_SCOPES)
 const first = ref(0)
@@ -190,12 +193,16 @@ watch([search, scope], () => {
 
 async function load(): Promise<void> {
   try {
-    const [found, tree, raised] = await Promise.all([Kinotic.projects.findDeployment(props.projectId),
-                                                     Kinotic.projects.findDependencies(props.projectId),
-                                                     Kinotic.vulnerabilityAlerts.findAllForProject(props.projectId)])
+    // the SBOM shows without its alerts when they cannot be read
+    const raised = Kinotic.vulnerabilityAlerts.findAllForProject(props.projectId).catch((err: unknown) => {
+      alertsError.value = errorMessage(err, "The SBOM's vulnerabilities could not be checked")
+      return []
+    })
+    const [found, tree] = await Promise.all([Kinotic.projects.findDeployment(props.projectId),
+                                             Kinotic.projects.findDependencies(props.projectId)])
     deployment.value = found
     dependencies.value = tree
-    alerts.value = raised
+    alerts.value = await raised
   } catch (err) {
     error.value = errorMessage(err, 'The SBOM could not be loaded')
   } finally {

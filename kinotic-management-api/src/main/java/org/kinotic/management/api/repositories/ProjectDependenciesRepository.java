@@ -34,7 +34,7 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
      * @param pageable the page to return; sorted by {@code organizationId} then {@code id}, since an id
      *                 names one project only within its organization
      */
-    public Future<Page<ProjectDependencies>> findAll(CursorPageable pageable) {
+    public Future<Page<ProjectDependencies>> findAllOfEveryOrganization(CursorPageable pageable) {
         return findAll(pageable, null);
     }
 
