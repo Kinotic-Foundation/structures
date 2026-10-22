@@ -5,6 +5,7 @@ package org.kinotic.gateway.internal.endpoints.stomp;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.Session;
@@ -50,6 +51,9 @@ public class EndpointConnectionHandler {
     private SessionKeepAliveMode sessionKeepAliveMode = SessionKeepAliveMode.ACTIVITY;
     private boolean sessionCreatedHere;
     private long sessionTimer = -1;
+    // completes once every service request and control event received so far has been handed to the event bus
+    // or refused, so each one waits for those before it and they leave in the order they arrived
+    private Future<Void> dispatched = Future.succeededFuture();
 
     public EndpointConnectionHandler(Services services) {
         this.services = services;
@@ -194,23 +198,39 @@ public class EndpointConnectionHandler {
                 String correlationId = incomingEvent.metadata().get(EventConstants.CORRELATION_ID_HEADER);
 
                 // A control event names a stream by correlation id and is published: the instance producing
-                // the stream is whichever one took the request, and the others ignore an id they do not hold
+                // the stream is whichever one took the request, and the others ignore an id they do not hold.
+                // It is published in turn, so a cancel never reaches the services before the request it cancels
                 if (incomingEvent.metadata().contains(EventConstants.CONTROL_HEADER)) {
-                    if (EventConstants.CONTROL_VALUE_CANCEL.equals(incomingEvent.metadata().get(EventConstants.CONTROL_HEADER))) {
-                        incomingInvocationTracker.requestFinished(correlationId);
-                    }
-                    services.eventBusService.publish(incomingEvent);
-                    return Future.succeededFuture();
+                    Future<Void> ret = dispatched.transform(previous -> {
+                        if (EventConstants.CONTROL_VALUE_CANCEL.equals(incomingEvent.metadata().get(EventConstants.CONTROL_HEADER))) {
+                            incomingInvocationTracker.requestFinished(correlationId);
+                        }
+                        services.eventBusService.publish(incomingEvent);
+                        return Future.<Void>succeededFuture();
+                    });
+                    dispatched = ret;
+                    return ret;
                 }
 
                 incomingInvocationTracker.requestSent(incomingEvent);
-                // the zone admitted the destination; the function's own check decides the caller may invoke it
-                return services.requestAuthorizer
+                // the zone admitted the destination; the function's own check decides the caller may invoke it.
+                // The check starts at once, and the request is sent once it passes and every earlier request
+                // has been sent
+                Future<Void> authorized = services.requestAuthorizer
                         .authorize(incomingEvent.cri(),
                                    connectedInfo.getParticipant(),
                                    incomingEvent.metadata().get(EventConstants.CONTENT_TYPE_HEADER),
-                                   incomingEvent.data())
-                        .compose(v -> services.eventBusService.sendWithAck(incomingEvent))
+                                   incomingEvent.data());
+                Promise<Void> handedOff = Promise.promise();
+                Future<Void> earlier = dispatched;
+                dispatched = handedOff.future();
+                return earlier.transform(previous -> authorized)
+                        .compose(v -> {
+                            Future<String> accepted = services.eventBusService.sendWithAck(incomingEvent);
+                            handedOff.complete();
+                            return accepted;
+                        })
+                        .andThen(result -> handedOff.tryComplete())
                         .onSuccess(nodeId -> incomingInvocationTracker.requestAccepted(correlationId, nodeId, incomingEvent.cri()))
                         .recover(throwable -> {
                             // no reply will come for a request that never left
