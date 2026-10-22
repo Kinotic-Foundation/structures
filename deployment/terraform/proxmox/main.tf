@@ -424,8 +424,8 @@ locals {
       mounts        = []
       entrypoint    = local.images.cnb.entrypoint
       image_env     = local.images.cnb.env
-      # No fixture migration applies: no test users, no console samples. The dev-server profile applies the
-      # development server's own seeds, the email templates of the UIs it serves
+      # No fixture migration applies: no test users, no console samples. The dev-server profile points Summit 42's
+      # email templates at the development server's Summit 42
       env = {
         SPRING_PROFILES_ACTIVE           = "production,dev-server"
         KINOTIC_MIGRATION_ELASTIC_SCHEME = "http"
