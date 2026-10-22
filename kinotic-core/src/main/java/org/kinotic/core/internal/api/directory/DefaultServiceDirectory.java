@@ -26,13 +26,11 @@ import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
-import org.kinotic.idl.api.annotations.McpTool;
 import org.kinotic.idl.api.converter.IdlConverterFactory;
 import org.kinotic.idl.api.converter.jsonschema.McpJsonSchemaGenerator;
 import org.kinotic.idl.api.directory.ServiceDeclaration;
 import org.kinotic.idl.api.directory.SchemaService;
 import org.kinotic.idl.api.directory.SchemaServiceFactory;
-import org.kinotic.idl.api.utils.IdlUtil;
 import org.kinotic.idl.api.schema.AsyncC3Type;
 import org.kinotic.idl.api.schema.C3Type;
 import org.kinotic.idl.api.schema.ComplexC3Type;
@@ -51,7 +49,6 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -60,12 +57,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
- * The {@link ServiceDirectory}: publishes the contracts of services that opt in with
- * {@code @Publish(advertise = true)}, expose an {@code @McpTool} function or declare an {@code @AuthzResource} or
- * {@code @AuthzUnchecked}, and the services an application's
- * runtimes register, keeps liveness verified against cluster registrations, serves the directory queries, and deploys the
+ * The {@link ServiceDirectory}: publishes the contract of every {@code @Publish}ed service, each of which declares
+ * an {@code @AuthzResource} or is marked {@code @AuthzUnchecked} (a service declaring neither fails its
+ * registration), and the services an application's runtimes register, keeps liveness verified against cluster registrations, serves the directory queries, and deploys the
  * {@link ServiceLivenessUpdater} as one HA cluster singleton on startup. Services registered while the
  * context starts are converted in one session once every singleton exists, so a service whose contract cannot
  * be created fails the refresh, and their entries are stored on {@link ApplicationReadyEvent}. Storage is
@@ -146,8 +143,12 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
     public void register(ServiceIdentifier serviceIdentifier, Class<?> serviceInterface, Class<?> serviceImplementation) {
         // the user class, so an AOP proxy never becomes the naming source
         ServiceDeclaration declaration = new ServiceDeclaration(serviceInterface, ClassUtils.getUserClass(serviceImplementation));
-        if (!shouldPublishToDirectory(declaration)) {
-            return;
+        // the gateway refuses every function its contract neither checks nor marks unchecked, so a service
+        // declaring neither could never be called through it
+        if (AnnotationUtils.findAnnotation(serviceInterface, AuthzResource.class) == null
+                && AnnotationUtils.findAnnotation(serviceInterface, AuthzUnchecked.class) == null) {
+            throw new IllegalStateException("The published service " + serviceInterface.getName()
+                                                    + " declares no @AuthzResource and is not marked @AuthzUnchecked");
         }
         boolean queued;
         synchronized (registrationLock) {
@@ -167,7 +168,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 registered.add(serviceIdentifier);
             }
             strategy.upsertEntry(entry)
-                    .onSuccess(v -> announce(entry.getId()))
+                    .onSuccess(this::announce)
                     .compose(v -> refreshOnline(serviceIdentifier))
                     .onFailure(throwable -> log.error("Failed to register service {} in the directory", serviceIdentifier, throwable));
         }
@@ -203,7 +204,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 // before the snapshot, so an observation that starts later always lands after this one
                 Instant observed = Instant.now();
                 strategy.upsertEntries(batch.values())
-                        .onSuccess(v -> batch.values().forEach(entry -> announce(entry.getId())))
+                        .onSuccess(this::announce)
                         .compose(v -> eventBusService.activeServiceAddresses())
                         .compose(addresses -> {
                             Set<String> services = servicesOf(addresses);
@@ -220,10 +221,12 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
         }
     }
 
-    // The entry's write is refreshed before it returns, so a node reading the contract on this announcement
-    // reads the one written
-    private void announce(String entryId) {
-        vertx.eventBus().publish(ServiceDirectory.CONTRACT_CHANGED_ADDRESS, entryId);
+    // Announces the entries whose contract was written. The write is refreshed before it returns, so a node
+    // reading the contract on this announcement reads the one written
+    private void announce(Set<String> changedEntryIds) {
+        for (String entryId : changedEntryIds) {
+            vertx.eventBus().publish(ServiceDirectory.CONTRACT_CHANGED_ADDRESS, entryId);
+        }
     }
 
     // Every node requests the deployment; Ignite elects a single host for it cluster-wide
@@ -307,44 +310,35 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 .setMcpExposed(!tools.isEmpty())
                 .setMcpTools(tools.isEmpty() ? null : tools);
         return strategy.upsertEntry(stored)
-                       .onSuccess(v -> announce(entryId))
+                       .onSuccess(this::announce)
                        .compose(v -> refreshOnline(entryId, serviceAddress));
     }
 
     @Override
     public Future<List<ServiceDefinition>> findSystemDefinitions() {
-        return systemDefinitions(0, new ArrayList<>());
-    }
-
-    private Future<List<ServiceDefinition>> systemDefinitions(int pageNumber, List<ServiceDefinition> collected) {
-        return strategy.findSystemEntries(Pageable.create(pageNumber, DEFINITIONS_PAGE_SIZE, Sort.by("id")))
-                       .compose(page -> {
-                           for (ServiceDirectoryEntry entry : page.getContent()) {
-                               collected.add(entry.getServiceDefinition());
-                           }
-                           return page.getContent().size() < DEFINITIONS_PAGE_SIZE
-                                   ? Future.succeededFuture(collected)
-                                   : systemDefinitions(pageNumber + 1, collected);
-                       });
+        return definitions(strategy::findSystemEntries, 0, new ArrayList<>());
     }
 
     @Override
     public Future<List<ServiceDefinition>> findApplicationDefinitions(String organizationId, String applicationId) {
-        return applicationDefinitions(organizationId, applicationId, 0, new ArrayList<>());
+        return definitions(pageable -> strategy.findEntriesScopedTo(organizationId, applicationId, pageable), 0, new ArrayList<>());
     }
 
-    private Future<List<ServiceDefinition>> applicationDefinitions(String organizationId, String applicationId, int pageNumber, List<ServiceDefinition> collected) {
-        return strategy.findEntriesScopedTo(organizationId, applicationId, Pageable.create(pageNumber, DEFINITIONS_PAGE_SIZE, Sort.by("id")))
-                       .compose(page -> {
-                           for (ServiceDirectoryEntry entry : page.getContent()) {
-                               if (entry.getServiceDefinition() != null) {
-                                   collected.add(entry.getServiceDefinition());
-                               }
-                           }
-                           return page.getContent().size() < DEFINITIONS_PAGE_SIZE
-                                   ? Future.succeededFuture(collected)
-                                   : applicationDefinitions(organizationId, applicationId, pageNumber + 1, collected);
-                       });
+    // Reads every page the finder returns, collecting the definition of each entry that holds one
+    private Future<List<ServiceDefinition>> definitions(Function<Pageable, Future<Page<ServiceDirectoryEntry>>> finder,
+                                                        int pageNumber,
+                                                        List<ServiceDefinition> collected) {
+        return finder.apply(Pageable.create(pageNumber, DEFINITIONS_PAGE_SIZE, Sort.by("id")))
+                     .compose(page -> {
+                         for (ServiceDirectoryEntry entry : page.getContent()) {
+                             if (entry.getServiceDefinition() != null) {
+                                 collected.add(entry.getServiceDefinition());
+                             }
+                         }
+                         return page.getContent().size() < DEFINITIONS_PAGE_SIZE
+                                 ? Future.succeededFuture(collected)
+                                 : definitions(finder, pageNumber + 1, collected);
+                     });
     }
 
     @Override
@@ -526,36 +520,9 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
         return tools;
     }
 
-    // Directory inclusion is opt-in via @Publish(advertise = true); an @McpTool function is already
-    // explicit intent to expose the service, so it implies inclusion, and an @AuthzResource or @AuthzUnchecked
-    // service must be in the directory for the gateway to find its checks or its mark
-    private boolean shouldPublishToDirectory(ServiceDeclaration registration) {
-        return isAdvertised(registration.serviceInterface())
-                || hasMcpToolFunction(registration)
-                || AnnotationUtils.findAnnotation(registration.serviceInterface(), AuthzResource.class) != null
-                || AnnotationUtils.findAnnotation(registration.serviceInterface(), AuthzUnchecked.class) != null;
-    }
-
     private boolean isAdvertised(Class<?> serviceInterface) {
         Publish publish = AnnotationUtils.findAnnotation(serviceInterface, Publish.class);
         return publish != null && publish.advertise();
-    }
-
-    private boolean hasMcpToolFunction(ServiceDeclaration registration) {
-        // a type-level @McpTool marks every function a tool, so the interface alone decides
-        boolean ret = AnnotationUtils.findAnnotation(registration.serviceInterface(), McpTool.class) != null;
-        if (!ret) {
-            for (Method method : IdlUtil.serviceFunctions(registration.serviceInterface()).values()) {
-                // findAnnotation on the most specific method honors @McpTool declared on the interface method
-                // or only on the implementation's override, matching DefaultSchemaService's discovery
-                Method specificMethod = ClassUtils.getMostSpecificMethod(method, registration.serviceImplementation());
-                if (AnnotationUtils.findAnnotation(specificMethod, McpTool.class) != null) {
-                    ret = true;
-                    break;
-                }
-            }
-        }
-        return ret;
     }
 
     private Map<String, ObjectC3Type> referenceResolver(Set<ComplexC3Type> referencedTypes) {

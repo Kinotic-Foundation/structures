@@ -111,15 +111,17 @@ public interface ServiceDirectoryStrategy {
      * Upserts an entry, leaving the liveness fields ({@code online}, {@code lastStatusChange},
      * {@code livenessVerifiedAt}) untouched.
      * @param entry the entry to upsert
-     * @return a {@link Future} completing when the entry is stored
+     * @return a {@link Future} completing when the entry is stored, with the entry's id when its contract was
+     *         written and empty when the stored contract was equal
      */
-    Future<Void> upsertEntry(ServiceDirectoryEntry entry);
+    Future<Set<String>> upsertEntry(ServiceDirectoryEntry entry);
 
     /**
      * Upserts the given entries as {@link #upsertEntry(ServiceDirectoryEntry)} does each.
      * @param entries the entries to upsert
-     * @return a {@link Future} completing when every entry is stored
+     * @return a {@link Future} completing when every entry is stored, with the ids of the entries whose contract
+     *         was written, leaving out those whose stored contract was equal
      */
-    Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries);
+    Future<Set<String>> upsertEntries(Collection<ServiceDirectoryEntry> entries);
 
 }
