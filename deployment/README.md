@@ -27,7 +27,10 @@ helm/
 │   ├── values.yaml     # Base: version, cluster name, Kibana off
 │   ├── values-azure.yaml
 │   └── values-azure-beta.yaml
-├── kinotic/            # The org, system and app servers (a Deployment, Service and ConfigMap each), one Ignite cluster, the migration Job, RBAC
+├── kinotic/            # The org, system and app servers (a Deployment, Service and ConfigMap each), one Ignite cluster, the migration Job, the OpenFGA store Job, RBAC
+├── openfga/            # OpenFGA, the authorization engine, via the upstream openfga chart, on the Postgres the openfga-db Secret names
+│   ├── values.yaml     # Base: version, Postgres datastore, migration in an init container, check caches
+│   └── values-azure.yaml
 ├── es-secret-sync/     # ES credential copy (elastic → kinotic namespace)
 ├── mimir/              # Mimir in monolithic mode (-target=all) on a persistent volume
 ├── load-generator/     # Load testing Job
@@ -46,7 +49,7 @@ The Azure cluster uses this layout:
 |---|---|
 | `elastic-system` | ECK operator |
 | `elastic` | Elasticsearch cluster |
-| `kinotic` | The Kinotic servers, TLS certs, load generator |
+| `kinotic` | The Kinotic servers, OpenFGA, TLS certs, load generator |
 | `observability` | Loki, Tempo, Mimir, Alloy, Grafana |
 
 ## Network Policy
@@ -54,6 +57,8 @@ The Azure cluster uses this layout:
 The cluster enforces `NetworkPolicy` resources to restrict Elasticsearch access. It uses Azure CNI with Cilium (`network_data_plane = "cilium"`), which replaces Calico as the network policy engine. Cilium is eBPF-based, built into AKS, and fully managed by Azure.
 
 The ES NetworkPolicy allows ingress only from the `kinotic` namespace (the servers + migration) and `elastic-system` (ECK operator). All other namespaces are blocked.
+
+OpenFGA's API is unauthenticated, so its NetworkPolicy allows ingress only from the pods of its own `kinotic` namespace: the servers and the store Job.
 
 ## Elasticsearch Storage
 
