@@ -33,12 +33,6 @@ public class ProjectDependencies implements ApplicationScoped<String> {
     private String applicationId;
 
     /**
-     * The fingerprint of the dependencies the tree lists, as the sync workload reported it in
-     * {@link ProjectArtifacts#dependencyHash()}.
-     */
-    private String dependencyHash;
-
-    /**
      * Every package version the lockfile installs, as a package URL, e.g.
      * {@code pkg:npm/%40isaacs/cliui@8.0.2}.
      */

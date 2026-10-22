@@ -66,8 +66,9 @@ import type { VulnerabilityAlert } from '@kinotic-ai/management-api'
  */
 
 const PAGE_SIZES = [25, 50, 100]
+// one scan raises many alerts in the same millisecond, so the id orders them for the pages to stay apart
 const NEWEST_FIRST = new Sort()
-NEWEST_FIRST.orders = [new Order('created', Direction.DESC)]
+NEWEST_FIRST.orders = [new Order('created', Direction.DESC), new Order('id', Direction.ASC)]
 
 const alerts = ref<VulnerabilityAlert[]>([])
 const total = ref<number | null>(null)

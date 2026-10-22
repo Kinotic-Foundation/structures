@@ -46,21 +46,12 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
         return loadOwned(projectId, participant)
                 .compose(deployment -> {
                     // the SBOM lists the dependencies it was generated from, so a report of other
-                    // dependencies drops it and the deployment generates it again
+                    // dependencies marks it outdated and the deployment generates it again; the tree and
+                    // its alerts stay until the next SBOM replaces them, which keeps their acknowledgements
                     boolean sameDependencies = deployment.getArtifacts() != null
                             && Objects.equals(deployment.getArtifacts().dependencyHash(), artifacts.dependencyHash());
-                    Future<Void> recorded = projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
-                                                                                        sameDependencies && deployment.isSbomGenerated());
-                    // deleted once the new artifacts are recorded, so a recordSbom of the old dependencies
-                    // checked from then on is refused, and only while it lists the old dependencies, so
-                    // a tree a recordSbom of the new ones stored meanwhile stays; the alerts stay, so the
-                    // next SBOM keeps their acknowledgements
-                    String previousHash = deployment.getArtifacts() != null ? deployment.getArtifacts().dependencyHash() : null;
-                    return sameDependencies || previousHash == null
-                            ? recorded
-                            : recorded.compose(v -> projectDependenciesRepository.deleteIfGeneratedFrom(projectId,
-                                                                                                        participant.getOrganizationId(),
-                                                                                                        previousHash));
+                    return projectDeploymentRepository.recordArtifacts(projectId, participant.getOrganizationId(), artifacts,
+                                                                       sameDependencies && deployment.isSbomGenerated());
                 });
     }
 
@@ -80,19 +71,16 @@ public class DefaultProjectArtifactService implements ProjectArtifactService {
                                     NOT_LAST_REPORTED, dependencyHash, projectId);
                     dependencies.setId(projectId)
                                 .setOrganizationId(organizationId)
-                                .setApplicationId(deployment.getApplicationId())
-                                .setDependencyHash(dependencyHash);
+                                .setApplicationId(deployment.getApplicationId());
                     // visible before the scan, so an advisory scan running alongside it finds the tree
                     return projectDependenciesRepository.saveSync(dependencies, organizationId)
                             // checked again once stored, since a recordArtifacts of other dependencies can land
-                            // after the check above and its tree delete before this save; the tree is then
-                            // deleted again, unless an SBOM of the newer dependencies has replaced it
+                            // after the check above; the tree then stays unmarked until the next SBOM replaces it
                             .compose(saved -> projectDeploymentRepository.recordSbomGenerated(projectId, organizationId, dependencyHash))
-                            .compose(recorded -> recorded
-                                    ? scanProject(dependencies)
-                                    : projectDependenciesRepository.deleteIfGeneratedFrom(projectId, organizationId, dependencyHash)
-                                                                   .compose(v -> Future.failedFuture(new IllegalArgumentException(
-                                                                           NOT_LAST_REPORTED.formatted(dependencyHash, projectId)))));
+                            .compose(recorded -> {
+                                Validate.isTrue(recorded, NOT_LAST_REPORTED, dependencyHash, projectId);
+                                return scanProject(dependencies);
+                            });
                 });
     }
 
