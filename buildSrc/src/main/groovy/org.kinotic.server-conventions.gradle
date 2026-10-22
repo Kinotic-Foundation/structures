@@ -40,7 +40,8 @@ def serverComponents = tasks.register('serverComponents') {
         def purls = runtime.incoming.resolutionResult.allComponents
                            .collect { it.id }
                            .findAll { it instanceof ModuleComponentIdentifier }
-                           .collect { "pkg:maven/${it.group}/${it.module}@${it.version}".toString() }
+                           // percent-encoded, as a package URL carries its version
+                           .collect { "pkg:maven/${it.group}/${it.module}@${URLEncoder.encode(it.version, 'UTF-8')}".toString() }
                            .toSorted()
         outputFile.get().asFile.text = purls.join('\n') + '\n'
     }
