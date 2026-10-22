@@ -236,12 +236,13 @@ public class EmailService {
      * Parses and test-renders email template sources, so a broken template fails when it is saved or passed rather
      * than when the next email is sent.
      *
-     * @throws IllegalArgumentException when a source is missing, or carrying the Handlebars message when one does not
+     * @throws IllegalArgumentException when a source is blank, or carrying the Handlebars message when one does not
      *                                  compile or render
      */
     public void validateTemplateSources(String subject, String htmlBody, String textBody) {
-        Validate.isTrue(subject != null && htmlBody != null && textBody != null,
-                        "An email template needs a subject, an HTML body and a text body");
+        Validate.isTrue(StringUtils.hasText(subject), "An email template's subject is required");
+        Validate.isTrue(StringUtils.hasText(htmlBody), "An email template's htmlBody is required");
+        Validate.isTrue(StringUtils.hasText(textBody), "An email template's textBody is required");
         Map<String, Object> sample = new HashMap<>();
         sample.put("inviterName", "Inviter Name");
         sample.put("organizationName", "Organization Name");
@@ -266,8 +267,8 @@ public class EmailService {
         if (url != null && !url.endsWith("/")) {
             try {
                 URI uri = new URI(url);
-                ret = ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
-                        && uri.getHost() != null
+                ret = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                        && uri.getRawAuthority() != null
                         && uri.getRawQuery() == null
                         && uri.getRawFragment() == null;
             } catch (URISyntaxException e) {

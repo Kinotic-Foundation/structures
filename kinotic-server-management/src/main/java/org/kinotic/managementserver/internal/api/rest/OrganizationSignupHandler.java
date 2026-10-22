@@ -138,7 +138,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      * already exists for this identity or its verified email, with {@code user_exists} when someone signs in as it
      * and {@code user_pending} when it is a member an administrator added that nobody signs in as yet, otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
-     * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.
+     * org-naming page of the UI the sign-up started from when the CORS pattern trusts it, and of this server's UI
+     * otherwise, which posts back to {@link #handleSocialCompleteOrg}.
      */
     @Override
     public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
@@ -202,7 +203,10 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               .onFailure(ex -> authEndpointSupport.respondError(ctx, 400, ex.getMessage()));
     }
 
-    /** Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token. */
+    /**
+     * Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token, when the CORS
+     * pattern trusts that origin, and to this server's UI otherwise.
+     */
     private void redirectToCompleteOrg(RoutingContext ctx, String origin, String token) {
         // the token names the verified identity's new organization, so only a trusted UI's page receives it
         String page = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;

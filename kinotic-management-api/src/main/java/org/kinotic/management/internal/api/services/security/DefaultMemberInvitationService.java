@@ -37,6 +37,7 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation,
                                                 EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
+        // checked before provision() saves the organization user and membership the invitation is for
         emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         String address = DomainUtil.normalizeEmail(email);
@@ -82,7 +83,6 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     @Override
     public Future<Void> sendInvitation(String email, EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
-        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         String organizationId = inviter.getOrganizationId();
         String address = DomainUtil.normalizeEmail(email);
@@ -118,7 +118,6 @@ public class DefaultMemberInvitationService implements MemberInvitationService {
     public Future<PendingInvite> inviteMember(String email, String displayName, String applicationId,
                                               EmailTemplate emailTemplate) {
         OrganizationParticipant inviter = requireOrgParticipant();
-        emailService.validateTemplate(emailTemplate);
         Validate.notBlank(email, "email is required");
         Validate.isTrue(StringUtils.isNotBlank(applicationId), "applicationId is required; an organization's members are added with addMember");
         // an invitation persists a reference to the application, so it must be one of the organization's
