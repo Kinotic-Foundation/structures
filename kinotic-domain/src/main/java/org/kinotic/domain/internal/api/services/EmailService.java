@@ -261,7 +261,8 @@ public class EmailService {
         }
     }
 
-    // the base the link paths are appended to, so a query, a fragment or a trailing slash would break every link
+    // the base the link paths are appended to, so a query, a fragment or a trailing slash would break every link, and
+    // user info would show a link to one host that opens another (https://trusted.example@attacker.example)
     private static boolean isBaseUrl(String url) {
         boolean ret = false;
         if (url != null && !url.endsWith("/")) {
