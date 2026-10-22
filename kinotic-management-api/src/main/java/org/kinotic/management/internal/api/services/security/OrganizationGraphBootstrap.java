@@ -31,12 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places every organization that is not yet on the system, or holds no grant though it has a creator, in the
- * authorization graph, once the server is up and the system store runs a model: the organization on the system,
- * its enabled members as its members, and the membership of its creator as its administrator. A sign-up does the
- * same for the organization it creates; an organization a migration seeds has records but no tuples, and this
- * gives it the ones a sign-up would have. An organization on the system holding a grant, whatever was granted or
- * revoked since, is left as it is.
+ * Places every organization that is not yet on the system in the authorization graph, once the server is up and
+ * the system store runs a model: the organization on the system, its enabled members as its members, and the
+ * membership of its creator, while an enabled member, as its administrator. A sign-up does the same for the
+ * organization it creates; an organization a migration seeds has records but no tuples, and this gives it the ones
+ * a sign-up would have. An organization on the system, whatever was granted or revoked since, is left as it is.
  */
 @Slf4j
 @Component
@@ -104,16 +103,11 @@ public class OrganizationGraphBootstrap {
         return page instanceof CursorPage<Organization> cursorPage && !page.getContent().isEmpty() ? cursorPage.getCursor() : null;
     }
 
-    // An organization is placed when it is not on the system, or when its creator's sign-up stopped before binding
-    // it, leaving the organization with no grant
     private Future<Boolean> place(Organization organization) {
         String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
         RelationshipTuple containment = DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), object);
         return relationships.holds(SYSTEM, containment)
-                            .compose(held -> held && organization.getCreatedBy() != null
-                                    ? relationships.findGrants(SYSTEM, object).map(grants -> !grants.isEmpty())
-                                    : Future.succeededFuture(held))
-                            .compose(done -> done ? Future.succeededFuture(false) : placed(organization, object, containment));
+                            .compose(held -> held ? Future.succeededFuture(false) : placed(organization, object, containment));
     }
 
     // The containment is written last, so a sweep cut short places the organization again, and the creator's
@@ -123,7 +117,7 @@ public class OrganizationGraphBootstrap {
         return members(organization.getId(), 0, enabled)
                 .compose(v -> {
                     Future<Void> ret = Future.succeededFuture();
-                    // a creator who has since left the organization is not made its administrator
+                    // the creator administers the organization while it is an enabled member of it
                     if (organization.getCreatedBy() != null && enabled.contains(organization.getCreatedBy())) {
                         String creator = DomainUtil.authzMember(organization.getCreatedBy(), organization.getId());
                         ret = relationships.ensureBound(SYSTEM,

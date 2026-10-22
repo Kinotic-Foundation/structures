@@ -138,7 +138,7 @@ public interface RelationshipService {
     Future<Void> unbind(String store, String bindingId, String object);
 
     /**
-     * Takes a resource out of a store: every grant made on it, and every relationship naming it, such as its place
+     * Takes a resource out of a store: every grant made on it, and every relationship on it, such as its place
      * under its parent and its members. A resource created again under the same id starts with no grant.
      *
      * @param store  the store, named as its record is

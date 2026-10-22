@@ -416,7 +416,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                 List<ObjectNode> sources = implying(about, permission.getKey());
                 ObjectNode relation = bundled;
                 if (!sources.isEmpty()) {
-                    // the subject types stay on the relation, where typeDefinition reads them, not on the union's child
+                    // the subject types move from the union's child to the relation, where typeDefinition reads them
                     ArrayNode directTypes = (ArrayNode) bundled.remove("directly_related_user_types");
                     sources.addFirst(bundled);
                     relation = union(sources);

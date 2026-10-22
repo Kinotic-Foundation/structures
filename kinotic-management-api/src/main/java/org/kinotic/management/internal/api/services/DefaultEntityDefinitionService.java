@@ -135,10 +135,12 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     // The definition's place in the graph, written once the record is, so a write that fails leaves a
     // definition nobody can reach rather than one nobody stores: in the system's store, where the
     // organization's members hold it, and in the application's, where its rows are reached through it. What a
-    // deleted definition of the same id left behind, when the removal after its record's deletion failed, is
-    // removed first, so the definition starts with no grant
+    // deleted definition of the same id left on itself, when the removal after its record's deletion failed, is
+    // removed first, so the definition starts with no grant made on it
     private Future<EntityDefinition> contained(EntityDefinition entityDefinition) {
-        return removed(entityDefinition)
+        String object = containment(entityDefinition).object();
+        return relationships.removeObject(AuthzStoreService.SYSTEM, object)
+                .compose(v -> relationships.removeObject(storeOf(entityDefinition), object))
                 .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition))))
                 .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
                 .map(entityDefinition);
@@ -151,6 +153,7 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
         String store = storeOf(entityDefinition);
         return relationships.removeObject(AuthzStoreService.SYSTEM, object)
                             .compose(v -> relationships.removeObject(store, object))
+                            // the rows within a tenant are reached by tenant, so each tenant placed in the store is read
                             .compose(v -> relationships.readByUser(store, AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, store), AuthzConstants.TENANT_TYPE))
                             .compose(placed -> {
                                 Future<Void> ret = Future.succeededFuture();
