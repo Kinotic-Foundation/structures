@@ -3,6 +3,7 @@ package org.kinotic.management.internal.api.services;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.EmailTemplateKind;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
@@ -49,7 +50,7 @@ public class DefaultInviteEmailTemplateService extends AbstractApplicationScoped
         entity.setOrganizationId(organizationId);
 
         // Fails at save rather than at the next send.
-        emailService.validateInviteTemplate(entity.getSubject(), entity.getHtmlBody(), entity.getTextBody());
+        emailService.validateTemplate(entity, EmailTemplateKind.INVITATION);
 
         return applicationRepository.requireById(entity.getApplicationId(), organizationId)
                 .compose(_ -> inviteEmailTemplateRepository.findByApplication(entity.getApplicationId(), organizationId))

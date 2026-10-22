@@ -110,7 +110,7 @@ public class DefaultMemberService implements MemberService {
         return inviteService.findPendingInvite(address, organizationId).compose(pending -> {
             Future<Void> ret;
             if (pending != null) {
-                ret = inviteService.resendInvite(pending.getId(), organizationId);
+                ret = inviteService.resendInvite(pending.getId(), organizationId, securityContext.currentPageOrigin());
             } else {
                 // a member added without an invitation gets one now, to claim the organization user with
                 ret = pendingMember(address, organizationId)
@@ -154,7 +154,7 @@ public class DefaultMemberService implements MemberService {
                 .setApplicationId(applicationId)
                 .setInvitedById(participant.getId())
                 .setInvitedByName(participantDisplayName(participant));
-        return inviteService.createInvite(invite);
+        return inviteService.createInvite(invite, securityContext.currentPageOrigin());
     }
 
     @Override

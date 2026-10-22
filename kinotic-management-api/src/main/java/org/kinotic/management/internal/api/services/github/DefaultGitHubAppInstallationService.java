@@ -6,7 +6,6 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
@@ -42,7 +41,6 @@ public class DefaultGitHubAppInstallationService
     private final GitHubApiClient apiClient;
     private final OidcConfigurationService oidcConfigurationService;
     private final SecretReferenceResolver secretReferenceResolver;
-    private final KinoticDomainProperties domainProperties;
 
     public DefaultGitHubAppInstallationService(GitHubAppInstallationRepository repository,
                                                SecurityContext securityContext,
@@ -50,8 +48,7 @@ public class DefaultGitHubAppInstallationService
                                                GitHubInstallStateService stateService,
                                                GitHubApiClient apiClient,
                                                OidcConfigurationService oidcConfigurationService,
-                                               SecretReferenceResolver secretReferenceResolver,
-                                               KinoticDomainProperties domainProperties) {
+                                               SecretReferenceResolver secretReferenceResolver) {
         super(repository, securityContext);
         this.installationRepository = repository;
         this.githubProperties = githubProperties;
@@ -59,16 +56,16 @@ public class DefaultGitHubAppInstallationService
         this.apiClient = apiClient;
         this.oidcConfigurationService = oidcConfigurationService;
         this.secretReferenceResolver = secretReferenceResolver;
-        this.domainProperties = domainProperties;
     }
 
     @Override
     public Future<String> startInstall(String returnTo) {
         // GitHubInstallCallbackHandler forwards the install's code to an absolute returnTo, and the portal navigates
-        // to a path, so it may only lead to the portal itself or to a UI the CORS allowlist admits
+        // to a path, so it may only lead to the portal itself or to the trusted UI the call came from
         if (returnTo != null && !isAllowedReturnTo(returnTo)) {
             return Future.failedFuture(new IllegalArgumentException(
-                    "returnTo must be a path, or a URL on an origin kinotic.domain.cors.allowedOriginPattern allows"));
+                    "returnTo must be a path, or a URL on the origin of the page making the call when"
+                            + " kinotic.domain.cors.allowedOriginPattern allows it"));
         }
         String orgId = requireOrganizationId();
         StagedInstall staged = new StagedInstall()
@@ -86,7 +83,10 @@ public class DefaultGitHubAppInstallationService
             // "//host" and "/\host" are network-path references a browser resolves to another origin
             ret = !returnTo.startsWith("//") && !returnTo.startsWith("/\\");
         } else {
-            ret = domainProperties.getDomain().getCors().trustsOrigin(originOf(returnTo));
+            // trusted by the allowlist of the gateway the page connected to, which can differ from this node's: the
+            // system server also hosts management-api, and its allowlist names only the console
+            String pageOrigin = securityContext.currentPageOrigin();
+            ret = pageOrigin != null && pageOrigin.equals(originOf(returnTo));
         }
         return ret;
     }

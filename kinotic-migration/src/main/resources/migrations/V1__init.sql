@@ -389,6 +389,20 @@ CREATE TABLE IF NOT EXISTS kinotic_invite_email_template (
     updated DATE
 );
 
+-- The emails a UI built on Kinotic sends in its own name (OriginEmailTemplate): Handlebars sources replacing
+-- the built-in invitation or verification email for flows started from a page at origin, which system users
+-- manage in the system console (OriginEmailTemplateService). At most one row per origin and kind.
+CREATE TABLE IF NOT EXISTS kinotic_origin_email_template (
+    id KEYWORD,
+    origin KEYWORD,
+    kind KEYWORD,
+    subject TEXT,
+    htmlBody TEXT,
+    textBody TEXT,
+    created DATE,
+    updated DATE
+);
+
 -- OAuth 2.0 Device Authorization Grant (RFC 8628): pending CLI device-code login flows.
 -- Short-lived (minutes); deleted once the CLI collects its tokens. deviceCodeHash is the
 -- SHA-256 of the high-entropy device_code the CLI polls with — the plaintext is never stored.

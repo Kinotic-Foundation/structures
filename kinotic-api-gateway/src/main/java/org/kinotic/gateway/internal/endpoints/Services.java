@@ -10,6 +10,7 @@ import org.kinotic.core.api.event.TraceLogFilter;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.internal.api.service.ExceptionConverter;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.gateway.internal.endpoints.stomp.DefaultStompServerHandler;
@@ -28,6 +29,8 @@ import tools.jackson.databind.json.JsonMapper;
 public class Services {
     @Autowired
     public ApiGatewayProperties apiGatewayProperties;
+    @Autowired
+    public KinoticDomainProperties domainProperties;
     @Autowired
     public EventBusService eventBusService;
     @Autowired

@@ -32,6 +32,7 @@ import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.internal.api.service.json.JacksonExceptionConverter;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.gateway.internal.endpoints.Services;
@@ -65,14 +66,15 @@ import static org.mockito.Mockito.when;
  * cluster is answered on the client's reply destination with the typed error, a reply that settles a
  * request releases it, a session under an open connection outlives its timeout, and a connection that closes
  * answers every invocation still outstanding on the services it published, a stream whose requester is
- * gone is cancelled on the connection producing it, and a sender header a client wrote never leaves the
- * connection.
+ * gone is cancelled on the connection producing it, a sender header a client wrote never leaves the
+ * connection, and a request names the page it came from only when the gateway trusts that page's origin.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
 public class EndpointConnectionHandlerTests {
 
     private static final long SESSION_TIMEOUT_MS = 1000;
+    private static final String TRUSTED_ORIGIN = "https://ui.example";
     private static final String SERVICE_DESTINATION = "srv://app.acme-org.orders-app~OrderService/create#1.0.0";
 
     private static Ignite ignite;
@@ -129,6 +131,8 @@ public class EndpointConnectionHandlerTests {
         services.apiGatewayProperties.setSessionTimeout(SESSION_TIMEOUT_MS);
         services.jsonMapper = jsonMapper;
         services.exceptionConverter = new JacksonExceptionConverter(new KinoticProperties(), jsonMapper);
+        services.domainProperties = new KinoticDomainProperties();
+        services.domainProperties.getDomain().getCors().setAllowedOriginPattern(TRUSTED_ORIGIN.replace(".", "\\."));
         services.stompAuthorizerFactory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"));
         services.securityService = mock(SecurityService.class);
         when(services.securityService.authenticate(any())).thenReturn(Future.succeededFuture(participant()));
@@ -347,6 +351,35 @@ public class EndpointConnectionHandlerTests {
     }
 
     @Test
+    public void testRequestNamesATrustedPageOrigin() throws Exception {
+        Event<byte[]> sent = sendFromPage(TRUSTED_ORIGIN, "inv-8");
+
+        Assertions.assertEquals(TRUSTED_ORIGIN, sent.metadata().get(EventConstants.PAGE_ORIGIN_HEADER));
+    }
+
+    @Test
+    public void testRequestNamesNoUntrustedPageOrigin() throws Exception {
+        Event<byte[]> sent = sendFromPage("https://elsewhere.example", "inv-9");
+
+        // neither the untrusted origin nor the one the client wrote reaches the service
+        Assertions.assertFalse(sent.metadata().contains(EventConstants.PAGE_ORIGIN_HEADER));
+    }
+
+    // Sends a request carrying a forged page origin header on a connection upgraded from origin, and returns what the gateway forwarded
+    @SuppressWarnings("unchecked")
+    private Event<byte[]> sendFromPage(String origin, String correlationId) throws Exception {
+        EndpointConnectionHandler handler = connect(services.sessionStore.createSession(SESSION_TIMEOUT_MS), origin, Map.of());
+        Event<byte[]> request = request(subscribeReplies(handler), correlationId);
+        request.metadata().put(EventConstants.PAGE_ORIGIN_HEADER, "https://forged.example");
+
+        handler.send(request).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).sendWithAck(sent.capture());
+        return sent.getValue();
+    }
+
+    @Test
     public void testClientSuppliedSenderHeaderIsDropped() throws Exception {
         EndpointConnectionHandler handler = connect(Map.of());
         String replyTo = subscribeReplies(handler);
@@ -464,11 +497,17 @@ public class EndpointConnectionHandlerTests {
     }
 
     private EndpointConnectionHandler connect(Session session, Map<String, String> connectHeaders) throws Exception {
+        return connect(session, null, connectHeaders);
+    }
+
+    private EndpointConnectionHandler connect(Session session, String origin, Map<String, String> connectHeaders) throws Exception {
         HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.headers()).thenReturn(MultiMap.caseInsensitiveMultiMap());
         RoutingContext routingContext = mock(RoutingContext.class);
         when(routingContext.session()).thenReturn(session);
         when(routingContext.request()).thenReturn(request);
+        // SessionBinding.handler resolves the upgrading page's origin into the routing context before the handshake
+        when(routingContext.get(endsWith(".origin"))).thenReturn(origin);
 
         EndpointConnectionHandler handler = new EndpointConnectionHandler(services);
         handler.handshake(routingContext).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);

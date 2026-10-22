@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 
 /**
  * Provides access to the security state associated with the current Vert.x context: the
- * authenticated {@link Participant}.
+ * authenticated {@link Participant}, and the trusted origin of the page that made the call.
  * <p>
  * Must only be used as a Spring-managed bean. The underlying {@link ContextLocal} must be
  * registered before any {@link Vertx} instance is created, which is handled by the bean
@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 public class SecurityContext {
 
     private static final ContextLocal<Participant> PARTICIPANT_LOCAL = ContextLocal.registerLocal(Participant.class);
+    private static final ContextLocal<String> PAGE_ORIGIN_LOCAL = ContextLocal.registerLocal(String.class);
 
     // a provider, since the Vertx bean depends on this one so the ContextLocal above is registered first
     private final ObjectProvider<Vertx> vertx;
@@ -74,6 +75,27 @@ public class SecurityContext {
      */
     public void setParticipant(Context context, Participant participant) {
         context.putLocal(PARTICIPANT_LOCAL, participant);
+    }
+
+    /**
+     * Returns the origin of the page that made the current service call, such as {@code https://portal.kinotic.ai},
+     * when the gateway that page connected to trusts that origin. Returns null when no page made the call, as for a
+     * client outside a browser or a call a cluster member makes for itself.
+     */
+    public String currentPageOrigin() {
+        String ret = null;
+        Context context = Vertx.currentContext();
+        if (context != null) {
+            ret = context.getLocal(PAGE_ORIGIN_LOCAL);
+        }
+        return ret;
+    }
+
+    /**
+     * Sets the trusted page origin on the given Vert.x context, or clears it when {@code pageOrigin} is null.
+     */
+    public void setPageOrigin(Context context, String pageOrigin) {
+        context.putLocal(PAGE_ORIGIN_LOCAL, pageOrigin);
     }
 
     /**

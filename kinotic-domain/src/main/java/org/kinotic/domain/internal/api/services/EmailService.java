@@ -20,10 +20,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.model.EmailTemplate;
+import org.kinotic.domain.api.model.EmailTemplateKind;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
+import org.kinotic.domain.internal.api.repositories.OriginEmailTemplateRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -70,25 +73,28 @@ public class EmailService {
 
     private final KinoticDomainProperties properties;
     private final InviteEmailTemplateRepository inviteEmailTemplateRepository;
+    private final OriginEmailTemplateRepository originEmailTemplateRepository;
     private final Vertx vertx;
 
     private volatile EmailClient emailClient;
 
     /**
-     * Sends a verification email to the given address.
+     * Sends a verification email to the given address, rendered with the {@link EmailTemplateKind#VERIFICATION}
+     * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with the
+     * built-in template otherwise.
      *
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
      * @param verificationToken the token to include in the verification URL
-     * @param origin            the origin of the UI whose verification page the link opens, or {@code null} for
-     *                          the portal's
+     * @param origin            the origin of the UI whose verification page the link opens and whose template is
+     *                          used, or {@code null} for the portal's
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
      */
     public Future<Void> sendVerificationEmail(String email,
                                               String displayName,
                                               String verificationToken,
                                               String origin) {
-        String verificationUrl = (origin != null ? origin : portalBaseUrl()) + VERIFICATION_PATH + verificationToken;
+        String verificationUrl = uiBaseUrl(origin) + VERIFICATION_PATH + verificationToken;
 
         if (!properties.getDomain().getEmail().isEnabled()) {
             log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
@@ -99,24 +105,31 @@ public class EmailService {
         Map<String, Object> variables = Map.of("displayName", displayName,
                                                "verificationUrl", verificationUrl);
 
-        return send(email,
-                    displayName,
-                    VERIFICATION_SUBJECT,
-                    render(VERIFICATION_HTML, variables),
-                    render(VERIFICATION_TEXT, variables));
+        return findOriginTemplate(origin, EmailTemplateKind.VERIFICATION)
+                .compose(template -> template != null
+                        ? send(email, displayName, template, variables)
+                        : send(email,
+                               displayName,
+                               VERIFICATION_SUBJECT,
+                               render(VERIFICATION_HTML, variables),
+                               render(VERIFICATION_TEXT, variables)));
     }
 
     /**
      * Sends an invitation email carrying the accept link for the given invite. An
      * application invite is rendered with the application's {@link InviteEmailTemplate}
-     * when one exists; org invites and apps without a template use the built-in template.
+     * when one exists; any other is rendered with the {@link EmailTemplateKind#INVITATION}
+     * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with
+     * the built-in template otherwise.
      *
      * @param invite           the saved invitation (token, recipient, scope, inviter attribution)
      * @param organizationName display name of the inviting organization
+     * @param origin           the origin of the UI whose invitation page the accept link opens and whose template
+     *                         is used, or {@code null} for the portal's
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
      */
-    public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName) {
-        String acceptUrl = portalBaseUrl() + INVITE_PATH + invite.getVerificationToken();
+    public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName, String origin) {
+        String acceptUrl = uiBaseUrl(origin) + INVITE_PATH + invite.getVerificationToken();
         String toName = invite.getDisplayName() != null ? invite.getDisplayName() : invite.getEmail();
 
         if (!properties.getDomain().getEmail().isEnabled()) {
@@ -143,24 +156,22 @@ public class EmailService {
                 ? "You're invited to join " + invite.getApplicationId()
                 : "You're invited to join " + organizationName + " on Kinotic";
 
-        if (invite.getApplicationId() == null) {
-            return send(invite.getEmail(), toName, defaultSubject,
-                        render(INVITE_HTML, variables),
-                        render(INVITE_TEXT, variables));
-        }
-        return inviteEmailTemplateRepository.findByApplication(invite.getApplicationId(),
-                                                               invite.getOrganizationId())
-                .compose(template -> {
-                    if (template == null) {
-                        return send(invite.getEmail(), toName, defaultSubject,
-                                    render(INVITE_HTML, variables),
-                                    render(INVITE_TEXT, variables));
-                    }
-                    return send(invite.getEmail(), toName,
-                                renderInline(TEXT_TEMPLATES, template.getSubject(), variables),
-                                renderInline(HTML_TEMPLATES, template.getHtmlBody(), variables),
-                                renderInline(TEXT_TEMPLATES, template.getTextBody(), variables));
-                });
+        return findInviteTemplate(invite, origin)
+                .compose(template -> template != null
+                        ? send(invite.getEmail(), toName, template, variables)
+                        : send(invite.getEmail(), toName, defaultSubject,
+                               render(INVITE_HTML, variables),
+                               render(INVITE_TEXT, variables)));
+    }
+
+    // an application's own template wins over the inviting UI's, which wins over the built-in
+    private Future<EmailTemplate> findInviteTemplate(PendingInvite invite, String origin) {
+        Future<InviteEmailTemplate> applicationTemplate = invite.getApplicationId() != null
+                ? inviteEmailTemplateRepository.findByApplication(invite.getApplicationId(), invite.getOrganizationId())
+                : Future.succeededFuture();
+        return applicationTemplate.compose(found -> found != null
+                ? Future.<EmailTemplate>succeededFuture(found)
+                : findOriginTemplate(origin, EmailTemplateKind.INVITATION));
     }
 
     /**
@@ -197,6 +208,10 @@ public class EmailService {
                     render(ORGANIZATIONS_TEXT, variables));
     }
 
+    private String uiBaseUrl(String origin) {
+        return origin != null ? origin : portalBaseUrl();
+    }
+
     // checked per send: a server that sends no mail leaves it unset
     private String portalBaseUrl() {
         String ret = properties.getDomain().getPortalBaseUrl();
@@ -205,27 +220,42 @@ public class EmailService {
     }
 
     /**
-     * Parses and test-renders invitation template sources, so a broken template fails at
-     * save time rather than when the next invitation is sent.
+     * Parses and test-renders a template's sources with sample values of its kind's variables, so a broken template
+     * fails at save time rather than when the next email is sent.
      *
      * @throws IllegalArgumentException carrying the Handlebars message when a source does
      *                                  not compile or render
      */
-    public void validateInviteTemplate(String subject, String htmlBody, String textBody) {
+    public void validateTemplate(EmailTemplate template, EmailTemplateKind kind) {
         Map<String, Object> sample = new HashMap<>();
-        sample.put("inviterName", "Inviter Name");
-        sample.put("organizationName", "Organization Name");
-        sample.put("applicationName", "application-id");
-        sample.put("acceptUrl", "https://example.invalid/invite/accept?token=sample");
-        sample.put("expiresInDays", 7L);
+        switch (kind) {
+            case INVITATION -> {
+                sample.put("inviterName", "Inviter Name");
+                sample.put("organizationName", "Organization Name");
+                sample.put("applicationName", "application-id");
+                sample.put("acceptUrl", "https://example.invalid/invite/accept?token=sample");
+                sample.put("expiresInDays", 7L);
+            }
+            case VERIFICATION -> {
+                sample.put("displayName", "Display Name");
+                sample.put("verificationUrl", "https://example.invalid/signup/verify?token=sample");
+            }
+        }
         try {
-            renderInline(TEXT_TEMPLATES, subject, sample);
-            renderInline(HTML_TEMPLATES, htmlBody, sample);
-            renderInline(TEXT_TEMPLATES, textBody, sample);
+            renderInline(TEXT_TEMPLATES, template.getSubject(), sample);
+            renderInline(HTML_TEMPLATES, template.getHtmlBody(), sample);
+            renderInline(TEXT_TEMPLATES, template.getTextBody(), sample);
         } catch (RuntimeException e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new IllegalArgumentException("Invalid email template: " + cause.getMessage(), e);
         }
+    }
+
+    // the template of kind the UI at origin sends in place of the built-in, or null for none or no origin
+    private Future<EmailTemplate> findOriginTemplate(String origin, EmailTemplateKind kind) {
+        return origin != null
+                ? originEmailTemplateRepository.findByOriginAndKind(origin, kind).map(EmailTemplate.class::cast)
+                : Future.succeededFuture();
     }
 
     /**
@@ -253,6 +283,14 @@ public class EmailService {
         } finally {
             context.destroy();
         }
+    }
+
+    private Future<Void> send(String toEmail, String toName, EmailTemplate template, Map<String, Object> variables) {
+        return send(toEmail,
+                    toName,
+                    renderInline(TEXT_TEMPLATES, template.getSubject(), variables),
+                    renderInline(HTML_TEMPLATES, template.getHtmlBody(), variables),
+                    renderInline(TEXT_TEMPLATES, template.getTextBody(), variables));
     }
 
     private Future<Void> send(String toEmail,

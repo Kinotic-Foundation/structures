@@ -16,7 +16,7 @@ import java.util.Date;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class InviteEmailTemplate implements ApplicationScoped<String> {
+public class InviteEmailTemplate implements ApplicationScoped<String>, EmailTemplate {
 
     private String id;
 

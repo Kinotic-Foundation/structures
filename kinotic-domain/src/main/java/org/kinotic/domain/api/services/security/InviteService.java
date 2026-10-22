@@ -25,9 +25,11 @@ public interface InviteService {
      *
      * @param invite carrying email, optional displayName, scope, and inviter attribution;
      *               id, token, and expiry are assigned here
+     * @param origin the origin of the UI whose invitation page the accept link opens, or {@code null} for the
+     *               portal's
      * @return a future emitting the saved invitation
      */
-    Future<PendingInvite> createInvite(PendingInvite invite);
+    Future<PendingInvite> createInvite(PendingInvite invite, String origin);
 
     /**
      * Finds the invitation for the given accept token, failing if the token is unknown or the
@@ -91,7 +93,8 @@ public interface InviteService {
 
     /**
      * Emails the invitation {@code inviteId} of organization {@code organizationId} again, to the same address
-     * with the same accept link. Fails when the organization has no such invitation.
+     * with the same accept token, on the invitation page of the UI at {@code origin}, or of the portal when
+     * {@code origin} is {@code null}. Fails when the organization has no such invitation.
      */
-    Future<Void> resendInvite(String inviteId, String organizationId);
+    Future<Void> resendInvite(String inviteId, String organizationId, String origin);
 }
