@@ -85,9 +85,9 @@ export interface IMemberService {
 
     /**
      * The accept link of the live invitation of email into the caller's organization (applicationId null) or one of
-     * its applications, for the inviter to send on when the platform hands links back in place of email, as a
+     * its applications, for the inviter to send on when the platform shows links in the UI in place of email, as a
      * demonstration server does. Anyone holding the link can accept the invitation as the invited address. Resolves
-     * null when the platform does not hand links back or no invitation into the scope is pending for the address.
+     * null when the platform does not show links in the UI or no invitation into the scope is pending for the address.
      */
     findInvitationLink(email: string, applicationId: string | null): Promise<string | null>
 

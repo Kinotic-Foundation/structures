@@ -10,4 +10,4 @@ kinotic:
     email:
       # No mail service: an inviter is shown the invitation's link to send on
       enabled: false
-      handOffLinks: true
+      showLinksInUI: true

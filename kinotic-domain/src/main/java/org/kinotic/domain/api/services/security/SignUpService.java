@@ -22,7 +22,7 @@ public interface SignUpService {
      * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet, and when
      * a sign-up is already pending for the email. A pending sign-up that has expired is replaced.
      * <p>
-     * When {@code kinotic.domain.email.enabled} is {@code false} and {@code kinotic.domain.email.handOffLinks} is
+     * When {@code kinotic.domain.email.enabled} is {@code false} and {@code kinotic.domain.email.showLinksInUI} is
      * {@code true}, no email is sent and the verification link is returned for the caller to open, so the address is
      * never proven to be the caller's; an email/password sign-up already pending for the email then returns its link
      * again.
@@ -31,7 +31,7 @@ public interface SignUpService {
      * @param displayName     the founder's display name
      * @param emailTemplate   the verification email to send in place of Kinotic's, whose UI's {@code /signup/verify}
      *                        page the link opens, or {@code null} for Kinotic's, which opens the portal's
-     * @return a future emitting the verification link when it is handed back, or {@code null} once it is emailed
+     * @return a future emitting the verification link when the UI shows it, or {@code null} once it is emailed
      * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
     Future<String> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);

@@ -24,4 +24,4 @@ kinotic:
       # No mail service: a sign-up continues at its verification link at once, and an inviter is shown the
       # invitation's link to send on
       enabled: false
-      handOffLinks: true
+      showLinksInUI: true

@@ -8,4 +8,4 @@ kinotic:
     email:
       # No mail service: a sign-up continues at its verification link at once
       enabled: false
-      handOffLinks: true
+      showLinksInUI: true

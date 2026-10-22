@@ -24,12 +24,12 @@ public class EmailProperties {
     private boolean enabled = true;
 
     /**
-     * When {@code true} and {@link #enabled} is {@code false}, each link a person must open is handed back to whoever
-     * asked for it, the verification link to the one signing up and an invitation's accept link to the inviter, as a
-     * demonstration server does. Nothing then proves an address belongs to the person using it, so this is never set
-     * on a server reachable by anyone but the people trying it.
+     * When {@code true} and {@link #enabled} is {@code false}, each link a person must open is returned to the UI that
+     * asked for it, which shows it: the verification link to the one signing up and an invitation's accept link to the
+     * inviter, as a demonstration server does. Nothing then proves an address belongs to the person using it, so this
+     * is never set on a server reachable by anyone but the people trying it.
      */
-    private boolean handOffLinks = false;
+    private boolean showLinksInUI = false;
 
     /**
      * ACS endpoint URL, e.g. {@code https://my-acs-resource.communication.azure.com}.

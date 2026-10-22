@@ -42,9 +42,9 @@ import java.util.concurrent.CompletableFuture;
  * from Handlebars templates.
  * <p>
  * When {@code kinotic.domain.email.enabled=false}, sends are skipped and the action
- * URL is logged instead; with {@code kinotic.domain.email.handOffLinks} also set, the links a person must open
- * are handed back for the caller to deliver: the verification link to the one signing up, an invitation's
- * accept link to the inviter.
+ * URL is logged instead; with {@code kinotic.domain.email.showLinksInUI} also set, the links a person must open
+ * are returned for the UI to show: the verification link to the one signing up, an invitation's accept link to
+ * the inviter.
  */
 @Slf4j
 @Component
@@ -87,7 +87,7 @@ public class EmailService {
      * @param verificationToken the token to include in the verification URL
      * @param template          the email to send in place of Kinotic's, whose UI's verification page the link opens,
      *                          or {@code null} for Kinotic's, which links to the portal's
-     * @return a future emitting the verification link when {@link #handsOffLinks()}, for the caller to open in place
+     * @return a future emitting the verification link when {@link #showsLinksInUI()}, for the UI to open in place
      *         of the email, or {@code null} once the email is sent (failing if ACS rejects it)
      */
     public Future<String> sendVerificationEmail(String email,
@@ -99,7 +99,7 @@ public class EmailService {
         if (!properties.getDomain().getEmail().isEnabled()) {
             log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
                     displayName, email, verificationUrl);
-            return Future.succeededFuture(handsOffLinks() ? verificationUrl : null);
+            return Future.succeededFuture(showsLinksInUI() ? verificationUrl : null);
         }
 
         Map<String, Object> variables = Map.of("displayName", displayName,
@@ -210,14 +210,14 @@ public class EmailService {
     }
 
     /**
-     * Whether the links a person must open are handed back to the caller to deliver, because no email carries them.
+     * Whether the links a person must open are returned for the UI to show, because no email carries them.
      */
-    public boolean handsOffLinks() {
-        return !properties.getDomain().getEmail().isEnabled() && properties.getDomain().getEmail().isHandOffLinks();
+    public boolean showsLinksInUI() {
+        return !properties.getDomain().getEmail().isEnabled() && properties.getDomain().getEmail().isShowLinksInUI();
     }
 
     /**
-     * The accept link of {@code invite} for the inviter to hand over when {@link #handsOffLinks()}. Anyone holding
+     * The accept link of {@code invite} for the UI to show the inviter when {@link #showsLinksInUI()}. Anyone holding
      * the link can accept the invitation as the invited address.
      *
      * @return the link Kinotic's invitation email carries, which opens the portal's invitation page

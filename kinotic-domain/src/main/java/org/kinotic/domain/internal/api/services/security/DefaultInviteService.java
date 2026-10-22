@@ -296,7 +296,7 @@ public class DefaultInviteService implements InviteService {
         Validate.notBlank(email, "email is required");
         Validate.notBlank(organizationId, "organizationId is required");
         Future<String> ret;
-        if (emailService.handsOffLinks()) {
+        if (emailService.showsLinksInUI()) {
             ret = pendingInviteRepository.findByEmailAndScope(email, organizationId, applicationId)
                                          .map(invite -> invite == null ? null : emailService.inviteAcceptUrl(invite));
         } else {

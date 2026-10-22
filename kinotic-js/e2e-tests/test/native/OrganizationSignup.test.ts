@@ -3,7 +3,7 @@ import {beforeAll, describe, expect, it} from 'vitest'
 import {generateRandomString, managementServer, restBase} from '../TestHelpers.js'
 
 /**
- * Signing up with an email and a password on a server that offers it and hands links back in place of email, as the
+ * Signing up with an email and a password on a server that offers it and shows links in the UI in place of email, as the
  * e2e stack and a demonstration server do: the verification link comes back with the request, and the sign-up
  * completes there.
  */

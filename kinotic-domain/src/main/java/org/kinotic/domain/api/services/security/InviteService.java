@@ -95,13 +95,13 @@ public interface InviteService {
     /**
      * The accept link of the live invitation of {@code email} into the scope, for the inviter to hand over when no
      * invitation email reaches the invitee: {@code kinotic.domain.email.enabled} is {@code false} and
-     * {@code kinotic.domain.email.handOffLinks} is {@code true}. Anyone holding the link can accept the invitation as
+     * {@code kinotic.domain.email.showLinksInUI} is {@code true}. Anyone holding the link can accept the invitation as
      * the invited address.
      *
      * @param email          the invited address
      * @param organizationId the organization of the scope
      * @param applicationId  the application of the scope, or {@code null} for an invitation into the organization
-     * @return a future emitting the link, or {@code null} when links are not handed off or no invitation is pending
+     * @return a future emitting the link, or {@code null} when links are not shown in the UI or no invitation is pending
      */
     Future<String> findAcceptUrl(String email, String organizationId, String applicationId);
 

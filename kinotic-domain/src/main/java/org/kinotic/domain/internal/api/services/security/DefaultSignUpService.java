@@ -64,12 +64,12 @@ public class DefaultSignUpService implements SignUpService {
                         Future<Void> cleared = existing == null
                                 ? Future.succeededFuture()
                                 : pendingSignUpRepository.deleteById(existing.getId());
-                        // saveSync: a link handed back in place of an email is opened at once, and the record must
+                        // saveSync: a link the UI shows in place of an email is opened at once, and the record must
                         // be searchable by then, as it must for a repeated request to find it
                         ret = cleared.compose(v -> requireNoOrganizationUser(pending))
                                      .compose(v -> pendingSignUpRepository.saveSync(pending))
                                      .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplate));
-                    } else if (existing.getAuthType() == AuthType.PASSWORD && emailService.handsOffLinks()) {
+                    } else if (existing.getAuthType() == AuthType.PASSWORD && emailService.showsLinksInUI()) {
                         // no email carries the link, so asking again is the only way back to it
                         ret = emailService.sendVerificationEmail(existing.getEmail(), existing.getDisplayName(),
                                                                  existing.getVerificationToken(), emailTemplate);
