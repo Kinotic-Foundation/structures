@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS kinotic_vulnerability_advisory (
 );
 
 -- How far the advisories of each package ecosystem have been read from OSV; id is the ecosystem.
-CREATE TABLE IF NOT EXISTS kinotic_vulnerability_feed (
+CREATE TABLE IF NOT EXISTS kinotic_osv_import_progress (
     id KEYWORD,
     syncedThrough DATE
 );
