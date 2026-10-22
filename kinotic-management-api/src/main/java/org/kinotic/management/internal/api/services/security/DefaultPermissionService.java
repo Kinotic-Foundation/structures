@@ -250,6 +250,9 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(type, "type cannot be blank");
         Validate.notBlank(permission, "permission cannot be blank");
         OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(List.of());
+        }
         return stores.modelId(SYSTEM)
                      .compose(modelId -> relationships.listObjects(SYSTEM, modelId,
                                                                    DomainUtil.authzUser(participant),
@@ -271,6 +274,9 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(permission, "permission cannot be blank");
         Validate.notBlank(id, "id cannot be blank");
         OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(false);
+        }
         RelationshipTuple held = new RelationshipTuple(DomainUtil.authzUser(participant),
                                                        AuthzUtil.permissionName(type, permission),
                                                        DomainUtil.authzObject(participant.getOrganizationId(), new Resource(type, id)));
@@ -289,6 +295,9 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(type, "type cannot be blank");
         Validate.notBlank(permission, "permission cannot be blank");
         OrganizationParticipant participant = requireOrgParticipant();
+        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+            return Future.succeededFuture(List.of());
+        }
         RelationshipTuple everywhere = new RelationshipTuple(DomainUtil.authzUser(participant),
                                                              AuthzUtil.permissionName(type, permission),
                                                              AuthzUtil.object(ORGANIZATION, participant.getOrganizationId()));

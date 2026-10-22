@@ -180,11 +180,11 @@ public interface RelationshipService {
     Future<List<Grant>> findGrants(String store, String object);
 
     /**
-     * Whether a grant gives a subject a permission: the grant's role bundles the permission, and the grant was
-     * made to the subject, or to a group the subject is a member of.
+     * Whether a grant gives a subject a permission: the grant's role bundles the permission or one implying it,
+     * and the grant was made to the subject, or to a group the subject is a member of.
      *
      * @param store      the store, named as its record is
-     * @param modelId    the model version to evaluate a group's membership against
+     * @param modelId    the model version to evaluate the role and a group's membership against
      * @param grant      the grant
      * @param subject    the user or group asked about
      * @param permission the model name of the permission, such as {@code project_can_edit}

@@ -38,9 +38,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class SystemGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
-    // a staff member who could not be bound is tried again by a later sweep, less often than a sweep that could
-    // not read the staff
-    private static final long FAILED_RETRY_MILLIS = 60_000;
+    // a staff member who could not be bound is tried again by a later sweep, after a delay that doubles with each sweep
+    // that leaves one, since a model the system store runs at startup may lack the types the sweep writes
+    private static final long MAX_RETRY_MILLIS = 60_000;
     // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
     private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
@@ -61,7 +61,7 @@ public class SystemGraphBootstrap {
               .compose(modelId -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT))
               .onSuccess(grants -> {
                   if (grants.isEmpty()) {
-                      place();
+                      place(RETRY_MILLIS);
                   }
               })
               // the reconciler writes the system model shortly after the servers start, so a store that runs
@@ -74,18 +74,18 @@ public class SystemGraphBootstrap {
 
     // The first grant ends the sweep for every later start, so a sweep that fails part way is made again here,
     // without asking the store, until it places everything; every binding has an id of its own, so one made twice is held once
-    private void place() {
+    private void place(long failedDelay) {
         AtomicInteger failed = new AtomicInteger();
         placeStaff(failed).onSuccess(bound -> {
                               log.info("Bound {} system user(s) and machine(s) as the system's staff", bound);
                               if (failed.get() > 0) {
                                   log.warn("{} system user(s) and machine(s) could not be bound; the system staff sweep is made again", failed.get());
-                                  vertx.setTimer(FAILED_RETRY_MILLIS, t -> place());
+                                  vertx.setTimer(failedDelay, t -> place(Math.min(failedDelay * 2, MAX_RETRY_MILLIS)));
                               }
                           })
                           .onFailure(e -> {
                               log.warn("The system staff sweep is made again: {}", e.getMessage());
-                              vertx.setTimer(RETRY_MILLIS, t -> place());
+                              vertx.setTimer(RETRY_MILLIS, t -> place(failedDelay));
                           });
     }
 

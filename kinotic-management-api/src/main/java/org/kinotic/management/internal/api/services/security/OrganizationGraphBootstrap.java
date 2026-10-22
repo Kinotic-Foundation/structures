@@ -40,9 +40,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class OrganizationGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
-    // an organization that could not be placed is tried again by a later sweep, less often than a sweep that could
-    // not start
-    private static final long FAILED_RETRY_MILLIS = 60_000;
+    // an organization that could not be placed is tried again by a later sweep, after a delay that doubles with each sweep
+    // that leaves one, since a model the system store runs at startup may lack the types the sweep writes
+    private static final long MAX_RETRY_MILLIS = 60_000;
     private static final int PAGE_SIZE = 100;
 
     private final Vertx vertx;
@@ -53,10 +53,10 @@ public class OrganizationGraphBootstrap {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
-        vertx.runOnContext(v -> run());
+        vertx.runOnContext(v -> run(RETRY_MILLIS));
     }
 
-    private void run() {
+    private void run(long failedDelay) {
         AtomicInteger failed = new AtomicInteger();
         stores.modelId(SYSTEM)
               .compose(modelId -> page(null, 0, failed))
@@ -66,14 +66,14 @@ public class OrganizationGraphBootstrap {
                   }
                   if (failed.get() > 0) {
                       log.warn("{} organization(s) could not be placed in the authorization graph; the sweep is made again", failed.get());
-                      vertx.setTimer(FAILED_RETRY_MILLIS, t -> run());
+                      vertx.setTimer(failedDelay, t -> run(Math.min(failedDelay * 2, MAX_RETRY_MILLIS)));
                   }
               })
               // the reconciler writes the system model shortly after the servers start, so a store that runs
               // none yet, like one that cannot be reached, is asked again
               .onFailure(e -> {
                   log.debug("The organization graph sweep waits: {}", e.getMessage());
-                  vertx.setTimer(RETRY_MILLIS, t -> run());
+                  vertx.setTimer(RETRY_MILLIS, t -> run(failedDelay));
               });
     }
 

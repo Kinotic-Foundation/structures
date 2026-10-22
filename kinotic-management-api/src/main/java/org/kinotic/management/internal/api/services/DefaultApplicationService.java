@@ -141,7 +141,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         // a caller with no tenancy opinion, such as the CLI ensuring the app row exists,
                         // omits the argument and leaves tenants to their administrators
                         newApplication.setTenantManagement(tenantManagement != null ? tenantManagement : TenantManagement.TENANT_ADMINISTRATORS);
-                        ret = save(newApplication).compose(storeProvisioner::provision);
+                        ret = save(newApplication).compose(this::provisioned);
                     }
                     return ret;
                 });
@@ -151,13 +151,21 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     public Future<Application> create(Application entity) {
         // Force the id to derive from the name; beforeSave mints it from the slug.
         entity.setId(null);
-        return failOnDuplicateName(super.create(entity), entity).compose(storeProvisioner::provision);
+        return failOnDuplicateName(super.create(entity), entity).compose(this::provisioned);
     }
 
     @Override
     public Future<Application> createSync(Application entity) {
         entity.setId(null);
-        return failOnDuplicateName(super.createSync(entity), entity).compose(storeProvisioner::provision);
+        return failOnDuplicateName(super.createSync(entity), entity).compose(this::provisioned);
+    }
+
+    // An application whose store could not be provisioned is deleted again, so the create can be made again.
+    // Provisioning writes no grant, so whatever part of the store it wrote is adopted by the next provisioning
+    private Future<Application> provisioned(Application application) {
+        return storeProvisioner.provision(application)
+                               .recover(e -> scopedRepository.deleteByIdSync(application.getId(), application.getOrganizationId())
+                                                             .transform(deleted -> Future.<Application>failedFuture(e)));
     }
 
     // The application leaves the graph with every grant made on it, and its store goes with everything in it, so an

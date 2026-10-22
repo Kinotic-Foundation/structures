@@ -134,11 +134,14 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
 
     // The definition's place in the graph, written once the record is, so a write that fails leaves a
     // definition nobody can reach rather than one nobody stores: in the system's store, where the
-    // organization's members hold it, and in the application's, where its rows are reached through it
+    // organization's members hold it, and in the application's, where its rows are reached through it. What a
+    // deleted definition of the same id left behind, when the removal after its record's deletion failed, is
+    // removed first, so the definition starts with no grant
     private Future<EntityDefinition> contained(EntityDefinition entityDefinition) {
-        return relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition)))
-                            .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
-                            .map(entityDefinition);
+        return removed(entityDefinition)
+                .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(entityDefinition))))
+                .compose(v -> relationships.ensure(storeOf(entityDefinition), List.of(containment(entityDefinition))))
+                .map(entityDefinition);
     }
 
     // The definition leaves both stores with every grant made on it, so one created again under its id starts with none

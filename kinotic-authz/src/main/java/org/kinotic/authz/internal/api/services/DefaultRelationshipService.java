@@ -293,8 +293,10 @@ public class DefaultRelationshipService implements RelationshipService {
 
     @Override
     public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
-        Future<Boolean> bundled = holds(store, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
-                                                                     AuthzUtil.roleObject(grant.roleId())));
+        // the role's relation also holds every permission a bundled one implies, which only a check evaluates
+        Future<Boolean> bundled = check(store, modelId, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
+                                                                              AuthzUtil.roleObject(grant.roleId())),
+                                        Consistency.HIGHER_CONSISTENCY);
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);

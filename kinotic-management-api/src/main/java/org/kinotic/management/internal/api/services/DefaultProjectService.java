@@ -152,9 +152,13 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     }
 
     // The project's place in the graph, written once the record is, so a write that fails leaves a project
-    // nobody can reach rather than one nobody stores
+    // nobody can reach rather than one nobody stores. What a deleted project of the same id left behind, when the
+    // removal after its record's deletion failed, is removed first, so the project starts with no grant
     private Future<Project> contained(Project project) {
-        return relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment(project))).map(project);
+        RelationshipTuple containment = containment(project);
+        return relationships.removeObject(AuthzStoreService.SYSTEM, containment.object())
+                            .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM, List.of(containment)))
+                            .map(project);
     }
 
     // The project leaves the graph with every grant made on it, so one created again under its id starts with none

@@ -13,7 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.config.KinoticAuthzProperties;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
+import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.model.Resource;
+import org.kinotic.authz.api.model.Subject;
+import org.kinotic.authz.api.model.SubjectType;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -282,6 +286,11 @@ class OpenFgaIntegrationTest {
         assertFalse(await(relationshipService.check(SYSTEM, modelId, new RelationshipTuple("user:sally-checks", "project_can_read", "project:shipping-checks"), Consistency.HIGHER_CONSISTENCY)));
         assertEquals(List.of("project:billing-checks"),
                      await(relationshipService.listObjects(SYSTEM, modelId, "user:sally-checks", "project_can_read", "project", Consistency.HIGHER_CONSISTENCY)));
+        // the grant of a role bundling only editing explains reading, which editing implies
+        Grant editing = new Grant("sally_edits_billing_checks", "project.editor_checks", new Subject(SubjectType.USER, "sally-checks"),
+                                  new Resource("project", "billing-checks"));
+        assertTrue(await(relationshipService.explains(SYSTEM, modelId, editing, editing.subject(), "project_can_read")));
+        assertFalse(await(relationshipService.explains(SYSTEM, modelId, editing, editing.subject(), "project_can_delete")));
 
         await(relationshipService.write(SYSTEM, List.of(), List.of(
                 new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"))));

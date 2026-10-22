@@ -99,7 +99,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         typeDefinitions.add(typeDefinition(USER, Map.of()));
         typeDefinitions.add(typeDefinition(GROUP, Map.of(MEMBER, direct(List.of(USER, GROUP + "#" + MEMBER)))));
         for (ResourceType type : new TreeMap<>(types).values()) {
-            typeDefinitions.add(roleType(type.name, permissionsOf(carried.get(type.name), types)));
+            typeDefinitions.add(roleType(type.name, carried.get(type.name), types));
             typeDefinitions.add(roleBindingType(storeType, type.name, bindable.get(type.name), permissionsOf(carried.get(type.name), types)));
             typeDefinitions.add(resourceType(type, types, carried.get(type.name)));
         }
@@ -402,14 +402,33 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     /**
      * A role homed at a type is a bundle of the permissions of that type and of the types it carries: for each,
-     * the role holds it for everyone or for nobody, which the binding then narrows to its members. The engine
-     * refuses a role bundling a permission from above its home.
+     * the role holds it for everyone or for nobody, which the binding then narrows to its members, and it holds
+     * every permission a permission it bundles implies. The engine refuses a role bundling a permission from
+     * above its home.
      */
-    private static ObjectNode roleType(String home, Set<String> permissions) {
+    private static ObjectNode roleType(String home, Set<String> carriedTypes, Map<String, ResourceType> types) {
         Map<String, ObjectNode> relations = new LinkedHashMap<>();
         relations.put(GRANT, direct(List.of(USER + ":*")));
-        for (String permission : permissions) {
-            relations.put(permission, direct(List.of(USER + ":*")));
+        for (String carried : carriedTypes) {
+            ResourceType about = types.get(carried);
+            for (Map.Entry<String, Set<String>> permission : new TreeMap<>(about.permissions).entrySet()) {
+                ObjectNode bundled = direct(List.of(USER + ":*"));
+                List<ObjectNode> sources = new ArrayList<>();
+                for (Map.Entry<String, Set<String>> other : new TreeMap<>(about.permissions).entrySet()) {
+                    if (other.getValue().contains(permission.getKey())) {
+                        sources.add(computed(AuthzUtil.permissionName(about.name, other.getKey())));
+                    }
+                }
+                ObjectNode relation = bundled;
+                if (!sources.isEmpty()) {
+                    // the subject types stay on the relation, where typeDefinition reads them, not on the union's child
+                    ArrayNode directTypes = (ArrayNode) bundled.remove("directly_related_user_types");
+                    sources.addFirst(bundled);
+                    relation = union(sources);
+                    relation.set("directly_related_user_types", directTypes);
+                }
+                relations.put(AuthzUtil.permissionName(about.name, permission.getKey()), relation);
+            }
         }
         return typeDefinition(AuthzUtil.roleType(home), relations);
     }
