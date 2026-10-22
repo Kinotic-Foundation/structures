@@ -1,7 +1,7 @@
 -- The default invitation and verification emails, in the Kinotic style, which every call that names no email
 -- template sends. Their links open the portal's pages.
 
-INSERT INTO kinotic_platform_email_template (id, type, subject, htmlBody, textBody, created, updated) VALUES ('kinotic-invitation', 'INVITATION', '{{#if applicationName}}You’re invited to join {{applicationName}}{{else}}You’re invited to join {{organizationName}} on Kinotic{{/if}}', '<!DOCTYPE html>
+INSERT INTO kinotic_system_email_template (id, type, subject, htmlBody, textBody, created, updated) VALUES ('kinotic-invitation', 'INVITATION', '{{#if applicationName}}You’re invited to join {{applicationName}}{{else}}You’re invited to join {{organizationName}} on Kinotic{{/if}}', '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -159,7 +159,7 @@ This invitation expires in {{expiresInDays}} days. If you weren’t expecting it
 you can safely ignore this email.
 
 — The Kinotic Team', '2026-10-22T00:00:00Z', '2026-10-22T00:00:00Z') WITH REFRESH;
-INSERT INTO kinotic_platform_email_template (id, type, subject, htmlBody, textBody, created, updated) VALUES ('kinotic-verification', 'VERIFICATION', 'Verify your Kinotic email', '<!DOCTYPE html>
+INSERT INTO kinotic_system_email_template (id, type, subject, htmlBody, textBody, created, updated) VALUES ('kinotic-verification', 'VERIFICATION', 'Verify your Kinotic email', '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

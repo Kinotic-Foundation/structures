@@ -68,7 +68,7 @@ import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateType, PlatformEmailTemplate } from '@kinotic-ai/system-api'
+import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateType, SystemEmailTemplate } from '@kinotic-ai/system-api'
 import { FormDrawer, showErrorToast, TemplateCodeEditor } from '@kinotic-ai/frontend-common'
 import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
 
@@ -77,12 +77,12 @@ import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
  */
 const props = defineProps<{
   visible: boolean
-  template: PlatformEmailTemplate | null
+  template: SystemEmailTemplate | null
 }>()
 
 const emit = defineEmits<{
   (e: 'update:visible', visible: boolean): void
-  (e: 'saved', template: PlatformEmailTemplate): void
+  (e: 'saved', template: SystemEmailTemplate): void
 }>()
 
 const TYPES = Object.values(EmailTemplateType).map(value => ({ label: EMAIL_TEMPLATE_TYPES[value].label, value }))
@@ -129,13 +129,13 @@ async function submit(): Promise<void> {
   if (!complete.value) {
     return
   }
-  const template = Object.assign(new PlatformEmailTemplate(id.value.trim(), type.value, subject.value, htmlBody.value, textBody.value), {
+  const template = Object.assign(new SystemEmailTemplate(id.value.trim(), type.value, subject.value, htmlBody.value, textBody.value), {
     uiBaseUrl: uiBaseUrl.value.trim() || null,
     created: props.template?.created ?? null
   })
   saving.value = true
   try {
-    const saved = await Kinotic.platformEmailTemplates.save(template)
+    const saved = await Kinotic.systemEmailTemplates.save(template)
     toast.add({ severity: 'success', summary: isNew.value ? 'Template added' : 'Template saved', life: 4000 })
     emit('saved', saved)
     emit('update:visible', false)

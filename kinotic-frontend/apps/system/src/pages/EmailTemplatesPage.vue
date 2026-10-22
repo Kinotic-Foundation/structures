@@ -37,7 +37,7 @@ import { ref } from 'vue'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
 import { Kinotic, type Pageable } from '@kinotic-ai/core'
-import { DEFAULT_EMAIL_TEMPLATE_IDS, type PlatformEmailTemplate } from '@kinotic-ai/system-api'
+import { DEFAULT_EMAIL_TEMPLATE_IDS, type SystemEmailTemplate } from '@kinotic-ai/system-api'
 import {
   CrudTable,
   filteredPageLoader,
@@ -54,7 +54,7 @@ import { EMAIL_TEMPLATE_TYPES } from '@/util/EmailTemplateTypes'
 /** One row: a template and the columns it is listed by. */
 interface TemplateRow extends DescriptiveIdentifiable {
   id: string
-  template: PlatformEmailTemplate
+  template: SystemEmailTemplate
   ui: string
   type: string
   subject: string
@@ -71,15 +71,15 @@ const headers: CrudHeader[] = [
 
 const confirm = useConfirm()
 const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePage(
-  filteredPageLoader((pageable: Pageable) => Kinotic.platformEmailTemplates.findAll(pageable),
+  filteredPageLoader((pageable: Pageable) => Kinotic.systemEmailTemplates.findAll(pageable),
                      toRow,
                      row => [row.id, row.ui, row.type, row.subject])
 )
 
 const drawerVisible = ref(false)
-const editing = ref<PlatformEmailTemplate | null>(null)
+const editing = ref<SystemEmailTemplate | null>(null)
 
-function toRow(template: PlatformEmailTemplate): TemplateRow {
+function toRow(template: SystemEmailTemplate): TemplateRow {
   return {
     id: template.id,
     template,
@@ -90,7 +90,7 @@ function toRow(template: PlatformEmailTemplate): TemplateRow {
   }
 }
 
-function openDrawer(template: PlatformEmailTemplate | null): void {
+function openDrawer(template: SystemEmailTemplate | null): void {
   editing.value = template
   drawerVisible.value = true
 }
@@ -112,7 +112,7 @@ function confirmDelete(row: TemplateRow): void {
     acceptProps: { label: 'Delete', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
     accept: () => run(async () => {
-      await Kinotic.platformEmailTemplates.deleteById(row.id)
+      await Kinotic.systemEmailTemplates.deleteById(row.id)
       removeRow(row.id)
     }, 'Template deleted', 'Failed to delete the template')
   })

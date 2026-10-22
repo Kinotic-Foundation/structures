@@ -389,10 +389,10 @@ CREATE TABLE IF NOT EXISTS kinotic_invite_email_template (
     updated DATE
 );
 
--- The emails a UI built on Kinotic sends in its own name (PlatformEmailTemplate): Handlebars sources of an
+-- The emails a UI built on Kinotic sends in its own name (SystemEmailTemplate): Handlebars sources of an
 -- invitation or verification email, which a call names by id, whose links open the page of the UI at uiBaseUrl, or
--- the portal's when it is absent. System users manage them in the system console (PlatformEmailTemplateService).
-CREATE TABLE IF NOT EXISTS kinotic_platform_email_template (
+-- the portal's when it is absent. System users manage them in the system console (SystemEmailTemplateService).
+CREATE TABLE IF NOT EXISTS kinotic_system_email_template (
     id KEYWORD,
     type KEYWORD,
     uiBaseUrl KEYWORD NOT INDEXED,

@@ -23,7 +23,7 @@ public interface SignUpService {
      * @param email           the email to verify
      * @param displayName     the founder's display name
      * @param emailTemplateId the {@link org.kinotic.domain.api.model.EmailTemplateType#VERIFICATION}
-     *                        {@link org.kinotic.domain.api.model.PlatformEmailTemplate} to email, whose UI's
+     *                        {@link org.kinotic.domain.api.model.SystemEmailTemplate} to email, whose UI's
      *                        {@code /signup/verify} page the link opens, or {@code null} for the default
      */
     Future<Void> initiateLocalSignUp(String email, String displayName, String emailTemplateId);

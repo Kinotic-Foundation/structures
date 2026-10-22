@@ -5,22 +5,22 @@ import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.EmailTemplateType;
-import org.kinotic.domain.api.model.PlatformEmailTemplate;
+import org.kinotic.domain.api.model.SystemEmailTemplate;
 
 /**
- * The emails UIs built on Kinotic send in their own name, each a {@link PlatformEmailTemplate} that system users
+ * The emails UIs built on Kinotic send in their own name, each a {@link SystemEmailTemplate} that system users
  * manage: the invitation and sign-up verification emails a call names by id.
  * <p>
  * Published in the system zone, which only SYSTEM participants and the platform's own cluster members may address.
  */
 @Publish
-public interface PlatformEmailTemplateService {
+public interface SystemEmailTemplateService {
 
     /** Every template, a page at a time. */
-    Future<Page<PlatformEmailTemplate>> findAll(Pageable pageable);
+    Future<Page<SystemEmailTemplate>> findAll(Pageable pageable);
 
     /** The template {@code id}, or {@code null} when none has that id. */
-    Future<PlatformEmailTemplate> findById(String id);
+    Future<SystemEmailTemplate> findById(String id);
 
     /**
      * Saves a template, new or changed. Its sources must render with sample values of its type's variables.
@@ -32,7 +32,7 @@ public interface PlatformEmailTemplateService {
      *                                  dashes, the UI base URL is not an http or https URL, a type's default is given
      *                                  another type, or a source does not render
      */
-    Future<PlatformEmailTemplate> save(PlatformEmailTemplate template);
+    Future<SystemEmailTemplate> save(SystemEmailTemplate template);
 
     /**
      * Deletes the template {@code id}; nothing happens for an unknown id.

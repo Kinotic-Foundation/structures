@@ -19,7 +19,7 @@ import java.util.Date;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class PlatformEmailTemplate implements Identifiable<String>, EmailTemplate {
+public class SystemEmailTemplate implements Identifiable<String>, EmailTemplate {
 
     /** The name callers choose the template by, such as {@code builder-invitation}. */
     private String id;

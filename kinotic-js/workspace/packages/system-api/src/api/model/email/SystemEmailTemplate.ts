@@ -6,7 +6,7 @@ import { EmailTemplateType } from '@/api/model/email/EmailTemplateType'
  * Handlebars sources rendered with the type's variables. An application's own invitation email template takes
  * precedence over the content of an invitation's template.
  */
-export class PlatformEmailTemplate {
+export class SystemEmailTemplate {
 
     /** The name callers choose the template by, such as builder-invitation. */
     public id: string

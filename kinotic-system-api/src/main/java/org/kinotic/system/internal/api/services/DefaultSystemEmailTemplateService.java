@@ -7,10 +7,10 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.EmailTemplateType;
-import org.kinotic.domain.api.model.PlatformEmailTemplate;
-import org.kinotic.domain.internal.api.repositories.PlatformEmailTemplateRepository;
+import org.kinotic.domain.api.model.SystemEmailTemplate;
+import org.kinotic.domain.internal.api.repositories.SystemEmailTemplateRepository;
 import org.kinotic.domain.internal.api.services.EmailService;
-import org.kinotic.system.api.services.PlatformEmailTemplateService;
+import org.kinotic.system.api.services.SystemEmailTemplateService;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -19,28 +19,28 @@ import java.util.regex.Pattern;
 
 @Component
 @RequiredArgsConstructor
-public class DefaultPlatformEmailTemplateService implements PlatformEmailTemplateService {
+public class DefaultSystemEmailTemplateService implements SystemEmailTemplateService {
 
     private static final Pattern ID = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
     // links append a path to it, so it is an absolute http or https URL with no query or fragment
     private static final Pattern UI_BASE_URL = Pattern.compile("https?://[^/?#@\\s]+(/[^?#\\s]*)?");
 
-    private final PlatformEmailTemplateRepository repository;
+    private final SystemEmailTemplateRepository repository;
     private final EmailService emailService;
 
     @Override
-    public Future<Page<PlatformEmailTemplate>> findAll(Pageable pageable) {
+    public Future<Page<SystemEmailTemplate>> findAll(Pageable pageable) {
         return repository.findAll(pageable);
     }
 
     @Override
-    public Future<PlatformEmailTemplate> findById(String id) {
+    public Future<SystemEmailTemplate> findById(String id) {
         Validate.notBlank(id, "id is required");
         return repository.findById(id);
     }
 
     @Override
-    public Future<PlatformEmailTemplate> save(PlatformEmailTemplate template) {
+    public Future<SystemEmailTemplate> save(SystemEmailTemplate template) {
         Validate.notNull(template, "template is required");
         Validate.notBlank(template.getId(), "id is required");
         Validate.isTrue(ID.matcher(template.getId()).matches(),

@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * The emails a {@link PlatformEmailTemplate} renders, each with its own variables.
+ * The emails a {@link SystemEmailTemplate} renders, each with its own variables.
  */
 @Getter
 @RequiredArgsConstructor
@@ -21,6 +21,6 @@ public enum EmailTemplateType {
      */
     VERIFICATION("kinotic-verification");
 
-    /** The id of the {@link PlatformEmailTemplate} sent when a call names none, which cannot be deleted. */
+    /** The id of the {@link SystemEmailTemplate} sent when a call names none, which cannot be deleted. */
     private final String defaultTemplateId;
 }

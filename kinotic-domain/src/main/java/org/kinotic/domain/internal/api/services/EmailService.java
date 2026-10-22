@@ -24,10 +24,10 @@ import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.EmailTemplateType;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.PlatformEmailTemplate;
+import org.kinotic.domain.api.model.SystemEmailTemplate;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
-import org.kinotic.domain.internal.api.repositories.PlatformEmailTemplateRepository;
+import org.kinotic.domain.internal.api.repositories.SystemEmailTemplateRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -69,14 +69,14 @@ public class EmailService {
 
     private final KinoticDomainProperties properties;
     private final InviteEmailTemplateRepository inviteEmailTemplateRepository;
-    private final PlatformEmailTemplateRepository platformEmailTemplateRepository;
+    private final SystemEmailTemplateRepository systemEmailTemplateRepository;
     private final Vertx vertx;
 
     private volatile EmailClient emailClient;
 
     /**
      * Sends a verification email to the given address, rendered with the {@link EmailTemplateType#VERIFICATION}
-     * {@link PlatformEmailTemplate} {@code emailTemplateId}, whose UI's verification page the link opens.
+     * {@link SystemEmailTemplate} {@code emailTemplateId}, whose UI's verification page the link opens.
      *
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
@@ -89,7 +89,7 @@ public class EmailService {
                                               String displayName,
                                               String verificationToken,
                                               String emailTemplateId) {
-        return findPlatformTemplate(emailTemplateId, EmailTemplateType.VERIFICATION).compose(template -> {
+        return findSystemTemplate(emailTemplateId, EmailTemplateType.VERIFICATION).compose(template -> {
             String verificationUrl = uiBaseUrl(template) + VERIFICATION_PATH + verificationToken;
             Future<Void> ret;
             if (properties.getDomain().getEmail().isEnabled()) {
@@ -107,7 +107,7 @@ public class EmailService {
 
     /**
      * Sends an invitation email carrying the accept link for the given invite, which opens the invitation page of the
-     * UI of the {@link EmailTemplateType#INVITATION} {@link PlatformEmailTemplate} {@code emailTemplateId}. The email
+     * UI of the {@link EmailTemplateType#INVITATION} {@link SystemEmailTemplate} {@code emailTemplateId}. The email
      * is rendered with that template, or with the application's {@link InviteEmailTemplate} for an application invite
      * whose application has one.
      *
@@ -118,8 +118,8 @@ public class EmailService {
      * @throws IllegalArgumentException when no invitation template has id {@code emailTemplateId}
      */
     public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName, String emailTemplateId) {
-        return findPlatformTemplate(emailTemplateId, EmailTemplateType.INVITATION).compose(platformTemplate -> {
-            String acceptUrl = uiBaseUrl(platformTemplate) + INVITE_PATH + invite.getVerificationToken();
+        return findSystemTemplate(emailTemplateId, EmailTemplateType.INVITATION).compose(systemTemplate -> {
+            String acceptUrl = uiBaseUrl(systemTemplate) + INVITE_PATH + invite.getVerificationToken();
             String toName = invite.getDisplayName() != null ? invite.getDisplayName() : invite.getEmail();
             Future<Void> ret;
             if (properties.getDomain().getEmail().isEnabled()) {
@@ -138,7 +138,7 @@ public class EmailService {
                 variables.put("expiresInDays", expiresInDays);
 
                 ret = findApplicationTemplate(invite)
-                        .compose(own -> send(invite.getEmail(), toName, own != null ? own : platformTemplate, variables));
+                        .compose(own -> send(invite.getEmail(), toName, own != null ? own : systemTemplate, variables));
             } else {
                 log.warn("Email sending is disabled; invite accept URL for {} <{}>: {}",
                          toName, invite.getEmail(), acceptUrl);
@@ -155,9 +155,9 @@ public class EmailService {
                 : Future.succeededFuture();
     }
 
-    private Future<PlatformEmailTemplate> findPlatformTemplate(String emailTemplateId, EmailTemplateType type) {
+    private Future<SystemEmailTemplate> findSystemTemplate(String emailTemplateId, EmailTemplateType type) {
         String id = emailTemplateId != null ? emailTemplateId : type.getDefaultTemplateId();
-        return platformEmailTemplateRepository.findById(id).map(found -> {
+        return systemEmailTemplateRepository.findById(id).map(found -> {
             if (emailTemplateId == null) {
                 // the seed migration gives every environment the defaults, and the console refuses to delete them
                 Validate.validState(found != null, "The default %s email template %s is missing", type, id);
@@ -167,7 +167,7 @@ public class EmailService {
         });
     }
 
-    private String uiBaseUrl(PlatformEmailTemplate template) {
+    private String uiBaseUrl(SystemEmailTemplate template) {
         return template.getUiBaseUrl() != null ? template.getUiBaseUrl() : portalBaseUrl();
     }
 

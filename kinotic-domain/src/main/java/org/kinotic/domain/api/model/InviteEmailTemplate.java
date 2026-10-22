@@ -10,7 +10,7 @@ import java.util.Date;
 /**
  * An application's customized invitation email — at most one per application. Subject and
  * bodies are Handlebars sources rendered with the {@link EmailTemplateType#INVITATION} variables; when an
- * application has no row here, the {@link PlatformEmailTemplate} the invitation is sent with is used.
+ * application has no row here, the {@link SystemEmailTemplate} the invitation is sent with is used.
  */
 @Getter
 @Setter

@@ -1,5 +1,5 @@
 /**
- * The emails a PlatformEmailTemplate renders, each with its own variables.
+ * The emails a SystemEmailTemplate renders, each with its own variables.
  */
 export enum EmailTemplateType {
     /**
@@ -11,7 +11,7 @@ export enum EmailTemplateType {
     VERIFICATION = 'VERIFICATION'
 }
 
-/** The id of each type's default PlatformEmailTemplate, sent by every call that names none, which cannot be deleted. */
+/** The id of each type's default SystemEmailTemplate, sent by every call that names none, which cannot be deleted. */
 export const DEFAULT_EMAIL_TEMPLATE_IDS: Record<EmailTemplateType, string> = {
     [EmailTemplateType.INVITATION]: 'kinotic-invitation',
     [EmailTemplateType.VERIFICATION]: 'kinotic-verification'
