@@ -81,8 +81,8 @@ public final class AuthzUtil {
     public static final String ADMIN = "admin";
     /** The level of the built-in role over everything inside an application but the application itself. */
     public static final String DEVELOPER = "developer";
-    /** The levels of the platform's staff roles: running the platform, and reading it. */
-    public static final String OPERATOR = "operator";
+    /** The levels of the system users' roles: running the platform, and reading it. */
+    public static final String MAINTAINER = "maintainer";
     public static final String SUPPORT = "support";
     /** The built-in role holding every permission of an organization and of everything inside it. */
     public static final String ORGANIZATION_ADMIN_ROLE = ORGANIZATION_TYPE + "." + ADMIN;
@@ -91,7 +91,7 @@ public final class AuthzUtil {
     /** The built-in role holding every permission of the platform and of everything on it. */
     public static final String PLATFORM_ADMIN_ROLE = PLATFORM_TYPE + "." + ADMIN;
     /** The built-in role holding the platform's own permissions and the reading permissions of everything on it. */
-    public static final String PLATFORM_OPERATOR_ROLE = PLATFORM_TYPE + "." + OPERATOR;
+    public static final String PLATFORM_MAINTAINER_ROLE = PLATFORM_TYPE + "." + MAINTAINER;
     /** The built-in role holding the reading permissions of the platform and of everything on it. */
     public static final String PLATFORM_SUPPORT_ROLE = PLATFORM_TYPE + "." + SUPPORT;
     /**

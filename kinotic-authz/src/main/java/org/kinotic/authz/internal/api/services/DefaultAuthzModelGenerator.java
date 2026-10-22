@@ -172,7 +172,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     /**
      * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting and managing access, an admin
      * of everything on it and inside it, and the roles its services declare; and for a platform store the
-     * application developer, everything inside an application but the application's own, the platform operator,
+     * application developer, everything inside an application but the application's own, the platform maintainer,
      * the platform's own permissions and the reading ones of everything on it, and the platform support, the
      * reading permissions of the platform and of everything on it. A role that would bundle nothing is not a
      * role.
@@ -193,10 +193,10 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         }
         if (kind == AuthzStoreKind.PLATFORM) {
             ResourceType platform = types.get(AuthzUtil.PLATFORM_TYPE);
-            Set<String> operating = modelNames(platform, platform.permissions.keySet());
-            operating.addAll(inside(platform, types, carried, false, true));
+            Set<String> maintaining = modelNames(platform, platform.permissions.keySet());
+            maintaining.addAll(inside(platform, types, carried, false, true));
             role(ret, AuthzUtil.APPLICATION_DEVELOPER_ROLE, inside(types.get(APPLICATION), types, carried, false, false));
-            role(ret, AuthzUtil.PLATFORM_OPERATOR_ROLE, operating);
+            role(ret, AuthzUtil.PLATFORM_MAINTAINER_ROLE, maintaining);
             role(ret, AuthzUtil.PLATFORM_SUPPORT_ROLE, inside(platform, types, carried, true, true));
         }
         for (ResourceType type : types.values()) {

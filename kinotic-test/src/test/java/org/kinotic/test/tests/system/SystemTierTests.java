@@ -58,8 +58,8 @@ import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
 
 /**
  * Verifies the system tier is authorized as the gateway authorizes it, against the platform store: the
- * platform's seeded administrator and vm-manager are bound once; a support operator reads every organization,
- * the cluster and the servers' logs and is refused the platform's writes; an operator manages machines and
+ * platform's seeded administrator and vm-manager are bound once; a support system user reads every organization,
+ * the cluster and the servers' logs and is refused the platform's writes; a maintainer manages machines and
  * workloads and is refused a node's reports; a machine granted the registrar role registers a node, reports
  * for that node alone, and loses its agent grant when the node is deregistered; a platform grant names only
  * the platform's own staff; and the telemetry tenant a platform participant may read follows its grant.
@@ -75,7 +75,7 @@ public class SystemTierTests extends KinoticTestBase {
     private static final String NODE_RECORD_SERVICE = "system-api~org.kinotic.system.api.services.workload.VmNodeService";
     private static final String WORKLOAD_SERVICE = "system-api~org.kinotic.system.api.services.workload.WorkloadOrchestrationService";
     private static final String LOG_SERVICE = "management-api~org.kinotic.management.api.services.telemetry.LogService";
-    // the operator and the vm-manager V2__kinotic_test_users seeds
+    // the system user and the vm-manager V2__kinotic_test_users seeds
     private static final String SEEDED_ADMIN_ID = "00000000-0000-0000-0000-000000000001";
     private static final String SEEDED_VM_MANAGER_ID = "00000000-0000-0000-0000-000000000011";
     private static final Map<String, Object> PAGE = Map.of("pageNumber", 0, "pageSize", 10);
@@ -134,11 +134,11 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void theSeededStaffAreBoundOnce() throws Exception {
         // the system server sweeps the platform once the store runs a model, shortly after the servers start
-        assertTrue(awaitUntil(() -> grantsOf(SEEDED_ADMIN_ID, AuthzUtil.PLATFORM_ADMIN_ROLE) == 1), "the seeded operator never administered the platform");
+        assertTrue(awaitUntil(() -> grantsOf(SEEDED_ADMIN_ID, AuthzUtil.PLATFORM_ADMIN_ROLE) == 1), "the seeded system user never administered the platform");
         assertTrue(awaitUntil(() -> grantsOf(SEEDED_VM_MANAGER_ID, VmNodeOrchestrationService.REGISTRAR_ROLE) == 1), "the seeded vm-manager never registered nodes");
 
         // the administrator holds everything on the platform and inside it
-        Participant admin = operator(SEEDED_ADMIN_ID);
+        Participant admin = userParticipant(SEEDED_ADMIN_ID);
         authorize(MEMBER_SERVICE, "createMachine", admin, List.of("a machine"));
         authorize(ACCESS_SERVICE, "grant", admin, List.of(new Subject(SubjectKind.USER, SEEDED_ADMIN_ID), AuthzUtil.PLATFORM_SUPPORT_ROLE));
         authorize(ORGANIZATION_SERVICE, "findMembers", admin, Arrays.asList(organization().getId(), null, PAGE));
@@ -151,14 +151,14 @@ public class SystemTierTests extends KinoticTestBase {
         Subject subject = new Subject(SubjectKind.USER, support.getId());
         Grant grant = await(access.grant(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE));
         Organization organization = organization();
-        Participant caller = operator(support.getId());
+        Participant caller = userParticipant(support.getId());
 
         assertTrue(awaitUntil(() -> admitted(ORGANIZATION_SERVICE, "findOrganizations", caller, List.of(PAGE))), "support never saw the organizations");
         // a read of one organization is checked on it, which the platform grant reaches through the graph
         authorize(ORGANIZATION_SERVICE, "findApplications", caller, List.of(organization.getId(), PAGE));
         authorize(ORGANIZATION_SERVICE, "findMembers", caller, Arrays.asList(organization.getId(), null, PAGE));
         authorize(CLUSTER_SERVICE, "getClusterInfo", caller, List.of());
-        // a check on the caller's organization, which an operator has none of, is made on the platform
+        // a check on the caller's organization, which a system user has none of, is made on the platform
         authorize(LOG_SERVICE, "serverHistory", caller, List.of(Map.of("telemetryServiceName", "kinotic-test")));
         assertRefused(MEMBER_SERVICE, "createMachine", caller, List.of("a machine"), "platform_can_manage_machines");
         assertRefused(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"), "platform_can_manage_workloads");
@@ -176,12 +176,12 @@ public class SystemTierTests extends KinoticTestBase {
     }
 
     @Test
-    public void anOperatorRunsThePlatformAndIsRefusedANodesReports() throws Exception {
-        SystemParticipantIdentity operator = systemUser("system-user");
-        await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
-        Participant caller = operator(operator.getId());
+    public void aMaintainerRunsThePlatformAndIsRefusedANodesReports() throws Exception {
+        SystemParticipantIdentity maintainer = systemUser("system-user");
+        await(access.grant(new Subject(SubjectKind.USER, maintainer.getId()), AuthzUtil.PLATFORM_MAINTAINER_ROLE));
+        Participant caller = userParticipant(maintainer.getId());
 
-        assertTrue(awaitUntil(() -> admitted(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"))), "the operator never managed workloads");
+        assertTrue(awaitUntil(() -> admitted(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"))), "the maintainer never managed workloads");
         authorize(MEMBER_SERVICE, "createMachine", caller, List.of("a machine"));
         authorize(MEMBER_SERVICE, "rotateSecret", caller, List.of(SEEDED_VM_MANAGER_ID));
         authorize(ORGANIZATION_SERVICE, "findOrganizations", caller, List.of(PAGE));
@@ -194,9 +194,9 @@ public class SystemTierTests extends KinoticTestBase {
     public void aRegistrarRegistersANodeAndReportsForItAlone() throws Exception {
         MachineParticipantIdentity registrar = machine("tier registrar");
         MachineParticipantIdentity other = machine("tier bystander");
-        SystemParticipantIdentity operator = systemUser("system-user");
+        SystemParticipantIdentity maintainer = systemUser("system-user");
         await(access.grant(new Subject(SubjectKind.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
-        await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
+        await(access.grant(new Subject(SubjectKind.USER, maintainer.getId()), AuthzUtil.PLATFORM_MAINTAINER_ROLE));
         Participant registrarCaller = machineParticipant(registrar.getId());
         Participant otherCaller = machineParticipant(other.getId());
         VmNodeRegistration node = NodeFixtures.registration("tier-" + suffix(), 4, 4096, 10240);
@@ -215,10 +215,10 @@ public class SystemTierTests extends KinoticTestBase {
         authorize(NODE_SERVICE, "deregisterNode", registrarCaller, List.of(node.getId()));
         assertRefused(NODE_SERVICE, "heartbeat", registrarCaller, List.of("tier-other-" + suffix(), List.of()), "vm_node_can_report");
         assertRefused(NODE_SERVICE, "heartbeat", otherCaller, List.of(node.getId(), List.of()), "vm_node_can_report");
-        // the platform's administrator reaches the node through the platform, an operator reads it and reports nothing
-        assertTrue(awaitUntil(() -> admitted(NODE_SERVICE, "heartbeat", operator(SEEDED_ADMIN_ID), List.of(node.getId(), List.of()))), "the administrator never reached the node");
-        assertTrue(awaitUntil(() -> admitted(NODE_RECORD_SERVICE, "findHistory", operator(operator.getId()), List.of(node.getId(), PAGE))), "the operator never read the node");
-        assertRefused(NODE_SERVICE, "heartbeat", operator(operator.getId()), List.of(node.getId(), List.of()), "vm_node_can_report");
+        // the platform's administrator reaches the node through the platform, a maintainer reads it and reports nothing
+        assertTrue(awaitUntil(() -> admitted(NODE_SERVICE, "heartbeat", userParticipant(SEEDED_ADMIN_ID), List.of(node.getId(), List.of()))), "the administrator never reached the node");
+        assertTrue(awaitUntil(() -> admitted(NODE_RECORD_SERVICE, "findHistory", userParticipant(maintainer.getId()), List.of(node.getId(), PAGE))), "the maintainer never read the node");
+        assertRefused(NODE_SERVICE, "heartbeat", userParticipant(maintainer.getId()), List.of(node.getId(), List.of()), "vm_node_can_report");
         List<Grant> grants = await(relationships.findGrants(PLATFORM, nodeObject));
         assertEquals(1, grants.size());
         assertEquals(VmNodeOrchestrationService.AGENT_ROLE, grants.getFirst().roleId());
@@ -238,27 +238,27 @@ public class SystemTierTests extends KinoticTestBase {
     @Test
     public void aPlatformGrantNamesOnlyThePlatformsStaff() throws Exception {
         OrganizationParticipantIdentity member = member(TEST_ORG_ID, "member");
-        SystemParticipantIdentity operator = systemUser("system-user");
+        SystemParticipantIdentity user = systemUser("system-user");
 
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> access.grant(new Subject(SubjectKind.USER, member.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.GROUP, operator.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectKind.GROUP, user.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE)));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.USER, operator.getId()), "project.editor-of-nothing")));
+                         failure(() -> access.grant(new Subject(SubjectKind.USER, user.getId()), "project.editor-of-nothing")));
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.revoke("no-such-grant")));
         // the roles a platform grant can name are the platform's own and those of the types on it, none of an
         // organization's or a tenant's
         List<RoleDefinition> defined = await(access.findRoles());
         List<String> roles = defined.stream().map(RoleDefinition::id).toList();
-        assertTrue(roles.containsAll(List.of(AuthzUtil.PLATFORM_ADMIN_ROLE, AuthzUtil.PLATFORM_OPERATOR_ROLE, AuthzUtil.PLATFORM_SUPPORT_ROLE,
+        assertTrue(roles.containsAll(List.of(AuthzUtil.PLATFORM_ADMIN_ROLE, AuthzUtil.PLATFORM_MAINTAINER_ROLE, AuthzUtil.PLATFORM_SUPPORT_ROLE,
                                              VmNodeOrchestrationService.REGISTRAR_ROLE, VmNodeOrchestrationService.AGENT_ROLE)), roles.toString());
         Set<String> organizationTree = Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE,
                                               AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.TENANT_TYPE);
         assertTrue(defined.stream().noneMatch(role -> organizationTree.contains(role.resourceType())), roles.toString());
         assertTrue(defined.stream().allMatch(role -> role.grantableOn().contains(AuthzUtil.PLATFORM_TYPE)), roles.toString());
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
+                         failure(() -> access.grant(new Subject(SubjectKind.USER, user.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
     }
 
     @Test
@@ -268,10 +268,10 @@ public class SystemTierTests extends KinoticTestBase {
         await(access.grant(new Subject(SubjectKind.USER, support.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE));
         ServerLogQuery query = new ServerLogQuery().setTelemetryServiceName("kinotic-test").setStart(0).setEnd(1).setLimit(1);
 
-        assertInstanceOf(AuthorizationException.class, failure(() -> runAs(operator(newcomer.getId()), () -> logService.serverHistory(query))));
+        assertInstanceOf(AuthorizationException.class, failure(() -> runAs(userParticipant(newcomer.getId()), () -> logService.serverHistory(query))));
         assertInstanceOf(AuthorizationException.class, failure(() -> runAsOrganization(() -> logService.serverHistory(query))));
         // the platform's tenant is read for support; whether the log store answers is not the tenant's to decide
-        assertTrue(awaitUntil(() -> !(failure(() -> runAs(operator(support.getId()), () -> logService.serverHistory(query))) instanceof AuthorizationException)),
+        assertTrue(awaitUntil(() -> !(failure(() -> runAs(userParticipant(support.getId()), () -> logService.serverHistory(query))) instanceof AuthorizationException)),
                    "support was never admitted to the platform's logs");
     }
 
@@ -294,7 +294,7 @@ public class SystemTierTests extends KinoticTestBase {
         return ret;
     }
 
-    private static Participant operator(String id) {
+    private static Participant userParticipant(String id) {
         return new DefaultSystemParticipant(id, Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, ParticipantConstants.PARTICIPANT_TYPE_USER), List.of());
     }
 

@@ -323,14 +323,14 @@ public class AuthzModelGeneratorTest {
         Set<String> everything = new TreeSet<>();
         model.permissions().forEach((type, permissions) -> permissions.forEach(permission -> everything.add(AuthzUtil.permissionName(type, permission))));
         assertEquals(everything, model.roles().get(AuthzUtil.PLATFORM_ADMIN_ROLE));
-        // the operator holds the platform's own permissions and reads everything on it
+        // the maintainer holds the platform's own permissions and reads everything on it
         assertEquals(Set.of("platform_can_read_cluster", "platform_can_manage_machines",
                             "organization_can_read_members", "project_can_read", "vm_node_can_read"),
-                     model.roles().get(AuthzUtil.PLATFORM_OPERATOR_ROLE));
+                     model.roles().get(AuthzUtil.PLATFORM_MAINTAINER_ROLE));
         // support reads the platform and everything on it
         assertEquals(Set.of("platform_can_read_cluster", "organization_can_read_members", "project_can_read", "vm_node_can_read"),
                      model.roles().get(AuthzUtil.PLATFORM_SUPPORT_ROLE));
-        assertFalse(model.roles().containsKey("application.operator"));
+        assertFalse(model.roles().containsKey("application.maintainer"));
     }
 
     @Test
