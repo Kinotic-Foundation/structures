@@ -5,19 +5,17 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.AuthzModel;
-import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
-import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
+import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -25,7 +23,6 @@ import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.system.api.services.SystemAccessService;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
@@ -37,8 +34,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
     private static final Resource SYSTEM_RESOURCE = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
     private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
-    private final ServiceDirectory directory;
-    private final AuthzModelGenerator generator;
+    private final AuthzModelService models;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final ParticipantIdentityService identities;
@@ -78,25 +74,13 @@ public class DefaultSystemAccessService implements SystemAccessService {
         Validate.notBlank(permission, "permission cannot be blank");
         String name = AuthzUtil.permissionName(AuthzConstants.SYSTEM_TYPE, permission);
         return requireStaff(subject).compose(stored -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
-                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> {
-                    RelationshipTuple holds = new RelationshipTuple(userOf(stored), name, SYSTEM_OBJECT);
-                    // an administrator asks after changing access, so the answer must not predate the change
-                    Future<Boolean> allowed = relationships.check(SYSTEM, modelId, holds, Consistency.HIGHER_CONSISTENCY);
-                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(SYSTEM, modelId, grant, stored, name)).toList();
-                    return Future.all(explains).compose(results -> allowed.map(held -> {
-                        List<Grant> through = new ArrayList<>();
-                        for (int i = 0; i < grants.size(); i++) {
-                            if (results.<Boolean>resultAt(i)) {
-                                through.add(DomainUtil.localGrant(grants.get(i)));
-                            }
-                        }
-                        return new AccessExplanation(held, through);
-                    }));
-                })));
+                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> relationships.explain(
+                        SYSTEM, modelId, stored, new RelationshipTuple(userOf(stored), name, SYSTEM_OBJECT), List.of(), grants)))
+                .map(DomainUtil::localExplanation));
     }
 
     private Future<AuthzModel> model() {
-        return directory.findSystemDefinitions().map(generator::systemModel);
+        return models.findSystemModel();
     }
 
     // The system's staff, a system user or a machine in SYSTEM scope, each held by the store as itself

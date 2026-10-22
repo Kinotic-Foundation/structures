@@ -5,17 +5,14 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.AuthzModel;
-import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
-import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
@@ -23,6 +20,7 @@ import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
+import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -43,8 +41,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final EntityDefinitionRepository entityDefinitions;
-    private final ServiceDirectory directory;
-    private final AuthzModelGenerator generator;
+    private final AuthzModelService models;
 
     @Override
     public Future<List<RoleDefinition>> findRoles(String applicationId) {
@@ -89,22 +86,9 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
             RelationshipTuple holds = new RelationshipTuple(userOf(subject), permission, objectOf(application, resource));
             return requireSubject(application, subject)
                     .compose(v -> grantsOn(application, resource))
-                    .compose(grants -> stores.modelId(store).compose(modelId -> {
-                        // an administrator asks after changing access, so the answer must not predate the change
-                        Future<Boolean> allowed = relationships.check(store, modelId, holds, Consistency.HIGHER_CONSISTENCY, edgesOf(resource));
-                        List<Future<Boolean>> explains = grants.stream()
-                                                               .map(grant -> relationships.explains(store, modelId, grant, subject, permission))
-                                                               .toList();
-                        return Future.all(explains).compose(results -> allowed.map(held -> {
-                            List<Grant> through = new ArrayList<>();
-                            for (int i = 0; i < grants.size(); i++) {
-                                if (results.<Boolean>resultAt(i)) {
-                                    through.add(DomainUtil.localGrant(grants.get(i)));
-                                }
-                            }
-                            return new AccessExplanation(held, through);
-                        }));
-                    }));
+                    .compose(grants -> stores.modelId(store)
+                                             .compose(modelId -> relationships.explain(store, modelId, subject, holds, edgesOf(resource), grants)))
+                    .map(DomainUtil::localExplanation);
         });
     }
 
@@ -199,9 +183,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     // The model the application's store runs: the system's services its users call and the services its
     // runtimes registered
     private Future<AuthzModel> model(Application application) {
-        return directory.findSystemDefinitions()
-                        .compose(system -> directory.findApplicationDefinitions(application.getOrganizationId(), application.getId())
-                                                      .map(services -> generator.applicationModel(system, services)));
+        return models.findApplicationModel(application.getOrganizationId(), application.getId());
     }
 
     // A grant in an application's store is made to one of its own users or machines

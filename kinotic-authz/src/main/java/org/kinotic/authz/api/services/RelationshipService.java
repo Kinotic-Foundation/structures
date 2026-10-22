@@ -3,6 +3,7 @@ package org.kinotic.authz.api.services;
 import io.vertx.core.Future;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
+import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Subject;
@@ -191,6 +192,25 @@ public interface RelationshipService {
      * @return true when the grant gives it
      */
     Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission);
+
+    /**
+     * Whether a subject holds a permission on an object, and which of the given grants give it, as
+     * {@link #explains} decides each. The answer reflects every write that completed before the call.
+     *
+     * @param store   the store, named as its record is
+     * @param modelId the model version to evaluate against
+     * @param subject the user or group asked about
+     * @param holds   the subject's user, the model name of the permission and the object
+     * @param context tuples held for this check only, as {@link #check(String, String, RelationshipTuple, Consistency, List)} takes them
+     * @param grants  the grants that reach the object
+     * @return whether the permission is held, and the grants giving it as the store holds them
+     */
+    Future<AccessExplanation> explain(String store,
+                                      String modelId,
+                                      Subject subject,
+                                      RelationshipTuple holds,
+                                      List<RelationshipTuple> context,
+                                      List<Grant> grants);
 
     /**
      * Whether the user holds the relation on the object, directly or through the model's rules.

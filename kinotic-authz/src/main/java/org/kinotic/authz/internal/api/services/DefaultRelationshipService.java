@@ -14,6 +14,7 @@ import dev.openfga.sdk.errors.ApiException;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
@@ -287,6 +288,29 @@ public class DefaultRelationshipService implements RelationshipService {
             ret = new Subject(SubjectType.GROUP, AuthzUtil.idOf(user));
         }
         return ret;
+    }
+
+    @Override
+    public Future<AccessExplanation> explain(String store,
+                                             String modelId,
+                                             Subject subject,
+                                             RelationshipTuple holds,
+                                             List<RelationshipTuple> context,
+                                             List<Grant> grants) {
+        // an administrator asks after changing access, so the answer must not predate the change
+        Future<Boolean> allowed = check(store, modelId, holds, Consistency.HIGHER_CONSISTENCY, context);
+        List<Future<Boolean>> explains = grants.stream()
+                                               .map(grant -> explains(store, modelId, grant, subject, holds.relation()))
+                                               .toList();
+        return Future.all(explains).compose(results -> allowed.map(held -> {
+            List<Grant> through = new ArrayList<>();
+            for (int i = 0; i < grants.size(); i++) {
+                if (results.<Boolean>resultAt(i)) {
+                    through.add(grants.get(i));
+                }
+            }
+            return new AccessExplanation(held, through);
+        }));
     }
 
     @Override
