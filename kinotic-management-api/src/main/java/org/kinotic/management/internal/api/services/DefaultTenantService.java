@@ -41,7 +41,7 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
                                     .setName(name)
                                     .setDescription(description);
         // create refuses an id another call took first, and the tenant it made is the one wanted when it is the
-        // application's own; beforeSave's lookup has no such guarantee against a call made at the same time
+        // application's own; the lookup in beforeWrite has no such guarantee against a call made at the same time
         return create(tenant).recover(err -> err instanceof AlreadyExistsException
                 ? tenantRepository.findById(tenant.getId(), organizationId)
                                   .compose(stored -> stored != null ? requireOfApplication(stored, applicationId) : Future.failedFuture(err))
