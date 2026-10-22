@@ -197,7 +197,10 @@ nothing. The rules that matter:
   counters and response timers (`vertx_http_{server,client}_requests_total`,
   `vertx_http_client_responses_total`, `vertx_http_{server,client}_response_time_seconds_*`) are
   dropped: query `http_server_request_duration_seconds_*` and `http_client_request_duration_seconds_*`,
-  which the agent records for the same requests.
+  which the agent records for the same requests. The byte meters are dropped too
+  (`vertx_{http,net}_{server,client}_bytes_{read,written}`, `vertx_eventbus_bytes_{read,written}`,
+  `vertx_http_{server,client}_{request,response}_bytes`): they record on every socket read and write,
+  message or request, and carry nothing finer than the server to attribute the traffic to.
 - **Tempo's metrics-generator** writes its own series to Mimir — `traces_spanmetrics_calls_total`
   and `traces_spanmetrics_latency_bucket`, labelled `service`, `span_name`, `span_kind`,
   `status_code`, and `peer_service` on HTTP client spans to a named backend. These only exist

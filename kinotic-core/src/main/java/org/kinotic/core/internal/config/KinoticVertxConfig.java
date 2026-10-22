@@ -35,13 +35,30 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 @Configuration
 public class KinoticVertxConfig {
 
-    // Vert.x's request counters and timers, which the agent's http.server.request.duration and
-    // http.client.request.duration already record with the same method and status code
-    private static final Set<String> AGENT_DUPLICATED_METERS = Set.of("vertx.http.server.requests",
-                                                                      "vertx.http.server.response.time",
-                                                                      "vertx.http.client.requests",
-                                                                      "vertx.http.client.responses",
-                                                                      "vertx.http.client.response.time");
+    private static final Set<String> DENIED_METERS = Set.of(
+            // the agent's http.server.request.duration and http.client.request.duration record these
+            // requests with the same method and status code
+            "vertx.http.server.requests",
+            "vertx.http.server.response.time",
+            "vertx.http.client.requests",
+            "vertx.http.client.responses",
+            "vertx.http.client.response.time",
+            // recorded on every socket read and write, event bus message or request, with no label that
+            // attributes the traffic to anything finer than the server
+            "vertx.http.server.bytes.read",
+            "vertx.http.server.bytes.written",
+            "vertx.http.client.bytes.read",
+            "vertx.http.client.bytes.written",
+            "vertx.net.server.bytes.read",
+            "vertx.net.server.bytes.written",
+            "vertx.net.client.bytes.read",
+            "vertx.net.client.bytes.written",
+            "vertx.eventbus.bytes.read",
+            "vertx.eventbus.bytes.written",
+            "vertx.http.server.request.bytes",
+            "vertx.http.server.response.bytes",
+            "vertx.http.client.request.bytes",
+            "vertx.http.client.response.bytes");
 
     @Bean
     public KinoticIgniteClusterManager clusterManager(Ignite ignite, ZonePartitioningService zonePartitioningService){
@@ -86,7 +103,7 @@ public class KinoticVertxConfig {
         // the registry has no backends. Vert.x registers on a composite in front of the global registry so
         // the deny filter stays scoped to Vert.x's meters.
         CompositeMeterRegistry meterRegistry = new CompositeMeterRegistry();
-        meterRegistry.config().meterFilter(MeterFilter.deny(id -> AGENT_DUPLICATED_METERS.contains(id.getName())));
+        meterRegistry.config().meterFilter(MeterFilter.deny(id -> DENIED_METERS.contains(id.getName())));
         meterRegistry.add(Metrics.globalRegistry);
         VertxOptions options = new VertxOptions()
                 .setMetricsOptions(new MicrometerMetricsOptions().setEnabled(true));
