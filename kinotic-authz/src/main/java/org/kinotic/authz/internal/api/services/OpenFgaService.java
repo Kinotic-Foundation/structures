@@ -1,6 +1,8 @@
 package org.kinotic.authz.internal.api.services;
 
 import dev.openfga.sdk.api.OpenFgaApi;
+import dev.openfga.sdk.api.StreamedListObjectsApi;
+import dev.openfga.sdk.api.client.ApiClient;
 import dev.openfga.sdk.api.client.ApiResponse;
 import dev.openfga.sdk.api.configuration.ApiToken;
 import dev.openfga.sdk.api.configuration.Configuration;
@@ -11,7 +13,6 @@ import dev.openfga.sdk.api.model.CreateStoreRequest;
 import dev.openfga.sdk.api.model.CreateStoreResponse;
 import dev.openfga.sdk.api.model.GetStoreResponse;
 import dev.openfga.sdk.api.model.ListObjectsRequest;
-import dev.openfga.sdk.api.model.ListObjectsResponse;
 import dev.openfga.sdk.api.model.ListStoresResponse;
 import dev.openfga.sdk.api.model.ReadAuthorizationModelsResponse;
 import dev.openfga.sdk.api.model.ReadRequest;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The OpenFGA client as the authorization services call it: the engine named by {@link AuthzProperties}, and
@@ -51,6 +53,7 @@ public class OpenFgaService {
     private static final int READ_PAGE_SIZE = 100;
 
     private final OpenFgaApi api;
+    private final StreamedListObjectsApi streamedListObjectsApi;
 
     public OpenFgaService(KinoticAuthzProperties properties) {
         AuthzProperties authz = properties.getAuthz();
@@ -59,7 +62,9 @@ public class OpenFgaService {
             configuration.credentials(new Credentials(new ApiToken(authz.getApiToken())));
         }
         try {
-            this.api = new OpenFgaApi(configuration);
+            ApiClient client = new ApiClient();
+            this.api = new OpenFgaApi(configuration, client);
+            this.streamedListObjectsApi = new StreamedListObjectsApi(configuration, client);
         } catch (FgaInvalidParameterException e) {
             throw new IllegalArgumentException("Invalid OpenFGA client configuration", e);
         }
@@ -138,8 +143,28 @@ public class OpenFgaService {
         });
     }
 
-    public Future<ListObjectsResponse> listObjects(String storeId, ListObjectsRequest request) {
-        return call(() -> api.listObjects(storeId, request));
+    /**
+     * Every object the request lists, however many there are. An error the engine reports partway through fails
+     * the listing.
+     */
+    public Future<List<String>> listObjects(String storeId, ListObjectsRequest request) {
+        // the streamed endpoint returns every object, where ListObjects stops at the engine's configured maximum.
+        // Its consumers are called one line at a time on one HTTP client thread, and the future completes after
+        // the last of them
+        List<String> objects = new ArrayList<>();
+        AtomicReference<Throwable> streamError = new AtomicReference<>();
+        Future<Void> streamed;
+        try {
+            streamed = KinoticUtil.toFuture(streamedListObjectsApi.streamedListObjects(storeId,
+                                                                                       request,
+                                                                                       response -> objects.add(response.getObject()),
+                                                                                       e -> streamError.compareAndSet(null, e)));
+        } catch (Exception e) {
+            streamed = Future.failedFuture(e);
+        }
+        return streamed.compose(v -> streamError.get() == null
+                ? Future.succeededFuture(objects)
+                : Future.failedFuture(streamError.get()));
     }
 
     private static <T> Future<T> call(Callable<CompletableFuture<ApiResponse<T>>> call) {

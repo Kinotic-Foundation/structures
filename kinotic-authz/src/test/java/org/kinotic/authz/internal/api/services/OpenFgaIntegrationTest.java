@@ -266,6 +266,23 @@ class OpenFgaIntegrationTest {
     }
 
     @Test
+    void listingReturnsEveryObjectPastTheEnginesListLimit() throws Exception {
+        String modelId = await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
+        // the engine's ListObjects stops at 1000 objects by default
+        List<RelationshipTuple> written = new ArrayList<>();
+        for (int i = 0; i < 1100; i++) {
+            written.add(new RelationshipTuple("application:crm-lists", "application", "project:p" + i + "-lists"));
+        }
+        await(relationshipService.write(SYSTEM, written, List.of()));
+        String bindingId = await(relationshipService.bind(SYSTEM, "project.editor", "user:sally-lists", "application:crm-lists"));
+
+        assertEquals(1100, await(relationshipService.listObjects(SYSTEM, modelId, "user:sally-lists", "project_can_read", "project",
+                                                                 Consistency.HIGHER_CONSISTENCY)).size());
+        await(relationshipService.revoke(SYSTEM, bindingId, "application:crm-lists"));
+        await(relationshipService.remove(SYSTEM, written));
+    }
+
+    @Test
     void checksAnswerFromWrittenRelationships() throws Exception {
         String modelId = await(storeService.ensureModel(SYSTEM, generator.systemModel(List.of(projectService()))));
         List<RelationshipTuple> written = List.of(
