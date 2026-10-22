@@ -47,7 +47,6 @@ public class EndpointConnectionHandler {
     private Session session;
     private long lastSessionFlush = 0;
     private ConnectedInfo connectedInfo;
-    private String pageOrigin;
     private StompAuthorizer stompAuthorizer;
     private SessionKeepAliveMode sessionKeepAliveMode = SessionKeepAliveMode.ACTIVITY;
     private boolean sessionCreatedHere;
@@ -62,8 +61,6 @@ public class EndpointConnectionHandler {
 
     public Future<MultiMap> handshake(RoutingContext routingContext) {
         session = routingContext.session();
-        String origin = SessionBinding.origin(routingContext);
-        pageOrigin = services.domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
         // the login the upgrading page made, carried by its session cookie
         this.connectedInfo = SessionBinding.connectedInfo(routingContext);
         // an upgrade that presented no session cookie got a session created for it
@@ -156,10 +153,9 @@ public class EndpointConnectionHandler {
     public Future<Void> send(Event<byte[]> incomingEvent) {
         signalActivity();
 
-        // The sender and page origin headers describe the caller to whoever receives the event, so only the gateway
-        // writes them, from the participant authenticated on the connection and the trusted origin it upgraded from
+        // The sender header names the caller to whoever receives the event, so only the gateway writes it,
+        // from the participant authenticated on the connection the event arrives on
         incomingEvent.metadata().remove(EventConstants.SENDER_HEADER);
-        incomingEvent.metadata().remove(EventConstants.PAGE_ORIGIN_HEADER);
 
         if (incomingEvent.cri().scheme().equals(EventConstants.REPLY_DESTINATION_SCHEME)) {
             // A reply is a one-way delivery to the requester's reply destination. It is never invoked and
@@ -187,9 +183,6 @@ public class EndpointConnectionHandler {
             try {
 
                 incomingEvent.setSender(connectedInfo.getParticipant());
-                if (pageOrigin != null) {
-                    incomingEvent.metadata().put(EventConstants.PAGE_ORIGIN_HEADER, pageOrigin);
-                }
 
                 // make sure reply-to if present is scoped to sender
                 validateReplyToForServiceRequest(incomingEvent);

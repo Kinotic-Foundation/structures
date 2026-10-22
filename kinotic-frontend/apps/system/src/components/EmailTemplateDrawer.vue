@@ -1,18 +1,27 @@
 <template>
   <FormDrawer :visible="visible" :title="isNew ? 'Add email template' : 'Edit email template'"
-              description="An email a UI sends in its own name, for the flows started from its pages." @close="emit('update:visible', false)">
+              description="An email a UI sends in its own name, which the calls that send it name by id." @close="emit('update:visible', false)">
     <form id="email-template-form" class="flex flex-col gap-5" @submit.prevent="submit">
       <div>
-        <label for="email-template-origin" class="mb-2 block text-sm font-medium">UI origin</label>
-        <InputText id="email-template-origin" v-model="origin" placeholder="https://builder.example.com" autocomplete="off" class="w-full font-mono" />
+        <label for="email-template-id" class="mb-2 block text-sm font-medium">Id</label>
+        <InputText id="email-template-id" v-model="id" :disabled="!isNew" placeholder="builder-invitation" autocomplete="off" class="w-full font-mono" />
         <p class="mt-1.5 text-[0.8125rem] text-muted-color">
-          The scheme and host of the UI, with no path. It is used only when the management server's CORS allowlist trusts this origin.
+          The name a UI sends this email by: lowercase letters, digits and dashes.
         </p>
       </div>
 
       <div>
         <label for="email-template-kind" class="mb-2 block text-sm font-medium">Email</label>
-        <Select input-id="email-template-kind" v-model="kind" :options="KINDS" option-label="label" option-value="value" class="w-full" />
+        <Select input-id="email-template-kind" v-model="kind" :options="KINDS" option-label="label" option-value="value"
+                :disabled="isDefault" class="w-full" />
+      </div>
+
+      <div>
+        <label for="email-template-ui" class="mb-2 block text-sm font-medium">UI base URL</label>
+        <InputText id="email-template-ui" v-model="uiBaseUrl" placeholder="https://builder.example.com" autocomplete="off" class="w-full font-mono" />
+        <p class="mt-1.5 text-[0.8125rem] text-muted-color">
+          Where the email's link opens the UI's invitation or verification page. Leave it empty for the portal.
+        </p>
       </div>
 
       <div>
@@ -59,21 +68,21 @@ import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
-import { EmailTemplateKind, OriginEmailTemplate } from '@kinotic-ai/system-api'
+import { DEFAULT_EMAIL_TEMPLATE_IDS, EmailTemplateKind, PlatformEmailTemplate } from '@kinotic-ai/system-api'
 import { FormDrawer, showErrorToast, TemplateCodeEditor } from '@kinotic-ai/frontend-common'
 import { EMAIL_TEMPLATE_KINDS } from '@/util/EmailTemplateKinds'
 
 /**
- * Adds a UI's email template, or edits the one given.
+ * Adds an email template, or edits the one given.
  */
 const props = defineProps<{
   visible: boolean
-  template: OriginEmailTemplate | null
+  template: PlatformEmailTemplate | null
 }>()
 
 const emit = defineEmits<{
   (e: 'update:visible', visible: boolean): void
-  (e: 'saved', template: OriginEmailTemplate): void
+  (e: 'saved', template: PlatformEmailTemplate): void
 }>()
 
 const KINDS = Object.values(EmailTemplateKind).map(value => ({ label: EMAIL_TEMPLATE_KINDS[value].label, value }))
@@ -85,7 +94,8 @@ const BODY_FORMATS = [
 
 const toast = useToast()
 
-const origin = ref('')
+const id = ref('')
+const uiBaseUrl = ref('')
 const kind = ref<EmailTemplateKind>(EmailTemplateKind.INVITATION)
 const subject = ref('')
 const htmlBody = ref('')
@@ -93,14 +103,16 @@ const textBody = ref('')
 const bodyFormat = ref<'html' | 'text'>('html')
 const saving = ref(false)
 
-const isNew = computed(() => !props.template?.id)
-const complete = computed(() => [origin, subject, htmlBody, textBody].every(field => field.value.trim() !== ''))
+const isNew = computed(() => props.template === null)
+const isDefault = computed(() => Object.values(DEFAULT_EMAIL_TEMPLATE_IDS).includes(id.value))
+const complete = computed(() => [id, subject, htmlBody, textBody].every(field => field.value.trim() !== ''))
 
 // the fields start from the template being edited each time the drawer opens
 watch(() => props.visible, visible => {
   if (visible) {
     const template = props.template
-    origin.value = template?.origin ?? ''
+    id.value = template?.id ?? ''
+    uiBaseUrl.value = template?.uiBaseUrl ?? ''
     kind.value = template?.kind ?? EmailTemplateKind.INVITATION
     subject.value = template?.subject ?? ''
     htmlBody.value = template?.htmlBody ?? ''
@@ -117,13 +129,13 @@ async function submit(): Promise<void> {
   if (!complete.value) {
     return
   }
-  const template = Object.assign(new OriginEmailTemplate(origin.value.trim(), kind.value, subject.value, htmlBody.value, textBody.value), {
-    id: props.template?.id ?? null,
+  const template = Object.assign(new PlatformEmailTemplate(id.value.trim(), kind.value, subject.value, htmlBody.value, textBody.value), {
+    uiBaseUrl: uiBaseUrl.value.trim() || null,
     created: props.template?.created ?? null
   })
   saving.value = true
   try {
-    const saved = await Kinotic.originEmailTemplates.save(template)
+    const saved = await Kinotic.platformEmailTemplates.save(template)
     toast.add({ severity: 'success', summary: isNew.value ? 'Template added' : 'Template saved', life: 4000 })
     emit('saved', saved)
     emit('update:visible', false)

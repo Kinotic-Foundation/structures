@@ -59,23 +59,24 @@ public class DefaultMemberService implements MemberService {
     }
 
     @Override
-    public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation) {
+    public Future<OrganizationMember> addMember(String email, String displayName, boolean sendInvitation, String emailTemplateId) {
         Validate.notBlank(email, "email is required");
         OrganizationParticipant participant = requireOrgParticipant();
         String address = DomainUtil.normalizeEmail(email);
         return identityService.findOrganizationUserByEmail(address)
                               .compose(user -> user == null
-                                      ? provision(participant, address, displayName, sendInvitation)
+                                      ? provision(participant, address, displayName, sendInvitation, emailTemplateId)
                                       // the organization user is someone's, or another organization's member to claim: joining
                                       // it to this organization needs its holder's acceptance, whatever was asked
-                                      : invite(participant, address, displayName, null)
+                                      : invite(participant, address, displayName, null, emailTemplateId)
                                               .map(invite -> new OrganizationMember(null, invite.getEmail(), invite.getDisplayName(), true,
                                                                         invite.getCreated(), true)));
     }
 
     // the organization creates the organization user and its membership at once: an invitation lets the address
     // claim the user, and without one only the organization's own provider can, so it must have one
-    private Future<OrganizationMember> provision(OrganizationParticipant participant, String address, String displayName, boolean sendInvitation) {
+    private Future<OrganizationMember> provision(OrganizationParticipant participant, String address, String displayName,
+                                                 boolean sendInvitation, String emailTemplateId) {
         String organizationId = participant.getOrganizationId();
         Future<Void> admissible = sendInvitation ? Future.succeededFuture() : requireOwnProvider(organizationId);
         OrganizationParticipantIdentity user = new OrganizationParticipantIdentity();
@@ -85,7 +86,7 @@ public class DefaultMemberService implements MemberService {
                          .compose(created -> membershipService.addMembership(created.getId(), organizationId)
                                  .compose(membership -> {
                                      Future<Void> invited = sendInvitation
-                                             ? invite(participant, address, displayName, null).mapEmpty()
+                                             ? invite(participant, address, displayName, null, emailTemplateId).mapEmpty()
                                              : Future.succeededFuture();
                                      return invited.map(v -> new OrganizationMember(created.getId(), created.getEmail(), created.getDisplayName(),
                                                                         true, membership.getCreated(), true));
@@ -102,7 +103,7 @@ public class DefaultMemberService implements MemberService {
     }
 
     @Override
-    public Future<Void> sendInvitation(String email) {
+    public Future<Void> sendInvitation(String email, String emailTemplateId) {
         Validate.notBlank(email, "email is required");
         OrganizationParticipant participant = requireOrgParticipant();
         String organizationId = participant.getOrganizationId();
@@ -110,11 +111,11 @@ public class DefaultMemberService implements MemberService {
         return inviteService.findPendingInvite(address, organizationId).compose(pending -> {
             Future<Void> ret;
             if (pending != null) {
-                ret = inviteService.resendInvite(pending.getId(), organizationId, securityContext.currentPageOrigin());
+                ret = inviteService.resendInvite(pending.getId(), organizationId, emailTemplateId);
             } else {
                 // a member added without an invitation gets one now, to claim the organization user with
                 ret = pendingMember(address, organizationId)
-                        .compose(member -> invite(participant, address, member.getDisplayName(), null))
+                        .compose(member -> invite(participant, address, member.getDisplayName(), null, emailTemplateId))
                         .mapEmpty();
             }
             return ret;
@@ -136,17 +137,18 @@ public class DefaultMemberService implements MemberService {
     }
 
     @Override
-    public Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId) {
+    public Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId, String emailTemplateId) {
         Validate.notBlank(email, "email is required");
         Validate.isTrue(StringUtils.isNotBlank(applicationId), "applicationId is required; an organization's members are added with addMember");
         OrganizationParticipant participant = requireOrgParticipant();
         // an invitation persists a reference to the application, so it must be one of the organization's
         return applicationRepository.requireById(applicationId, participant.getOrganizationId())
-                                    .compose(app -> invite(participant, DomainUtil.normalizeEmail(email), displayName, applicationId))
+                                    .compose(app -> invite(participant, DomainUtil.normalizeEmail(email), displayName, applicationId, emailTemplateId))
                                     .map(PendingInviteSummary::from);
     }
 
-    private Future<PendingInvite> invite(OrganizationParticipant participant, String email, String displayName, String applicationId) {
+    private Future<PendingInvite> invite(OrganizationParticipant participant, String email, String displayName, String applicationId,
+                                         String emailTemplateId) {
         PendingInvite invite = new PendingInvite()
                 .setEmail(email)
                 .setDisplayName(displayName)
@@ -154,7 +156,7 @@ public class DefaultMemberService implements MemberService {
                 .setApplicationId(applicationId)
                 .setInvitedById(participant.getId())
                 .setInvitedByName(participantDisplayName(participant));
-        return inviteService.createInvite(invite, securityContext.currentPageOrigin());
+        return inviteService.createInvite(invite, emailTemplateId);
     }
 
     @Override

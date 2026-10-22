@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Covers {@link CorsProperties#trustsOrigin}: the origins a browser flow may hand sign-up links and GitHub App install
- * codes to.
+ * Covers {@link CorsProperties#trustsOrigin}: the origins a browser flow may hand GitHub App install codes to.
  */
 class CorsPropertiesTest {
 

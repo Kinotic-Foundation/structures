@@ -10,7 +10,7 @@
       :icon="Mail"
       :tint="TINTS.sky"
       title="Make the invitation yours"
-      description="This application sends the default invitation email of the UI the invitation is sent from. Customize it to control what invitees receive."
+      description="This application sends the invitation email each invitation names, which is the Kinotic default when it names none. Customize it to control what invitees receive."
       :points="[
         'Write your own subject, message and call to action',
         'Personalize it with the inviter, organization and application names',
@@ -145,7 +145,7 @@ import { USER_STATE } from '@/states/IUserState'
 
 /**
  * Editor for an application's customized invitation email. Without a saved template the
- * application uses the inviting UI's default email; saving validates the Handlebars sources on the
+ * application uses the email each invitation names; saving validates the Handlebars sources on the
  * server, and reverting deletes the template.
  */
 const props = defineProps<{

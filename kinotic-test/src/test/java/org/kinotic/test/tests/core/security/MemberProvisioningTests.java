@@ -11,6 +11,7 @@ import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.EmailTemplateKind;
 import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
@@ -116,7 +117,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aMemberAddedWithoutAnInvitationIsClaimedByTheOrganizationsProviderOnce() throws Exception {
         String email = "pending-" + suffix() + "@example.test";
-        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Pending", false)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Pending", false, null)));
         assertNotNull(added.id());
         assertTrue(added.pending());
         assertTrue(added.enabled());
@@ -142,7 +143,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aPendingMembersSignUpIsToldToAcceptTheInvitationUntilTheMemberIsClaimed() throws Exception {
         String email = "signs-up-" + suffix() + "@example.test";
-        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Signs Up", false)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Signs Up", false, null)));
         // the sign-up finds the organization user by a search, which sees it once the index has refreshed
         await(identities.syncIndex());
 
@@ -159,7 +160,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         // both calls look the address up before either organization user is written, so the index tells neither of the
         // other; the organization user's id is derived from the address, so the create of one of them is refused
         CompositeFuture both = await(asAdministrator(() -> {
-            CompositeFuture joined = Future.join(members.addMember(email, "Pat Twice", false), members.addMember(email, "Pat Twice", false));
+            CompositeFuture joined = Future.join(members.addMember(email, "Pat Twice", false, null), members.addMember(email, "Pat Twice", false, null));
             return joined.transform(v -> Future.succeededFuture(joined));
         }));
         int added = 0;
@@ -185,7 +186,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         await(identities.syncIndex());
 
         // the address has no organization user, so the organization adds one, pending, beside the system user
-        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Sam Member", false)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Sam Member", false, null)));
         assertNotNull(added.id());
         assertNotEquals(systemUser.getId(), added.id());
         assertTrue(added.pending());
@@ -207,11 +208,11 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void aMemberAddedWithAnInvitationClaimsTheOrganizationUserByAccepting() throws Exception {
         String withPassword = "accepts-" + suffix() + "@example.test";
-        OrganizationMember added = await(asAdministrator(() -> members.addMember(withPassword, "Pat Accepts", true)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(withPassword, "Pat Accepts", true, null)));
         await(identities.syncIndex());
         PendingInvite invite = await(invites.findPendingInvite(withPassword, organization.getId()));
         assertNotNull(invite);
-        await(asAdministrator(() -> members.sendInvitation(withPassword)));
+        await(asAdministrator(() -> members.sendInvitation(withPassword, null)));
 
         Participant member = await(invites.acceptLocalInvite(invite.getVerificationToken(), PASSWORD, "Pat Herself"));
         assertEquals(added.id(), member.getId());
@@ -221,7 +222,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
 
         // or through one of the organization's providers, which binds the identity
         String withProvider = "binds-" + suffix() + "@example.test";
-        OrganizationMember bound = await(asAdministrator(() -> members.addMember(withProvider, "Pat Binds", true)));
+        OrganizationMember bound = await(asAdministrator(() -> members.addMember(withProvider, "Pat Binds", true, null)));
         await(identities.syncIndex());
         PendingInvite providerInvite = await(invites.findPendingInvite(withProvider, organization.getId()));
         Participant viaProvider = await(invites.acceptOidcInvite(providerInvite.getVerificationToken(), "sub-" + suffix(), okta.getId(), withProvider));
@@ -235,29 +236,29 @@ public class MemberProvisioningTests extends KinoticTestBase {
         OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing person"), PASSWORD));
         await(identities.syncIndex());
 
-        OrganizationMember invited = await(asAdministrator(() -> members.addMember(email, null, false)));
+        OrganizationMember invited = await(asAdministrator(() -> members.addMember(email, null, false, null)));
         assertNull(invited.id());
         assertTrue(invited.pending());
         assertNotNull(await(invites.findPendingInvite(email, organization.getId())));
         assertNull(await(memberships.findMembership(user.getId(), organization.getId())));
 
         // a second invitation is refused while one is pending, and the address once it is a member
-        assertTrue(failure(() -> members.addMember(email, null, true)).getMessage().contains("already pending"));
+        assertTrue(failure(() -> members.addMember(email, null, true, null)).getMessage().contains("already pending"));
         await(memberships.addMembership(user.getId(), organization.getId()));
-        assertTrue(failure(() -> members.addMember(email, null, true)).getMessage().contains("already exists in this organization"));
+        assertTrue(failure(() -> members.addMember(email, null, true, null)).getMessage().contains("already exists in this organization"));
     }
 
     @Test
     public void removingAPendingMemberRemovesTheOrganizationUserNobodySignedInAs() throws Exception {
         String email = "removed-" + suffix() + "@example.test";
-        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Removed", true)));
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Removed", true, null)));
 
         await(asAdministrator(() -> members.removeMember(added.id())));
         assertNull(await(identities.findById(added.id())));
         assertNull(await(invites.findPendingInvite(email, organization.getId())));
 
         // the address can be added again: the organization user takes the id the address derives, and nothing of the old one is left
-        OrganizationMember again = await(asAdministrator(() -> members.addMember(email, "Pat Again", false)));
+        OrganizationMember again = await(asAdministrator(() -> members.addMember(email, "Pat Again", false, null)));
         assertEquals(added.id(), again.id());
         assertTrue(again.pending());
         assertFalse(await(identities.hasSignInMethod(again.id())));
@@ -265,8 +266,20 @@ public class MemberProvisioningTests extends KinoticTestBase {
     }
 
     @Test
+    public void anInvitationIsSentWithTheInvitationTemplateItNames() throws Exception {
+        String email = "templated-" + suffix() + "@example.test";
+        await(asAdministrator(() -> members.addMember(email, "Pat Templated", true, null)));
+
+        await(asAdministrator(() -> members.sendInvitation(email, EmailTemplateKind.INVITATION.getDefaultTemplateId())));
+        assertTrue(failure(() -> members.sendInvitation(email, EmailTemplateKind.VERIFICATION.getDefaultTemplateId()))
+                           .getMessage().contains("No INVITATION email template"));
+        assertTrue(failure(() -> members.sendInvitation(email, "no-such-template-" + suffix()))
+                           .getMessage().contains("No INVITATION email template"));
+    }
+
+    @Test
     public void anInvitationIntoAnApplicationNamesOne() throws Exception {
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> members.inviteMember("someone-" + suffix() + "@example.test", null, null)));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> members.inviteMember("someone-" + suffix() + "@example.test", null, null, null)));
     }
 
     // the member at email as the organization's members page lists them

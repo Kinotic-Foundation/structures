@@ -1,5 +1,5 @@
 /**
- * The emails an OriginEmailTemplate can replace, each rendered with its own variables.
+ * The emails a PlatformEmailTemplate renders, each with its own variables.
  */
 export enum EmailTemplateKind {
     /**
@@ -9,4 +9,10 @@ export enum EmailTemplateKind {
     INVITATION = 'INVITATION',
     /** The link that verifies a new account's email address at sign-up. Variables: displayName and verificationUrl. */
     VERIFICATION = 'VERIFICATION'
+}
+
+/** The id of each kind's default PlatformEmailTemplate, sent by every call that names none, which cannot be deleted. */
+export const DEFAULT_EMAIL_TEMPLATE_IDS: Record<EmailTemplateKind, string> = {
+    [EmailTemplateKind.INVITATION]: 'kinotic-invitation',
+    [EmailTemplateKind.VERIFICATION]: 'kinotic-verification'
 }

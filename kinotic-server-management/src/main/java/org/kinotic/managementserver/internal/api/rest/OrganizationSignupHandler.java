@@ -5,7 +5,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
@@ -50,9 +49,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
-     * pending sign-up, and emails a verification link to the verification page of the UI that sent the request
-     * when {@code kinotic.domain.cors.allowedOriginPattern} names its origin other than through {@code *}, and to the
-     * portal's otherwise.
+     * pending sign-up, and emails a verification link with the verification email template the optional
+     * {@code emailTemplateId} names, or the default one.
      * The org name and password are collected later, at {@link #handleLocalComplete}.
      */
     private void handleLocalSignUp(RoutingContext ctx) {
@@ -60,8 +58,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             JsonObject body = ctx.body().asJsonObject();
             String email = body.getString("email");
             String displayName = body.getString("displayName");
+            String emailTemplateId = body.getString("emailTemplateId");
 
-            signUpService.initiateLocalSignUp(email, displayName, SessionBinding.origin(ctx))
+            signUpService.initiateLocalSignUp(email, displayName, emailTemplateId)
                     .onSuccess(v -> ctx.response()
                             .setStatusCode(200)
                             .putHeader("Content-Type", "application/json")

@@ -44,7 +44,7 @@ public class DefaultInviteService implements InviteService {
     private final EmailService emailService;
 
     @Override
-    public Future<PendingInvite> createInvite(PendingInvite invite, String origin) {
+    public Future<PendingInvite> createInvite(PendingInvite invite, String emailTemplateId) {
         Validate.notBlank(invite.getEmail(), "email is required");
         Validate.notBlank(invite.getOrganizationId(), "organizationId is required");
         Validate.notBlank(invite.getInvitedByName(), "invitedByName is required");
@@ -69,7 +69,7 @@ public class DefaultInviteService implements InviteService {
                     // saveSync because the console re-queries pending invites as soon as this
                     // returns — a plain save races the ES index refresh and the new row is missed.
                     return pendingInviteRepository.saveSync(invite)
-                            .compose(saved -> emailService.sendInviteEmail(saved, org.getName(), origin)
+                            .compose(saved -> emailService.sendInviteEmail(saved, org.getName(), emailTemplateId)
                                                           .map(saved));
                 });
     }
@@ -290,7 +290,7 @@ public class DefaultInviteService implements InviteService {
     }
 
     @Override
-    public Future<Void> resendInvite(String inviteId, String organizationId, String origin) {
+    public Future<Void> resendInvite(String inviteId, String organizationId, String emailTemplateId) {
         Validate.notBlank(inviteId, "inviteId is required");
         Validate.notBlank(organizationId, "organizationId is required");
         return pendingInviteRepository.findById(inviteId)
@@ -300,7 +300,7 @@ public class DefaultInviteService implements InviteService {
                         return Future.failedFuture(new IllegalArgumentException("Invitation not found."));
                     }
                     return organizationService.findById(organizationId)
-                                              .compose(org -> emailService.sendInviteEmail(invite, org.getName(), origin));
+                                              .compose(org -> emailService.sendInviteEmail(invite, org.getName(), emailTemplateId));
                 });
     }
 

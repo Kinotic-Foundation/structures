@@ -24,19 +24,17 @@ import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.EmailTemplateKind;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.OriginEmailTemplate;
+import org.kinotic.domain.api.model.PlatformEmailTemplate;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
-import org.kinotic.domain.internal.api.repositories.OriginEmailTemplateRepository;
+import org.kinotic.domain.internal.api.repositories.PlatformEmailTemplateRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -71,91 +69,106 @@ public class EmailService {
 
     private final KinoticDomainProperties properties;
     private final InviteEmailTemplateRepository inviteEmailTemplateRepository;
-    private final OriginEmailTemplateRepository originEmailTemplateRepository;
+    private final PlatformEmailTemplateRepository platformEmailTemplateRepository;
     private final Vertx vertx;
 
     private volatile EmailClient emailClient;
 
     /**
      * Sends a verification email to the given address, rendered with the {@link EmailTemplateKind#VERIFICATION}
-     * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with the
-     * portal's otherwise.
+     * {@link PlatformEmailTemplate} {@code emailTemplateId}, whose UI's verification page the link opens.
      *
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
      * @param verificationToken the token to include in the verification URL
-     * @param origin            the origin of the UI whose verification page the link opens and whose template is
-     *                          used, or {@code null} for the portal's
+     * @param emailTemplateId   the template to send, or {@code null} for the kind's default
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
+     * @throws IllegalArgumentException when no verification template has id {@code emailTemplateId}
      */
     public Future<Void> sendVerificationEmail(String email,
                                               String displayName,
                                               String verificationToken,
-                                              String origin) {
-        String verificationUrl = uiBaseUrl(origin) + VERIFICATION_PATH + verificationToken;
-
-        if (!properties.getDomain().getEmail().isEnabled()) {
-            log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
-                    displayName, email, verificationUrl);
-            return Future.succeededFuture();
-        }
-
-        Map<String, Object> variables = Map.of("displayName", displayName,
-                                               "verificationUrl", verificationUrl);
-
-        return findOriginTemplate(origin, EmailTemplateKind.VERIFICATION)
-                .compose(template -> send(email, displayName, template, variables));
+                                              String emailTemplateId) {
+        return findPlatformTemplate(emailTemplateId, EmailTemplateKind.VERIFICATION).compose(template -> {
+            String verificationUrl = uiBaseUrl(template) + VERIFICATION_PATH + verificationToken;
+            Future<Void> ret;
+            if (properties.getDomain().getEmail().isEnabled()) {
+                Map<String, Object> variables = Map.of("displayName", displayName,
+                                                       "verificationUrl", verificationUrl);
+                ret = send(email, displayName, template, variables);
+            } else {
+                log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
+                         displayName, email, verificationUrl);
+                ret = Future.succeededFuture();
+            }
+            return ret;
+        });
     }
 
     /**
-     * Sends an invitation email carrying the accept link for the given invite. An
-     * application invite is rendered with the application's {@link InviteEmailTemplate}
-     * when one exists; any other is rendered with the {@link EmailTemplateKind#INVITATION}
-     * {@link org.kinotic.domain.api.model.OriginEmailTemplate} of the UI at {@code origin} when one exists, and with
-     * the portal's otherwise.
+     * Sends an invitation email carrying the accept link for the given invite, which opens the invitation page of the
+     * UI of the {@link EmailTemplateKind#INVITATION} {@link PlatformEmailTemplate} {@code emailTemplateId}. The email
+     * is rendered with that template, or with the application's {@link InviteEmailTemplate} for an application invite
+     * whose application has one.
      *
      * @param invite           the saved invitation (token, recipient, scope, inviter attribution)
      * @param organizationName display name of the inviting organization
-     * @param origin           the origin of the UI whose invitation page the accept link opens and whose template
-     *                         is used, or {@code null} for the portal's
+     * @param emailTemplateId  the template to send, or {@code null} for the kind's default
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
+     * @throws IllegalArgumentException when no invitation template has id {@code emailTemplateId}
      */
-    public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName, String origin) {
-        String acceptUrl = uiBaseUrl(origin) + INVITE_PATH + invite.getVerificationToken();
-        String toName = invite.getDisplayName() != null ? invite.getDisplayName() : invite.getEmail();
+    public Future<Void> sendInviteEmail(PendingInvite invite, String organizationName, String emailTemplateId) {
+        return findPlatformTemplate(emailTemplateId, EmailTemplateKind.INVITATION).compose(platformTemplate -> {
+            String acceptUrl = uiBaseUrl(platformTemplate) + INVITE_PATH + invite.getVerificationToken();
+            String toName = invite.getDisplayName() != null ? invite.getDisplayName() : invite.getEmail();
+            Future<Void> ret;
+            if (properties.getDomain().getEmail().isEnabled()) {
+                long expiresInDays = Math.max(1, Math.round(
+                        (invite.getExpiresAt().getTime() - System.currentTimeMillis()) / 86_400_000.0));
 
-        if (!properties.getDomain().getEmail().isEnabled()) {
-            log.warn("Email sending is disabled; invite accept URL for {} <{}>: {}",
-                    toName, invite.getEmail(), acceptUrl);
-            return Future.succeededFuture();
-        }
+                // HashMap rather than Map.of: applicationName is omitted (not null) for org invites
+                // so the templates' {{#if applicationName}} branch sees it as falsy.
+                Map<String, Object> variables = new HashMap<>();
+                variables.put("inviterName", invite.getInvitedByName());
+                variables.put("organizationName", organizationName);
+                if (invite.getApplicationId() != null) {
+                    variables.put("applicationName", invite.getApplicationId());
+                }
+                variables.put("acceptUrl", acceptUrl);
+                variables.put("expiresInDays", expiresInDays);
 
-        long expiresInDays = Math.max(1, Math.round(
-                (invite.getExpiresAt().getTime() - System.currentTimeMillis()) / 86_400_000.0));
-
-        // HashMap rather than Map.of: applicationName is omitted (not null) for org invites
-        // so the templates' {{#if applicationName}} branch sees it as falsy.
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("inviterName", invite.getInvitedByName());
-        variables.put("organizationName", organizationName);
-        if (invite.getApplicationId() != null) {
-            variables.put("applicationName", invite.getApplicationId());
-        }
-        variables.put("acceptUrl", acceptUrl);
-        variables.put("expiresInDays", expiresInDays);
-
-        return findInviteTemplate(invite, origin)
-                .compose(template -> send(invite.getEmail(), toName, template, variables));
+                ret = findApplicationTemplate(invite)
+                        .compose(own -> send(invite.getEmail(), toName, own != null ? own : platformTemplate, variables));
+            } else {
+                log.warn("Email sending is disabled; invite accept URL for {} <{}>: {}",
+                         toName, invite.getEmail(), acceptUrl);
+                ret = Future.succeededFuture();
+            }
+            return ret;
+        });
     }
 
-    // an application's own template wins over the inviting UI's, which wins over the portal's
-    private Future<EmailTemplate> findInviteTemplate(PendingInvite invite, String origin) {
-        Future<InviteEmailTemplate> applicationTemplate = invite.getApplicationId() != null
+    // the application's own template for an application invite, or null when it has none or the invite is an organization's
+    private Future<InviteEmailTemplate> findApplicationTemplate(PendingInvite invite) {
+        return invite.getApplicationId() != null
                 ? inviteEmailTemplateRepository.findByApplication(invite.getApplicationId(), invite.getOrganizationId())
                 : Future.succeededFuture();
-        return applicationTemplate.compose(found -> found != null
-                ? Future.<EmailTemplate>succeededFuture(found)
-                : findOriginTemplate(origin, EmailTemplateKind.INVITATION));
+    }
+
+    private Future<PlatformEmailTemplate> findPlatformTemplate(String emailTemplateId, EmailTemplateKind kind) {
+        String id = emailTemplateId != null ? emailTemplateId : kind.getDefaultTemplateId();
+        return platformEmailTemplateRepository.findById(id).map(found -> {
+            if (emailTemplateId == null) {
+                // the seed migration gives every environment the defaults, and the console refuses to delete them
+                Validate.validState(found != null, "The default %s email template %s is missing", kind, id);
+            }
+            Validate.isTrue(found != null && found.getKind() == kind, "No %s email template has id '%s'", kind, id);
+            return found;
+        });
+    }
+
+    private String uiBaseUrl(PlatformEmailTemplate template) {
+        return template.getUiBaseUrl() != null ? template.getUiBaseUrl() : portalBaseUrl();
     }
 
     /**
@@ -190,10 +203,6 @@ public class EmailService {
                     ORGANIZATIONS_SUBJECT,
                     render(ORGANIZATIONS_HTML, variables),
                     render(ORGANIZATIONS_TEXT, variables));
-    }
-
-    private String uiBaseUrl(String origin) {
-        return origin != null ? origin : portalBaseUrl();
     }
 
     // checked per send: a server that sends no mail leaves it unset
@@ -233,25 +242,6 @@ public class EmailService {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new IllegalArgumentException("Invalid email template: " + cause.getMessage(), e);
         }
-    }
-
-    // the template of kind the UI at origin sends, or the portal's when that UI has none of its own or no UI is named
-    private Future<EmailTemplate> findOriginTemplate(String origin, EmailTemplateKind kind) {
-        URI portal = URI.create(portalBaseUrl());
-        String portalOrigin = (portal.getScheme() + "://" + portal.getAuthority()).toLowerCase(Locale.ROOT);
-        Future<OriginEmailTemplate> own = origin != null && !origin.equals(portalOrigin)
-                ? originEmailTemplateRepository.findByOriginAndKind(origin, kind)
-                : Future.succeededFuture();
-        return own.compose(found -> found != null
-                        ? Future.succeededFuture(found)
-                        : originEmailTemplateRepository.findByOriginAndKind(portalOrigin, kind))
-                  .map(found -> {
-                      // the seed migration gives every environment's portal origin one of each kind, so only a
-                      // template deleted on the console or a portalBaseUrl the seeds do not name gets here
-                      Validate.validState(found != null, "No %s email template for the portal's origin %s",
-                                          kind, portalOrigin);
-                      return found;
-                  });
     }
 
     /**

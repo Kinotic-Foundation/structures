@@ -20,14 +20,13 @@ public interface SignUpService {
      * {@link ExistingUserException} when the email has an organization user someone signs in as, and with
      * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet.
      *
-     * @param email       the email to verify
-     * @param displayName the founder's display name
-     * @param origin      the origin of the UI the sign-up started from, whose {@code /signup/verify} page the
-     *                    link opens when {@code kinotic.domain.cors.allowedOriginPattern} names it other than
-     *                    through {@code *}; the link
-     *                    opens the portal's page for any other origin or {@code null}
+     * @param email           the email to verify
+     * @param displayName     the founder's display name
+     * @param emailTemplateId the {@link org.kinotic.domain.api.model.EmailTemplateKind#VERIFICATION}
+     *                        {@link org.kinotic.domain.api.model.PlatformEmailTemplate} to email, whose UI's
+     *                        {@code /signup/verify} page the link opens, or {@code null} for the default
      */
-    Future<Void> initiateLocalSignUp(String email, String displayName, String origin);
+    Future<Void> initiateLocalSignUp(String email, String displayName, String emailTemplateId);
 
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it

@@ -14,13 +14,6 @@ public class EventConstants {
 
     public static final String SENDER_HEADER = "sender";
 
-    /**
-     * The origin of the page whose connection sent a service request, such as {@code https://portal.kinotic.ai}.
-     * Only the gateway the page connected to writes it, and only for an origin that gateway's CORS pattern trusts.
-     * The invoked service reads it from {@link org.kinotic.core.api.security.SecurityContext#currentPageOrigin()}.
-     */
-    public static final String PAGE_ORIGIN_HEADER = "page-origin";
-
     public static final String CONTENT_TYPE_HEADER = "content-type";
 
     /**

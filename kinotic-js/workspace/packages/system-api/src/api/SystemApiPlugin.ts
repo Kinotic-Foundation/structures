@@ -9,7 +9,7 @@ import { SystemOrganizationService, type ISystemOrganizationService } from '@/ap
 import { SystemMemberService, type ISystemMemberService } from '@/api/services/ISystemMemberService'
 import { WatchEventService, type IWatchEventService } from '@/api/services/IWatchEventService'
 import { LlmConfigurationService, type ILlmConfigurationService } from '@/api/services/ILlmConfigurationService'
-import { OriginEmailTemplateService, type IOriginEmailTemplateService } from '@/api/services/IOriginEmailTemplateService'
+import { PlatformEmailTemplateService, type IPlatformEmailTemplateService } from '@/api/services/IPlatformEmailTemplateService'
 import { SystemJobService, type ISystemJobService } from '@/api/services/ISystemJobService'
 
 export interface ISystemApiExtension {
@@ -22,7 +22,7 @@ export interface ISystemApiExtension {
     systemMembers: ISystemMemberService
     watchEvents: IWatchEventService
     llmConfigurations: ILlmConfigurationService
-    originEmailTemplates: IOriginEmailTemplateService
+    platformEmailTemplates: IPlatformEmailTemplateService
     systemJobs: ISystemJobService
 }
 
@@ -38,7 +38,7 @@ export const SystemApiPlugin: KinoticPlugin<ISystemApiExtension> = {
             systemMembers: new SystemMemberService(kinotic),
             watchEvents: new WatchEventService(kinotic),
             llmConfigurations: new LlmConfigurationService(kinotic),
-            originEmailTemplates: new OriginEmailTemplateService(kinotic),
+            platformEmailTemplates: new PlatformEmailTemplateService(kinotic),
             systemJobs: new SystemJobService(kinotic),
         }
     }

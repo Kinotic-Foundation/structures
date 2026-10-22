@@ -44,7 +44,7 @@ describe('Members', () => {
 
     it('adds a person with an invitation, lists them as pending, sends the invitation again and removes them', async () => {
         const email = address()
-        const added = await Kinotic.members.addMember(email, 'Added Person', true)
+        const added = await Kinotic.members.addMember(email, 'Added Person', true, null)
         expect(added.id).toBeTruthy()
         expect(added.email).toBe(email)
         expect(added.pending).toBe(true)
@@ -54,7 +54,7 @@ describe('Members', () => {
         expect(listed.content?.find(m => m.id === added.id)?.pending).toBe(true)
         expect(await pendingInvitationFor(email)).toBe(true)
 
-        await Kinotic.members.sendInvitation(email)
+        await Kinotic.members.sendInvitation(email, null)
 
         // the member goes, and with them the organization user nobody signed in as and the invitation they never accepted
         await Kinotic.members.removeMember(added.id!)
@@ -65,12 +65,12 @@ describe('Members', () => {
 
     it('adds a person without an invitation, since the organization has a provider of its own, and sends one later', async () => {
         const email = address()
-        const added = await Kinotic.members.addMember(email, 'Quiet Person', false)
+        const added = await Kinotic.members.addMember(email, 'Quiet Person', false, null)
         expect(added.id).toBeTruthy()
         expect(added.pending).toBe(true)
         expect(await pendingInvitationFor(email)).toBe(false)
 
-        await Kinotic.members.sendInvitation(email)
+        await Kinotic.members.sendInvitation(email, null)
         expect(await pendingInvitationFor(email)).toBe(true)
 
         await Kinotic.members.removeMember(added.id!)
@@ -78,11 +78,11 @@ describe('Members', () => {
     })
 
     it('refuses an address that is already a member, and an invitation into no application', async () => {
-        await expect(Kinotic.members.addMember(E2E_ORG_USER_EMAIL, null, true))
+        await expect(Kinotic.members.addMember(E2E_ORG_USER_EMAIL, null, true, null))
             .rejects.toThrow(/already exists in this organization/)
-        await expect(Kinotic.members.sendInvitation(E2E_ORG_USER_EMAIL))
+        await expect(Kinotic.members.sendInvitation(E2E_ORG_USER_EMAIL, null))
             .rejects.toThrow(/already signed in/)
-        await expect(Kinotic.members.inviteMember(address(), null, ''))
+        await expect(Kinotic.members.inviteMember(address(), null, '', null))
             .rejects.toThrow(/applicationId/)
     })
 })

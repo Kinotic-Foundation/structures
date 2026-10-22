@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <PageHeader title="Email templates"
-                description="The emails each UI sends in its own name. A UI with none of its own sends the portal's." />
+                description="The emails UIs send in their own name, which a call names by id. A call that names none sends the Kinotic default." />
 
     <CrudTable
       ref="crudTable"
@@ -9,13 +9,18 @@
       :data-source="dataSource"
       :search="tableSearch"
       create-new-button-text="Add template"
-      empty-state-text="No email templates; add the portal's, which every UI without its own sends"
+      empty-state-text="No email templates"
       :row-actions="rowActions"
       @update:search="tableSearch = $event"
       @add-item="openDrawer(null)"
     >
-      <template #item.origin="{ item }">
-        <span class="font-mono text-sm">{{ item.origin }}</span>
+      <template #item.id="{ item }">
+        <span class="font-mono text-sm">{{ item.id }}</span>
+      </template>
+
+      <template #item.ui="{ item }">
+        <span v-if="item.template.uiBaseUrl" class="font-mono text-sm">{{ item.ui }}</span>
+        <span v-else class="text-muted-color">{{ item.ui }}</span>
       </template>
 
       <template #item.updated="{ item }">
@@ -32,7 +37,7 @@ import { ref } from 'vue'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
 import { Kinotic, type Pageable } from '@kinotic-ai/core'
-import type { OriginEmailTemplate } from '@kinotic-ai/system-api'
+import { DEFAULT_EMAIL_TEMPLATE_IDS, type PlatformEmailTemplate } from '@kinotic-ai/system-api'
 import {
   CrudTable,
   filteredPageLoader,
@@ -49,62 +54,65 @@ import { EMAIL_TEMPLATE_KINDS } from '@/util/EmailTemplateKinds'
 /** One row: a template and the columns it is listed by. */
 interface TemplateRow extends DescriptiveIdentifiable {
   id: string
-  template: OriginEmailTemplate
-  origin: string
+  template: PlatformEmailTemplate
+  ui: string
   kind: string
   subject: string
   updated: string | null
 }
 
 const headers: CrudHeader[] = [
-  { field: 'origin', header: 'UI origin', sortable: false, width: '30%' },
-  { field: 'kind', header: 'Email', sortable: false, width: '18%' },
-  { field: 'subject', header: 'Subject', sortable: false, optional: true, width: '32%' },
-  { field: 'updated', header: 'Updated', sortable: false, optional: true, width: '20%' }
+  { field: 'id', header: 'Id', sortable: false, width: '24%' },
+  { field: 'kind', header: 'Email', sortable: false, width: '16%' },
+  { field: 'ui', header: 'Links open', sortable: false, optional: true, width: '28%' },
+  { field: 'subject', header: 'Subject', sortable: false, optional: true, width: '20%' },
+  { field: 'updated', header: 'Updated', sortable: false, optional: true, width: '12%' }
 ]
 
 const confirm = useConfirm()
 const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePage(
-  filteredPageLoader((pageable: Pageable) => Kinotic.originEmailTemplates.findAll(pageable),
+  filteredPageLoader((pageable: Pageable) => Kinotic.platformEmailTemplates.findAll(pageable),
                      toRow,
-                     row => [row.origin, row.kind, row.subject])
+                     row => [row.id, row.ui, row.kind, row.subject])
 )
 
 const drawerVisible = ref(false)
-const editing = ref<OriginEmailTemplate | null>(null)
+const editing = ref<PlatformEmailTemplate | null>(null)
 
-function toRow(template: OriginEmailTemplate): TemplateRow {
+function toRow(template: PlatformEmailTemplate): TemplateRow {
   return {
-    id: template.id ?? '',
+    id: template.id,
     template,
-    origin: template.origin,
+    ui: template.uiBaseUrl ?? 'The portal',
     kind: EMAIL_TEMPLATE_KINDS[template.kind]?.label ?? template.kind,
     subject: template.subject,
     updated: template.updated
   }
 }
 
-function openDrawer(template: OriginEmailTemplate | null): void {
+function openDrawer(template: PlatformEmailTemplate | null): void {
   editing.value = template
   drawerVisible.value = true
 }
 
+// a kind's default is sent by every call that names no template, so it can be edited but not deleted
 function rowActions(row: TemplateRow): MenuItem[] {
-  return [
-    { label: 'Edit', icon: 'pi pi-pencil', command: () => openDrawer(row.template) },
-    { label: 'Delete', icon: 'pi pi-trash', command: () => confirmDelete(row) }
-  ]
+  const actions: MenuItem[] = [{ label: 'Edit', icon: 'pi pi-pencil', command: () => openDrawer(row.template) }]
+  if (!Object.values(DEFAULT_EMAIL_TEMPLATE_IDS).includes(row.id)) {
+    actions.push({ label: 'Delete', icon: 'pi pi-trash', command: () => confirmDelete(row) })
+  }
+  return actions
 }
 
 function confirmDelete(row: TemplateRow): void {
   confirm.require({
     header: 'Delete template',
-    message: `Delete the ${row.kind.toLowerCase()} email of ${row.origin}? That UI sends the portal's instead.`,
+    message: `Delete the ${row.kind.toLowerCase()} email ${row.id}? Calls that name it fail until a template with that id is added again.`,
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Delete', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
     accept: () => run(async () => {
-      await Kinotic.originEmailTemplates.deleteById(row.id)
+      await Kinotic.platformEmailTemplates.deleteById(row.id)
       removeRow(row.id)
     }, 'Template deleted', 'Failed to delete the template')
   })

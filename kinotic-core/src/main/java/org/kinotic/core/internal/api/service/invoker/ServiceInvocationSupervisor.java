@@ -396,16 +396,13 @@ public class ServiceInvocationSupervisor {
                     throw new IllegalStateException("No compatible ReturnValueConverter found");
                 }
 
-                // Inject the Participant and page origin into the Vert.x context so service methods can read them from SecurityContext
+                // Inject the Participant into the Vert.x context so service methods can access it via context.getLocal()
                 Participant participant = incomingEvent.sender();
-                String pageOrigin = incomingEvent.metadata().get(EventConstants.PAGE_ORIGIN_HEADER);
-                Context context = Vertx.currentContext();
-                if (context != null) {
-                    if (participant != null) {
+                if (participant != null) {
+                    Context context = Vertx.currentContext();
+                    if (context != null) {
                         securityContext.setParticipant(context, participant);
                     }
-                    // set even when absent, so an origin bound by an earlier invocation on this context never carries over
-                    securityContext.setPageOrigin(context, pageOrigin);
                 }
 
                 Span span = startInvocationSpan(incomingEvent);
