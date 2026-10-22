@@ -99,8 +99,7 @@ public class DefaultDeviceCodeGrantService implements DeviceCodeGrantService {
         if (polledTooSoon(grant, now)) {
             return Future.succeededFuture(new DeviceCodePollResult(PollStatus.SLOW_DOWN, null, null));
         }
-        grant.setLastPolledAt(now);
-        return deviceCodeGrantRepository.saveSync(grant)
+        return deviceCodeGrantRepository.recordPoll(grant.getId(), now)
                 .map(new DeviceCodePollResult(PollStatus.AUTHORIZATION_PENDING, null, null));
     }
 

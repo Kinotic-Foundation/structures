@@ -34,7 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies each single-use credential is redeemed exactly once however many presentations of it race: a refresh
  * token rotates once and the rest are treated as reuse, an approved device-code grant is redeemed by one poll, a
- * device-code grant binds the first of two racing approvers, and an authorization code is exchanged once.
+ * device-code grant binds the first of two racing approvers and keeps that approval through polls racing it, and an
+ * authorization code is exchanged once.
  */
 @SpringBootTest
 public class SingleUseTokenRaceTests extends KinoticTestBase {
@@ -148,6 +149,27 @@ public class SingleUseTokenRaceTests extends KinoticTestBase {
         assertEquals(PollStatus.APPROVED, redeemed.status());
         assertEquals(bySystemUser.succeeded() ? SYSTEM_USER : ORGANIZATION_USER, redeemed.approver().getId(),
                      "the poll redeems the identity that won");
+    }
+
+    @Test
+    public void aPendingPollRacingAnApprovalKeepsTheApproval() {
+        for (int round = 0; round < 10; round++) {
+            DeviceCodeGrantStart started = deviceCodeGrants.start(ISSUER, null).await();
+
+            // each poll reads the grant pending, and writes when it was polled while the approval lands; two
+            // polls stay within the conflict retries a single grant's writers get
+            List<Future<?>> requests = new ArrayList<>();
+            Future<Void> approval = deviceCodeGrants.approve(ISSUER, started.userCode(), organizationUser());
+            requests.add(approval);
+            for (int i = 0; i < 2; i++) {
+                requests.add(deviceCodeGrants.poll(ISSUER, started.deviceCode()));
+            }
+            Future.join(requests).otherwiseEmpty().await();
+            assertTrue(approval.succeeded(), "the approval binds the grant: " + approval.cause());
+
+            DeviceCodePollResult redeemed = deviceCodeGrants.poll(ISSUER, started.deviceCode()).await();
+            assertEquals(PollStatus.APPROVED, redeemed.status(), "the grant is still approved after the polls in round " + round);
+        }
     }
 
     @Test

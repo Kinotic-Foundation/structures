@@ -6,6 +6,7 @@ import org.kinotic.domain.internal.api.model.DeviceCodeGrant;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +36,18 @@ public class DeviceCodeGrantRepository extends AbstractRepository<DeviceCodeGran
     /** Finds the grant with the given {@code userCode}, or {@code null} if none matches. */
     public Future<DeviceCodeGrant> findByUserCode(String userCode) {
         return findFirst(b -> b.query(termFilter("userCode", userCode)));
+    }
+
+    /**
+     * Records when the grant was last polled, leaving its approval as a concurrent {@link #approve} wrote it.
+     * Visible to search on completion.
+     *
+     * @param id       the grant
+     * @param polledAt when it was polled
+     * @return a {@link Future} that completes when the time is recorded, or fails when the grant no longer exists
+     */
+    public Future<Void> recordPoll(String id, Date polledAt) {
+        return crudServiceTemplate.partialUpdateSync(indexName, id, Map.of("lastPolledAt", polledAt), false);
     }
 
     /**
