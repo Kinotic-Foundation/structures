@@ -93,6 +93,10 @@ resource "helm_release" "openfga" {
     file("${path.module}/../../../helm/openfga/values-azure.yaml"),
   ]
 
+  # The beta B1ms server admits 35 user connections, and the engine opens up to 30 per pod by
+  # default; 10 per pod fits three pods mid-rollout plus a migration
+  set = var.beta_mode ? [{ name = "datastore.maxOpenConns", value = "10" }] : []
+
   depends_on = [
     kubernetes_secret.openfga_db,
     azurerm_postgresql_flexible_server_database.openfga,
