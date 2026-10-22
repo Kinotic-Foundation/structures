@@ -76,7 +76,7 @@ public class InvitationTests extends KinoticTestBase {
         OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Existing member"), PASSWORD));
         await(memberships.addMembership(user.getId(), organization.getId()));
 
-        Throwable refusal = failure(() -> invites.createInvite(invite(email)));
+        Throwable refusal = failure(() -> invites.createInvite(invite(email), null));
         assertInstanceOf(IllegalArgumentException.class, refusal);
         assertTrue(refusal.getMessage().contains("already exists in this organization"), refusal.getMessage());
     }
@@ -84,7 +84,7 @@ public class InvitationTests extends KinoticTestBase {
     @Test
     public void anInvitationAcceptedByADisabledMemberSignsNoOneIn() throws Exception {
         String email = "disabled-" + suffix() + "@example.test";
-        PendingInvite invite = await(invites.createInvite(invite(email)));
+        PendingInvite invite = await(invites.createInvite(invite(email), null));
         // the organization user joins and is disabled in the organization while the invitation is still out
         OrganizationParticipantIdentity user = await(identities.createUser(organizationUser(email, "Disabled member"), PASSWORD));
         await(memberships.addMembership(user.getId(), organization.getId()));
@@ -105,7 +105,7 @@ public class InvitationTests extends KinoticTestBase {
         await(identities.createUser(systemUser, SYSTEM_USER_PASSWORD));
 
         // the invitation sees no organization user for the address, so accepting it sets a new password
-        PendingInvite invite = await(invites.createInvite(invite(email)));
+        PendingInvite invite = await(invites.createInvite(invite(email), null));
         Participant member = await(invites.acceptLocalInvite(invite.getVerificationToken(), PASSWORD, null));
         assertEquals(organization.getId(), assertInstanceOf(OrganizationParticipant.class, member).getOrganizationId());
 

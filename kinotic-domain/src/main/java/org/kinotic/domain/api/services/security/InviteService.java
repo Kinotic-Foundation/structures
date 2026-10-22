@@ -6,6 +6,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.security.PendingInvite;
 
 /**
@@ -25,9 +26,11 @@ public interface InviteService {
      *
      * @param invite carrying email, optional displayName, scope, and inviter attribution;
      *               id, token, and expiry are assigned here
+     * @param emailTemplate the invitation email to send in place of Kinotic's, or {@code null} for Kinotic's
      * @return a future emitting the saved invitation
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
-    Future<PendingInvite> createInvite(PendingInvite invite);
+    Future<PendingInvite> createInvite(PendingInvite invite, EmailTemplate emailTemplate);
 
     /**
      * Finds the invitation for the given accept token, failing if the token is unknown or the
@@ -91,7 +94,10 @@ public interface InviteService {
 
     /**
      * Emails the invitation {@code inviteId} of organization {@code organizationId} again, to the same address
-     * with the same accept link. Fails when the organization has no such invitation.
+     * with the same accept token, as the invitation email {@code emailTemplate}, or Kinotic's when it is {@code null}.
+     * Fails when the organization has no such invitation.
+     *
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
-    Future<Void> resendInvite(String inviteId, String organizationId);
+    Future<Void> resendInvite(String inviteId, String organizationId, EmailTemplate emailTemplate);
 }
