@@ -106,12 +106,12 @@
         <Message v-if="vulnerabilityError" severity="warn" :closable="false" class="m-5">{{ vulnerabilityError }}</Message>
         <div v-else-if="servers === null" class="py-6 text-center text-sm text-muted-color">Checking the servers' libraries…</div>
         <template v-else>
-          <div v-for="server in servers" :key="server.nodeIds[0]"
+          <div v-for="(server, index) in servers" :key="index"
                class="border-b border-surface-200 last:border-b-0 dark:border-surface-700">
             <div class="flex flex-wrap items-center gap-2 px-5 py-3 text-sm">
               <span class="font-semibold text-surface-950 dark:text-surface-0">{{ server.serverName || UNKNOWN_VERSION }}</span>
               <span class="rounded-md bg-surface-100 px-1.5 py-0.5 font-mono text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200">{{ releaseOf(server.version) }}</span>
-              <span class="text-muted-color">{{ server.nodeIds.length }} {{ server.nodeIds.length === 1 ? 'node' : 'nodes' }} · {{ server.componentCount }} libraries</span>
+              <span class="text-muted-color">{{ server.nodeCount }} {{ server.nodeCount === 1 ? 'node' : 'nodes' }} · {{ server.componentCount }} libraries</span>
               <Tag v-if="server.findings.length" :value="`${countSevere(server.findings)} critical or high`"
                    :severity="countSevere(server.findings) ? 'danger' : 'secondary'" />
             </div>

@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The advisories affecting the libraries one build of a Kinotic server runs, with the cluster nodes
- * running that build.
+ * The advisories affecting the libraries one build of a Kinotic server runs, with how many cluster
+ * nodes run that build.
  */
 @Getter
 @Setter
@@ -31,9 +31,9 @@ public class ServerVulnerabilities {
     private String version;
 
     /**
-     * The ids of the nodes running the build.
+     * How many nodes run the build.
      */
-    private List<String> nodeIds = new ArrayList<>();
+    private int nodeCount;
 
     /**
      * How many libraries the build runs; none when its nodes' classpath holds no library list, such
