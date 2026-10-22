@@ -56,6 +56,15 @@ public @interface AuthzCheck {
     String[] implies() default {};
 
     /**
+     * The name of the {@link org.kinotic.idl.api.directory.AuthzPermissionResolver} that decides the permission
+     * of each request from the parameters it reads, in place of {@link #permission()}: a named query needs
+     * {@code can_read} when its statement reads and {@code can_delete} when it deletes. Names are the
+     * {@code *_PERMISSION_RESOLVER} constants of {@link org.kinotic.idl.api.utils.AuthzConstants}; declaring a
+     * {@link #permission()} or {@link #implies()} beside one fails the service's contract.
+     */
+    String permissionResolver() default "";
+
+    /**
      * True for a function whose check must not be answered from the engine's caches, because a stale allow
      * would be a security event: removing or disabling a member, rotating a machine's secret.
      */

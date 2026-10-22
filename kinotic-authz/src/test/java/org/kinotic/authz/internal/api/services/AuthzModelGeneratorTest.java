@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
@@ -271,6 +272,21 @@ public class AuthzModelGeneratorTest {
         Set<String> ret = withRoleTypes("application", "entity_definition", "tenant");
         ret.addAll(Set.of("tenant_definition", "tenant_definition_role_binding"));
         return ret;
+    }
+
+    @Test
+    public void aResolvedCheckAddsEveryPermissionItsResolverMayRequire() {
+        FunctionDefinition runQuery = new FunctionDefinition().setName("runQuery");
+        runQuery.setDecorators(List.of(new AuthzCheckC3Decorator()
+                                               .setResource("report")
+                                               .setResourceId("{id}")
+                                               .setPermissionResource("report")
+                                               .setPermissionResolver("statement")
+                                               .setPossiblePermissions(List.of(new AuthzPermissionChoice("can_read", "the query reads rows"),
+                                                                               new AuthzPermissionChoice("can_delete", "the query is a DELETE")))));
+        AuthzModel model = generator.systemModel(List.of(service("ReportService", "report", "organization", runQuery)));
+
+        assertEquals(Set.of("can_read", "can_delete"), model.permissions().get("report"));
     }
 
     @Test

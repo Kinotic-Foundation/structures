@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
@@ -34,22 +33,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that a named query is checked for the permission its statement needs: one that reads rows passes the
- * request's check for {@code can_read}, and one that updates rows is refused to a viewer of the definition and
- * runs for an editor of it.
+ * Verifies that the request for a named query is checked for the permission its statement needs: a viewer of the
+ * definition is admitted to a query that reads rows and refused one that updates them, with the reason, an editor
+ * is admitted to the update, which then runs, and a query the definition does not hold is refused.
  */
 @SpringBootTest
 public class NamedQueryAuthorizationTests extends KinoticTestBase {
 
     private static final String ENTITIES_SERVICE = DomainUtil.APP_API_ZONE + "~org.kinotic.persistence.api.services.JsonEntitiesRepository";
     private static final String RENAME_QUERY = "renamePeople";
+    private static final String FIND_QUERY = "findPeople";
 
     @Autowired
     private ApplicationAccessService access;
@@ -67,32 +66,25 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
     private TestDataService testDataService;
 
     @Test
-    public void aNamedQueryThatUpdatesRowsIsRunOnlyForAnEditor() throws Exception {
+    public void aNamedQueryIsCheckedForThePermissionItsStatementNeeds() throws Exception {
         EntityDefinition person = createPersonDefinition();
-        createRenameQuery(person);
+        createQueries(person);
         String tenantId = "tenant-" + suffix();
         ApplicationParticipantIdentity bob = endUser(tenantId);
         ScopedParticipant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectType.USER, bob.getId());
         Resource personHere = new Resource(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenantId));
-        List<Object> request = List.of(person.getId(), RENAME_QUERY, List.of());
+        List<Object> find = List.of(person.getId(), FIND_QUERY, List.of());
+        List<Object> rename = List.of(person.getId(), RENAME_QUERY, List.of());
 
         await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.VIEWER), personHere)));
-        // the request's check reads only can_read, which the viewer holds
-        assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "namedQuery", caller, request)), "the viewer was never admitted to the named query");
-        Throwable refused = assertThrows(ExecutionException.class, () -> await(rename(person, caller))).getCause();
-        assertInstanceOf(AuthorizationException.class, refused);
+        assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "namedQuery", caller, find)), "the viewer was never admitted to the query that reads");
+        assertRefused(ENTITIES_SERVICE, "namedQuery", caller, rename, "the query is an UPDATE");
 
         await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), personHere)));
-        assertTrue(awaitUntil(() -> {
-            boolean ran;
-            try {
-                ran = ((Number) await(rename(person, caller)).getFirst().get("count")).longValue() == 0;
-            } catch (ExecutionException e) {
-                ran = false;
-            }
-            return ran;
-        }), "the editor's update never ran");
+        assertTrue(awaitUntil(() -> admitted(ENTITIES_SERVICE, "namedQuery", caller, rename)), "the editor was never admitted to the update");
+        assertEquals(0L, ((Number) await(rename(person, caller)).getFirst().get("count")).longValue());
+        assertFalse(admitted(ENTITIES_SERVICE, "namedQuery", caller, List.of(person.getId(), "noSuchQuery", List.of())));
     }
 
     @SuppressWarnings("rawtypes")
@@ -103,7 +95,11 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
                                                                   new DefaultEntityContext((ScopedParticipant) caller)));
     }
 
-    private void createRenameQuery(EntityDefinition definition) throws Exception {
+    private void createQueries(EntityDefinition definition) throws Exception {
+        FunctionDefinition find = new FunctionDefinition().setName(FIND_QUERY)
+                                                          .addParameter("lastName", new StringC3Type());
+        find.setDecorators(List.of(new QueryDecorator().setStatements("SELECT * FROM %s WHERE lastName = :lastName"
+                                                                              .formatted(definition.getName()))));
         FunctionDefinition rename = new FunctionDefinition().setName(RENAME_QUERY)
                                                             .addParameter("oldName", new StringC3Type())
                                                             .addParameter("newName", new StringC3Type());
@@ -115,7 +111,7 @@ public class NamedQueryAuthorizationTests extends KinoticTestBase {
         namedQueries.setApplicationId(definition.getApplicationId());
         namedQueries.setProjectId(definition.getProjectId());
         namedQueries.setEntityDefinitionName(definition.getName());
-        namedQueries.setNamedQueries(List.of(rename));
+        namedQueries.setNamedQueries(List.of(find, rename));
         await(runAsOrganization(() -> namedQueriesDefinitionService.saveSync(namedQueries)));
     }
 

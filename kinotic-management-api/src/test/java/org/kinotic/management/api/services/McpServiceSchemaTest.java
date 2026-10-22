@@ -211,7 +211,7 @@ public class McpServiceSchemaTest {
                                                            new JsonNodeToC3Type(),
                                                            new C3SchemaToC3Type(),
                                                            new ReactiveToC3Type(registryProvider()));
-        return new DefaultSchemaService(new DefaultResolvableTypeConverter(converters), Set.of(Participant.class));
+        return new DefaultSchemaService(new DefaultResolvableTypeConverter(converters), Set.of(Participant.class), List::of);
     }
 
     // a registry carrying the Vert.x Future adapter DefaultKinotic registers at startup, so the

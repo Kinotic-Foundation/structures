@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies a definition a runtime declares derives as a {@code @Publish} interface does: each function of a
  * service declaring a resource gets the check derived from its name and parameters or taken from the check it
  * declares, with the same refusals, so a TypeScript service and a Java one are indistinguishable to the
- * directory, and a service declaring no resource is stored as declared.
+ * directory, and a service declaring no resource is stored as declared. A runtime's definition naming a
+ * permission resolver is refused, since resolvers are the system's own.
  */
 @SpringBootTest
 public class CheckDerivationTest {
@@ -76,6 +77,16 @@ public class CheckDerivationTest {
         // the declared definition is left as it is
         assertNull(function(declared, "findReports").getDecorators());
         assertTrue(function(declared, "ping").findDecorator(AuthzCheckC3Decorator.class).isUnchecked());
+    }
+
+    @Test
+    public void aDefinitionNamingAPermissionResolverIsRefused() {
+        AuthzCheckC3Decorator resolved = new AuthzCheckC3Decorator().setPermissionResolver("test_statement");
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                                               () -> schemaService.deriveChecks(reports(function("runQuery", resolved, "reportId", "queryName"))));
+
+        assertTrue(e.getMessage().contains("permission resolver"), e.getMessage());
     }
 
     @Test

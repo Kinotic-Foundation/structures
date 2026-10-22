@@ -127,5 +127,11 @@ public class DefaultNamedQueriesService implements NamedQueriesService {
                                   .compose(queryExecutor -> queryExecutor.executePage(new QueryContext(context, parameterHolder), pageable, type));
     }
 
+    @Override
+    public Future<String> findPermission(EntityDescriptor entityDescriptor, String queryName) {
+        return KinoticUtil.toFuture(cache.get(new CacheKey(queryName, entityDescriptor)))
+                          .map(QueryExecutor::permission);
+    }
+
     private record CacheKey(String queryName, EntityDescriptor entityDescriptor) {}
 }

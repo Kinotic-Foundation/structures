@@ -10,6 +10,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
 import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.persistence.internal.api.hooks.ReadPostProcessor;
 import org.kinotic.persistence.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.persistence.internal.api.services.sql.QueryContext;
@@ -95,5 +96,10 @@ public class SelectQueryExecutor extends AbstractQueryExecutor {
 
     private static Order toOrder(OrderBy term) {
         return term.direction() == SortDirection.DESC ? Order.desc(term.field()) : Order.asc(term.field());
+    }
+
+    @Override
+    public String permission() {
+        return AuthzConstants.CAN_READ;
     }
 }

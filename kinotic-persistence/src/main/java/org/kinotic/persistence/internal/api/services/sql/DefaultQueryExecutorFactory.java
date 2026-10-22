@@ -7,7 +7,6 @@ import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.QueryDecorator;
 import org.kinotic.domain.api.services.EntityStatementResolver;
-import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -54,7 +53,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     private final ReadPreProcessor readPreProcessor;
     private final ReadPostProcessor readPostProcessor;
     private final JsonMapper jsonMapper;
-    private final RequestAuthorizer requestAuthorizer;
 
     public QueryExecutor createQueryExecutor(EntityDescriptor entityDescriptor,
                                              String queryName,
@@ -99,7 +97,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                                             elasticVertxClient,
                                                                             ElasticsearchSqlWriter.write(aggregate),
                                                                             domainPersistenceProperties);
-            // the caller's request was checked for can_read, which admits reading rows, not writing them
             case InsertStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_CREATE);
             case UpdateStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_EDIT);
             case DeleteStatement _ -> write(entityDescriptor, statement, AuthzConstants.CAN_DELETE);
@@ -125,7 +122,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                 .filter(candidate -> candidate.supports(statement))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No executor found for statement: " + statement.getClass().getSimpleName()));
-        return new StatementQueryExecutor(entityDescriptor, statement, permission, entityStatementResolver, executor,
-                                          requestAuthorizer, jsonMapper);
+        return new StatementQueryExecutor(entityDescriptor, statement, permission, entityStatementResolver, executor, jsonMapper);
     }
 }

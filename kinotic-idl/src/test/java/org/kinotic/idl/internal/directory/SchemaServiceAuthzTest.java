@@ -7,6 +7,7 @@ import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ParameterDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
 import org.kinotic.idl.internal.support.TestService;
@@ -16,11 +17,16 @@ import org.kinotic.idl.internal.support.authz.TestMemberService;
 import org.kinotic.idl.internal.support.authz.TestMisnamedRoleService;
 import org.kinotic.idl.internal.support.authz.TestMisreferencingService;
 import org.kinotic.idl.internal.support.authz.TestProjectService;
+import org.kinotic.idl.internal.support.authz.TestResolvedService;
+import org.kinotic.idl.internal.support.authz.TestResolverBesidePermissionService;
+import org.kinotic.idl.internal.support.authz.TestResolverMissingParameterService;
 import org.kinotic.idl.internal.support.authz.TestResourcelessCheckService;
 import org.kinotic.idl.internal.support.authz.TestRowsService;
+import org.kinotic.idl.internal.support.authz.TestStatementPermissionResolver;
 import org.kinotic.idl.internal.support.authz.TestUncheckedResourceService;
 import org.kinotic.idl.internal.support.authz.TestUncheckedService;
 import org.kinotic.idl.internal.support.authz.TestUnderivableService;
+import org.kinotic.idl.internal.support.authz.TestUnknownResolverService;
 import org.kinotic.idl.internal.support.authz.TestVmNodeService;
 import org.kinotic.idl.internal.support.authz.TestWorkloadService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the authorization declarations a {@link SchemaService} derives while converting a resource service:
  * the resource decorator on the service, one check per function from its name, parameters and
  * {@code @AuthzCheck}, the object a service names for functions naming none, the unchecked mark on a function
- * and on a whole service declaring no resource, the consistent declaration, and the rejections: a function
- * whose check does not resolve, a type named by a template, which only a resource id may be, a service marked
- * unchecked beside its resource, and a check declared on a service with no resource.
+ * and on a whole service declaring no resource, the consistent declaration, a check whose permission a resolver
+ * decides, which records every permission the resolver may require, and the rejections: a function whose check
+ * does not resolve, a type named by a template, which only a resource id may be, a service marked unchecked
+ * beside its resource, a check declared on a service with no resource, and a resolver named beside a permission,
+ * by a name no resolver has, or reading a parameter the function lacks.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -303,6 +311,38 @@ public class SchemaServiceAuthzTest {
         IllegalStateException e = assertThrows(IllegalStateException.class, () -> convert(TestMisreferencingService.class));
 
         assertTrue(e.getMessage().contains("missing"));
+    }
+
+    @Test
+    public void aResolvedCheckRecordsEveryPermissionTheResolverMayRequire() {
+        AuthzCheckC3Decorator check = check(convert(TestResolvedService.class), "runQuery");
+
+        assertEquals(TestStatementPermissionResolver.NAME, check.getPermissionResolver());
+        assertNull(check.getPermission());
+        assertEquals(List.of("can_read", "can_delete"), check.getPossiblePermissions().stream().map(AuthzPermissionChoice::getPermission).toList());
+        assertEquals("report", check.getResource());
+        assertEquals("{reportId}", check.getResourceId());
+    }
+
+    @Test
+    public void aResolverBesideAPermissionRejectsTheService() {
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> convert(TestResolverBesidePermissionService.class));
+
+        assertTrue(e.getMessage().contains("beside a permission"), e.getMessage());
+    }
+
+    @Test
+    public void aResolverNoResolverIsNamedRejectsTheService() {
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> convert(TestUnknownResolverService.class));
+
+        assertTrue(e.getMessage().contains("'nobody'"), e.getMessage());
+    }
+
+    @Test
+    public void aResolverReadingAParameterTheFunctionLacksRejectsTheService() {
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> convert(TestResolverMissingParameterService.class));
+
+        assertTrue(e.getMessage().contains("'queryName'"), e.getMessage());
     }
 
     @Test

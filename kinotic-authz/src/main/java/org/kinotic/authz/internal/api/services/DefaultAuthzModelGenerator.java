@@ -6,6 +6,7 @@ import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -325,7 +326,13 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                                                                    + " requires a permission of '" + check.getPermissionResource()
                                                                    + "', which no service or entity definition declares");
                     }
-                    type.addPermission(check.getPermission(), check.getImplies());
+                    if (check.getPermissionResolver() == null) {
+                        type.addPermission(check.getPermission(), check.getImplies());
+                    } else {
+                        for (AuthzPermissionChoice choice : check.getPossiblePermissions()) {
+                            type.addPermission(choice.getPermission(), List.of());
+                        }
+                    }
                 }
             }
         }

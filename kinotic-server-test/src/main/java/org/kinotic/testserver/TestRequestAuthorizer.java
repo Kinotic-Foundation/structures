@@ -24,9 +24,4 @@ public class TestRequestAuthorizer implements RequestAuthorizer {
     public Future<Void> authorize(CRI cri, Participant participant, ObjectNode arguments) {
         return Future.succeededFuture();
     }
-
-    @Override
-    public Future<Void> authorizeOnEntityDefinition(Participant participant, String permission, String entityDefinitionId) {
-        return Future.succeededFuture();
-    }
 }

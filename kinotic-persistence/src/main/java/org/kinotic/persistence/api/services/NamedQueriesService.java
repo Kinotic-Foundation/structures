@@ -50,4 +50,15 @@ public interface NamedQueriesService {
                                               Class<T> type,
                                               EntityContext context);
 
+    /**
+     * Finds the permission a caller needs on the entity definition to run a named query.
+     *
+     * @param entityDescriptor describes the {@link EntityDefinition} that this named query is defined for
+     * @param queryName        the name of {@link FunctionDefinition} that defines the query
+     * @return {@link Future} with the short permission name: {@code can_read} for a query that reads rows,
+     *         {@code can_create}, {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes
+     *         them; fails when the definition holds no such query
+     */
+    Future<String> findPermission(EntityDescriptor entityDescriptor, String queryName);
+
 }

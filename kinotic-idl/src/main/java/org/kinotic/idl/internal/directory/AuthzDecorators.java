@@ -4,6 +4,7 @@ import org.kinotic.idl.api.annotations.AuthzCheck;
 import org.kinotic.idl.api.annotations.AuthzResource;
 import org.kinotic.idl.api.annotations.AuthzRole;
 import org.kinotic.idl.api.annotations.AuthzUnchecked;
+import org.kinotic.idl.api.directory.AuthzPermissionResolver;
 import org.kinotic.idl.api.directory.ConversionContext;
 import org.kinotic.idl.api.schema.AnyC3Type;
 import org.kinotic.idl.api.schema.C3Type;
@@ -14,6 +15,7 @@ import org.kinotic.idl.api.schema.PropertyDefinition;
 import org.kinotic.idl.api.schema.ReferenceC3Type;
 import org.kinotic.idl.api.schema.StringC3Type;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.kinotic.idl.api.schema.decorators.AuthzResourceC3Decorator;
 import org.kinotic.idl.api.schema.decorators.AuthzRoleDeclaration;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -23,6 +25,7 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,7 +103,8 @@ final class AuthzDecorators {
     static AuthzCheckC3Decorator uncheckedOf(String where, AuthzCheckC3Decorator declared) {
         List<String> implies = declared.getImplies() == null ? List.of() : declared.getImplies();
         if (present(declared.getPermission()) != null || present(declared.getResource()) != null
-                || present(declared.getResourceId()) != null || !implies.isEmpty() || declared.isConsistent()) {
+                || present(declared.getResourceId()) != null || present(declared.getPermissionResolver()) != null
+                || !implies.isEmpty() || declared.isConsistent()) {
             throw new IllegalStateException("The function " + where + " is declared unchecked beside a check;"
                                                     + " an unchecked function has none");
         }
@@ -161,6 +165,7 @@ final class AuthzDecorators {
                 .setResource(check.resource())
                 .setResourceId(check.resourceId())
                 .setImplies(List.of(check.implies()))
+                .setPermissionResolver(check.permissionResolver())
                 .setConsistent(check.consistent());
     }
 
@@ -199,14 +204,16 @@ final class AuthzDecorators {
      *                          super interface
      * @param parameters        the function's converted parameters, the ones a request carries
      * @param conversionContext the context the parameters were converted in, which resolves their references
-     * @throws IllegalStateException as {@link #checkOf(String, AuthzResourceC3Decorator, String, AuthzCheckC3Decorator, List, ConversionContext)} does
+     * @param resolvers         the permission resolvers a check may name, by name
+     * @throws IllegalStateException as {@link #checkOf(String, AuthzResourceC3Decorator, String, AuthzCheckC3Decorator, List, ConversionContext, Map)} does
      */
     static AuthzCheckC3Decorator checkOf(Class<?> serviceInterface,
                                          AuthzResourceC3Decorator resource,
                                          String functionName,
                                          Method interfaceMethod,
                                          List<ParameterDefinition> parameters,
-                                         ConversionContext conversionContext) {
+                                         ConversionContext conversionContext,
+                                         Map<String, AuthzPermissionResolver> resolvers) {
         // the check is the interface's: its redeclaration of an inherited function carries it, which
         // the implementation's method, inherited from a base class outside that interface, would not reach
         AuthzCheck check = AnnotationUtils.findAnnotation(interfaceMethod, AuthzCheck.class);
@@ -214,7 +221,7 @@ final class AuthzDecorators {
         if (AnnotationUtils.findAnnotation(interfaceMethod, AuthzUnchecked.class) != null) {
             declared = (declared == null ? new AuthzCheckC3Decorator() : declared).setUnchecked(true);
         }
-        return checkOf(serviceInterface.getName(), resource, functionName, declared, parameters, conversionContext);
+        return checkOf(serviceInterface.getName(), resource, functionName, declared, parameters, conversionContext, resolvers);
     }
 
     /**
@@ -226,40 +233,54 @@ final class AuthzDecorators {
      * @param declared          what the function declares about its check, or null for nothing
      * @param parameters        the function's parameters, the ones a request carries
      * @param conversionContext the context the parameters were converted in, which resolves their references
-     * @throws IllegalStateException when the function derives no check and declares none, or a declaration
-     *                               references a parameter the function does not have
+     * @param resolvers         the permission resolvers a check may name, by name
+     * @throws IllegalStateException when the function derives no check and declares none, a declaration
+     *                               references a parameter the function does not have, or it names a permission
+     *                               resolver beside a permission, one not in {@code resolvers}, one requiring
+     *                               no permission, or one reading a parameter the function does not have
      */
     static AuthzCheckC3Decorator checkOf(String declarer,
                                          AuthzResourceC3Decorator resource,
                                          String functionName,
                                          AuthzCheckC3Decorator declared,
                                          List<ParameterDefinition> parameters,
-                                         ConversionContext conversionContext) {
+                                         ConversionContext conversionContext,
+                                         Map<String, AuthzPermissionResolver> resolvers) {
         String type = resource.getResourceType();
         String parent = resource.getParent();
         String where = functionName + " on " + declarer;
         String declaredPermission = declared == null ? null : present(declared.getPermission());
         String declaredResource = declared == null ? null : present(declared.getResource());
         String declaredResourceId = declared == null ? null : present(declared.getResourceId());
+        String permissionResolver = declared == null ? null : present(declared.getPermissionResolver());
         List<String> implies = declared == null || declared.getImplies() == null ? List.of() : declared.getImplies();
         if (declared != null && declared.isUnchecked()) {
             return uncheckedOf(where, declared);
         }
 
-        // the function's own permission, else the one its service requires of every function, else its verb's
+        // a resolver's permission, decided per request, else the function's own, else the one its service requires
+        // of every function, else its verb's
         String permission;
-        if (declaredPermission != null) {
+        List<AuthzPermissionChoice> possiblePermissions = List.of();
+        if (permissionResolver != null) {
+            if (declaredPermission != null || !implies.isEmpty()) {
+                throw new IllegalStateException("The function " + where + " declares a permission resolver beside a permission;"
+                                                        + " the resolver decides the permission");
+            }
+            possiblePermissions = possiblePermissionsOf(where, resolvers.get(permissionResolver), permissionResolver, parameters);
+            permission = null;
+        } else if (declaredPermission != null) {
             permission = declaredPermission;
         } else if (resource.getPermission() != null) {
             permission = resource.getPermission();
         } else {
             permission = derivedPermission(functionName);
         }
-        if (permission == null) {
+        if (permission == null && permissionResolver == null) {
             throw new IllegalStateException("The function " + where + " derives no permission from its name;"
                                                     + " declare one with @AuthzCheck(permission = ...)");
         }
-        if (!AuthzUtil.isIdentifier(permission)) {
+        if (permission != null && !AuthzUtil.isIdentifier(permission)) {
             throw new IllegalStateException("The permission '" + permission + "' of " + where
                                                     + " is not a lowercase identifier");
         }
@@ -333,7 +354,37 @@ final class AuthzDecorators {
                 .setPermissionResource(permissionResource)
                 .setPermission(permission)
                 .setImplies(implies)
+                .setPermissionResolver(permissionResolver)
+                .setPossiblePermissions(possiblePermissions)
                 .setConsistent(declared != null && declared.isConsistent());
+    }
+
+    // The permissions the named resolver may require, once the function carries every parameter it reads
+    private static List<AuthzPermissionChoice> possiblePermissionsOf(String where,
+                                                                     AuthzPermissionResolver resolver,
+                                                                     String name,
+                                                                     List<ParameterDefinition> parameters) {
+        if (resolver == null) {
+            throw new IllegalStateException("The function " + where + " names the permission resolver '" + name
+                                                    + "', but no resolver has that name");
+        }
+        List<AuthzPermissionChoice> ret = List.copyOf(resolver.possiblePermissions());
+        if (ret.isEmpty()) {
+            throw new IllegalStateException("The permission resolver '" + name + "' of " + where + " requires no permission");
+        }
+        for (AuthzPermissionChoice choice : ret) {
+            if (!AuthzUtil.isIdentifier(choice.getPermission())) {
+                throw new IllegalStateException("The permission '" + choice.getPermission() + "' the resolver '" + name
+                                                        + "' of " + where + " may require is not a lowercase identifier");
+            }
+        }
+        for (String parameterName : resolver.parameters()) {
+            if (parameter(parameters, parameterName) == null) {
+                throw new IllegalStateException("The permission resolver '" + name + "' of " + where + " reads '" + parameterName
+                                                        + "', which is not a parameter the request carries");
+            }
+        }
+        return ret;
     }
 
     /**

@@ -21,11 +21,14 @@ import org.kinotic.core.api.security.SecurityExceptionFactory;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
+import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
+import org.kinotic.domain.api.services.security.RequestPermissionResolver;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.StringC3Type;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import tools.jackson.databind.json.JsonMapper;
@@ -36,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -65,7 +69,9 @@ import static org.mockito.Mockito.when;
  * refusals: a denied check, a request naming no object, a body no id can be read from or whose object the check
  * reads names a property twice, and the requests no
  * contract covers, of a service the directory holds no definition for, a function the definition leaves out or
- * marks neither way, and a node running no directory. The authorizer runs in debug mode, so each refusal names
+ * marks neither way, and a node running no directory; and a check whose permission a resolver decides, made for
+ * the permission the resolver decides and refused, with the reason, when the caller lacks it, when the resolver
+ * decides a permission the contract does not record or decides nothing, and on a node without the resolver. The authorizer runs in debug mode, so each refusal names
  * its reason.
  */
 class DefaultRequestAuthorizerTest {
@@ -74,6 +80,9 @@ class DefaultRequestAuthorizerTest {
     private static final String ENTITIES = "app-api~org.kinotic.persistence.api.services.JsonEntitiesRepository";
     private static final String MODEL_ID = "model-1";
     private static final String CRM_MODEL_ID = "crm-model-1";
+    private static final String STATEMENT_RESOLVER = "statement";
+    private static final AuthzPermissionChoice READ = new AuthzPermissionChoice("can_read", "the query reads rows");
+    private static final AuthzPermissionChoice DELETE = new AuthzPermissionChoice("can_delete", "the query is a DELETE");
 
     private final SecurityExceptionFactory securityExceptions = new SecurityExceptionFactory(new KinoticProperties().setDebug(true));
     private ServiceDirectory directory;
@@ -96,7 +105,9 @@ class DefaultRequestAuthorizerTest {
         when(relationships.check(eq(SYSTEM), eq(MODEL_ID), any(), any(), any())).thenReturn(Future.succeededFuture(true));
         when(relationships.check(eq("acme.crm"), eq(CRM_MODEL_ID), any(), any(), any())).thenReturn(Future.succeededFuture(true));
         vertx = Vertx.vertx();
-        authorizer = new DefaultRequestAuthorizer(provider, stores, relationships, jsonMapper, vertx, securityExceptions);
+        ObjectProvider<RequestPermissionResolver> resolvers = mock(ObjectProvider.class);
+        when(resolvers.orderedStream()).thenAnswer(invocation -> Stream.of(new StatementResolver()));
+        authorizer = new DefaultRequestAuthorizer(provider, resolvers, stores, relationships, jsonMapper, vertx, securityExceptions);
         authorizer.listenForContractChanges();
 
         ServiceDefinition service = new ServiceDefinition().setNamespace("org.kinotic.management.api.services").setName("ProjectService");
@@ -115,6 +126,8 @@ class DefaultRequestAuthorizerTest {
         ServiceDefinition entities = new ServiceDefinition().setNamespace("org.kinotic.persistence.api.services").setName("JsonEntitiesRepository");
         entities.addFunction(function("findById", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_read", false), "entityDefinitionId", "id"));
         entities.addFunction(function("save", check("entity_definition", "{entityDefinitionId}", "entity_definition", "can_create", false), "entityDefinitionId", "entity"));
+        entities.addFunction(function("namedQuery", resolved(STATEMENT_RESOLVER), "entityDefinitionId", "queryName", "queryParameters"));
+        entities.addFunction(function("namedQueryElsewhere", resolved("elsewhere"), "entityDefinitionId", "queryName", "queryParameters"));
         when(directory.findEntry(ENTITIES)).thenReturn(Future.succeededFuture(new ServiceDirectoryEntry().setId(ENTITIES).setServiceDefinition(entities)));
     }
 
@@ -282,7 +295,8 @@ class DefaultRequestAuthorizerTest {
     void aNodeWithoutADirectoryRefusesEveryRequest() {
         ObjectProvider<ServiceDirectory> none = mock(ObjectProvider.class);
         when(none.getIfAvailable()).thenReturn(null);
-        DefaultRequestAuthorizer alone = new DefaultRequestAuthorizer(none, mock(AuthzStoreService.class), relationships, JsonMapper.builder().build(), vertx, securityExceptions);
+        DefaultRequestAuthorizer alone = new DefaultRequestAuthorizer(none, mock(ObjectProvider.class), mock(AuthzStoreService.class), relationships,
+                                                                      JsonMapper.builder().build(), vertx, securityExceptions);
 
         ExecutionException failure = assertThrows(ExecutionException.class,
                                                   () -> alone.authorize(cri("listAccessible"), sally(), EventConstants.CONTENT_TYPE_JSON, bytes("[]"))
@@ -387,6 +401,62 @@ class DefaultRequestAuthorizerTest {
         assertEquals(down, failure.getCause());
     }
 
+    @Test
+    void aResolvedPermissionIsCheckedOnTheObjectTheCheckNames() throws Exception {
+        namedQuery("deletePeople");
+
+        assertEquals(new RelationshipTuple("user:sally@acme", "entity_definition_can_delete", "entity_definition:acme.crm.person"),
+                     checked(Consistency.MINIMIZE_LATENCY));
+    }
+
+    @Test
+    void aRefusalOfAResolvedPermissionSaysWhyTheRequestNeedsIt() {
+        when(relationships.check(eq(SYSTEM), eq(MODEL_ID), any(), any(), any())).thenReturn(Future.succeededFuture(false));
+
+        AuthorizationException refused = refusedNamedQuery("deletePeople");
+
+        assertTrue(refused.getMessage().contains("entity_definition_can_delete") && refused.getMessage().contains("the query is a DELETE"),
+                   refused.getMessage());
+    }
+
+    @Test
+    void aPermissionTheContractDoesNotRecordForTheResolverIsRefused() {
+        AuthorizationException refused = refusedNamedQuery("editPeople");
+
+        assertTrue(refused.getMessage().contains("not one it may require"), refused.getMessage());
+        verify(relationships, never()).check(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aRequestTheResolverDecidesNothingForIsRefused() {
+        AuthorizationException refused = refusedNamedQuery("missing");
+
+        assertTrue(refused.getMessage().contains("decided nothing"), refused.getMessage());
+        verify(relationships, never()).check(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aCheckNamingAResolverTheNodeLacksIsRefused() {
+        ExecutionException failure = assertThrows(ExecutionException.class,
+                                                  () -> authorizer.authorize(CRI.create("srv://crm@" + ENTITIES + "/namedQueryElsewhere#1.0.0"), sally(),
+                                                                             EventConstants.CONTENT_TYPE_JSON, bytes("[\"acme.crm.person\",\"countPeople\",[]]"))
+                                                                  .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS));
+
+        AuthorizationException refused = assertInstanceOf(AuthorizationException.class, failure.getCause());
+        assertTrue(refused.getMessage().contains("which this node does not have"), refused.getMessage());
+    }
+
+    private void namedQuery(String queryName) throws Exception {
+        authorizer.authorize(CRI.create("srv://crm@" + ENTITIES + "/namedQuery#1.0.0"), sally(),
+                             EventConstants.CONTENT_TYPE_JSON, bytes("[\"acme.crm.person\",\"" + queryName + "\",[]]"))
+                  .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+    }
+
+    private AuthorizationException refusedNamedQuery(String queryName) {
+        ExecutionException failure = assertThrows(ExecutionException.class, () -> namedQuery(queryName));
+        return assertInstanceOf(AuthorizationException.class, failure.getCause());
+    }
+
     private void authorize(String function, Participant participant, String contentType, String body) throws Exception {
         authorizer.authorize(cri(function), participant, contentType, bytes(body))
                   .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
@@ -445,6 +515,16 @@ class DefaultRequestAuthorizerTest {
         return ret;
     }
 
+    // a check on the definition the request names, whose permission the named resolver decides
+    private static AuthzCheckC3Decorator resolved(String resolver) {
+        return new AuthzCheckC3Decorator().setResource("entity_definition")
+                                          .setResourceId("{entityDefinitionId}")
+                                          .setPermissionResource("entity_definition")
+                                          .setPermissionResolver(resolver)
+                                          .setPossiblePermissions(List.of(READ, DELETE))
+                                          .setImplies(List.of());
+    }
+
     private static AuthzCheckC3Decorator unchecked() {
         return new AuthzCheckC3Decorator().setUnchecked(true);
     }
@@ -456,5 +536,41 @@ class DefaultRequestAuthorizerTest {
                                           .setPermission(permission)
                                           .setImplies(List.of())
                                           .setConsistent(consistent);
+    }
+
+    // decides a query's permission from its name: count* reads, delete* deletes, edit* edits, which the contract does
+    // not record, and any other name selects no query
+    private static final class StatementResolver implements RequestPermissionResolver {
+
+        @Override
+        public String name() {
+            return STATEMENT_RESOLVER;
+        }
+
+        @Override
+        public List<String> parameters() {
+            return List.of("entityDefinitionId", "queryName");
+        }
+
+        @Override
+        public List<AuthzPermissionChoice> possiblePermissions() {
+            return List.of(READ, DELETE);
+        }
+
+        @Override
+        public Future<AuthzPermissionChoice> resolve(ScopedParticipant participant, List<String> arguments) {
+            String queryName = arguments.get(1);
+            Future<AuthzPermissionChoice> ret;
+            if (queryName.startsWith("count")) {
+                ret = Future.succeededFuture(READ);
+            } else if (queryName.startsWith("delete")) {
+                ret = Future.succeededFuture(DELETE);
+            } else if (queryName.startsWith("edit")) {
+                ret = Future.succeededFuture(new AuthzPermissionChoice("can_edit", "the query is an UPDATE"));
+            } else {
+                ret = Future.failedFuture(new IllegalArgumentException("No query found with name " + queryName));
+            }
+            return ret;
+        }
     }
 }

@@ -2,6 +2,7 @@
 
 package org.kinotic.idl.internal.directory;
 
+import org.kinotic.idl.api.directory.AuthzPermissionResolver;
 import org.kinotic.idl.api.directory.ConversionContext;
 import org.kinotic.idl.api.directory.ServiceDeclaration;
 import org.kinotic.idl.api.directory.GenericTypeConverter;
@@ -46,6 +47,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
  * Provides the ability to create {@link C3Type}'s
@@ -58,6 +60,7 @@ public class DefaultSchemaService implements SchemaService {
 
     private final GenericTypeConverter typeConverter;
     private final Set<Class<?>> skippedParameterTypes;
+    private final Supplier<List<AuthzPermissionResolver>> permissionResolvers;
     // extracted Javadoc resources by type; a type without a resource caches an empty map
     private final Map<Class<?>, Map<String, String>> javadocCache = new ConcurrentHashMap<>();
 
@@ -65,10 +68,15 @@ public class DefaultSchemaService implements SchemaService {
      * @param typeConverter         converts the types a signature names
      * @param skippedParameterTypes parameter types the platform supplies to a function rather than the request,
      *                              matched by assignability, which no function's contract advertises
+     * @param permissionResolvers   the permission resolvers a service's checks may name, read when services are
+     *                              converted
      */
-    public DefaultSchemaService(GenericTypeConverter typeConverter, Set<Class<?>> skippedParameterTypes) {
+    public DefaultSchemaService(GenericTypeConverter typeConverter,
+                                Set<Class<?>> skippedParameterTypes,
+                                Supplier<List<AuthzPermissionResolver>> permissionResolvers) {
         this.typeConverter = typeConverter;
         this.skippedParameterTypes = skippedParameterTypes;
+        this.permissionResolvers = permissionResolvers;
     }
 
     @Override
@@ -99,12 +107,18 @@ public class DefaultSchemaService implements SchemaService {
         // one conversion context for the whole batch, so complex types shared between services convert once
         DefaultConversionContext conversionContext = new DefaultConversionContext(typeConverter, true);
 
+        Map<String, AuthzPermissionResolver> resolvers = new HashMap<>();
+        for (AuthzPermissionResolver resolver : permissionResolvers.get()) {
+            resolvers.put(resolver.name(), resolver);
+        }
+
         NamespaceDefinition ret = new NamespaceDefinition();
         // record equality collapses duplicates, so a service declared twice converts once
         for (ServiceDeclaration declaration : new LinkedHashSet<>(services)) {
             ret.addServiceDefinition(createForService(declaration.serviceInterface(),
                                                       declaration.serviceImplementation(),
-                                                      conversionContext));
+                                                      conversionContext,
+                                                      resolvers));
         }
         ret.setComplexC3Types(conversionContext.getComplexC3Types());
         return ret;
@@ -132,13 +146,17 @@ public class DefaultSchemaService implements SchemaService {
             List<ParameterDefinition> parameters = function.getParameters() == null ? List.of() : function.getParameters();
             AuthzCheckC3Decorator declaredCheck = function.findDecorator(AuthzCheckC3Decorator.class);
             AuthzCheckC3Decorator check;
-            if (authzResource != null) {
+            if (declaredCheck != null && declaredCheck.getPermissionResolver() != null) {
+                throw new IllegalStateException("The function " + function.getName() + " on " + declarer
+                                                        + " names a permission resolver, which only the system's own services may name");
+            } else if (authzResource != null) {
                 check = AuthzDecorators.checkOf(declarer,
                                                 authzResource,
                                                 function.getName(),
                                                 declaredCheck,
                                                 parameters,
-                                                conversionContext);
+                                                conversionContext,
+                                                Map.of());
             } else if (declaredCheck != null && declaredCheck.isUnchecked()) {
                 // a service declaring no resource is marked unchecked as a whole, which its definition carries on
                 // each function
@@ -179,7 +197,8 @@ public class DefaultSchemaService implements SchemaService {
 
     private ServiceDefinition createForService(Class<?> serviceInterface,
                                                Class<?> implementation,
-                                               ConversionContext conversionContext) {
+                                               ConversionContext conversionContext,
+                                               Map<String, AuthzPermissionResolver> resolvers) {
         Assert.notNull(serviceInterface, "serviceInterface cannot be null");
         Assert.notNull(implementation, "implementation cannot be null");
 
@@ -240,7 +259,8 @@ public class DefaultSchemaService implements SchemaService {
                                                        function.getKey(),
                                                        function.getValue(),
                                                        functionDefinition.getParameters(),
-                                                       conversionContext));
+                                                       conversionContext,
+                                                       resolvers));
             } else if (AuthzDecorators.declaresCheck(function.getValue())) {
                 throw new IllegalStateException("The function " + function.getKey() + " on " + serviceInterface.getName()
                                                         + " declares a check, but the service declares no resource;"

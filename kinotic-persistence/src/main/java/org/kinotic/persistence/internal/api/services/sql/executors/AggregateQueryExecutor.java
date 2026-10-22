@@ -7,6 +7,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.config.DomainPersistenceProperties;
 import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
+import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.persistence.internal.api.services.sql.QueryContext;
 import org.kinotic.persistence.internal.api.services.sql.elasticsearch.ElasticVertxClient;
 import org.kinotic.sql.executor.ElasticsearchSql;
@@ -125,5 +126,10 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
 
         }
         return filter;
+    }
+
+    @Override
+    public String permission() {
+        return AuthzConstants.CAN_READ;
     }
 }

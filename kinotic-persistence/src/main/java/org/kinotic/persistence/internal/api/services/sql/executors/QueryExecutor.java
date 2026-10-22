@@ -20,4 +20,11 @@ public interface QueryExecutor {
                                     Pageable pageable,
                                     Class<T> type);
 
+    /**
+     * @return the short permission a caller needs on the entity definition to run the query: {@code can_read}
+     *         for one that reads rows, {@code can_create}, {@code can_edit} or {@code can_delete} for one that
+     *         inserts, updates or deletes them
+     */
+    String permission();
+
 }

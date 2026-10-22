@@ -122,6 +122,8 @@ public final class AuthzConstants {
     public static final String CAN_READ_MEMBERS = "can_read_members";
     public static final String CAN_READ_TELEMETRY = "can_read_telemetry";
     public static final String CAN_READ_WORKLOADS = "can_read_workloads";
+    /** The resolver deciding a named query's permission from its statement. */
+    public static final String NAMED_QUERY_PERMISSION_RESOLVER = "named_query";
     /** The longest relation name OpenFGA accepts; a typed permission name must fit it. */
     public static final int MAX_RELATION_NAME_LENGTH = 50;
 

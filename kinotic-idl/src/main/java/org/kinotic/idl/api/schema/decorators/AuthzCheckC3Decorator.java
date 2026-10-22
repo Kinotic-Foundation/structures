@@ -51,6 +51,18 @@ public final class AuthzCheckC3Decorator extends C3Decorator {
     private List<String> implies = List.of();
 
     /**
+     * The name of the resolver deciding the permission of each request, for a check whose permission depends on
+     * the request; {@link #permission} is null then.
+     */
+    private String permissionResolver;
+
+    /**
+     * Every permission the {@link #permissionResolver} may require, each with the reason a request needs it;
+     * empty for a check naming its {@link #permission}.
+     */
+    private List<AuthzPermissionChoice> possiblePermissions = List.of();
+
+    /**
      * True for a function declared served with no check, which any caller the zone admits may call: the
      * derivation drops the check of such a function, so a stored definition carries none.
      */

@@ -116,6 +116,8 @@ public interface AdminJsonEntitiesRepository {
 
     /**
      * Executes a named query.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
+     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
@@ -124,7 +126,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzConstants.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permissionResolver = AuthzConstants.NAMED_QUERY_PERMISSION_RESOLVER, resourceId = "{entityDefinitionId}")
     Future<List<RawJson>> namedQuery(String entityDefinitionId,
                                      String queryName,
                                      List<QueryParameter> queryParameters,
@@ -133,6 +135,8 @@ public interface AdminJsonEntitiesRepository {
 
     /**
      * Executes a named query and returns a {@link Page} of results.
+     * The caller needs {@code can_read} on the definition for a query that reads rows, and {@code can_create},
+     * {@code can_edit} or {@code can_delete} for one that inserts, updates or deletes them.
      *
      * @param entityDefinitionId     the id of the {@link EntityDefinition} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
@@ -142,7 +146,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzConstants.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permissionResolver = AuthzConstants.NAMED_QUERY_PERMISSION_RESOLVER, resourceId = "{entityDefinitionId}")
     Future<Page<RawJson>> namedQueryPage(String entityDefinitionId,
                                          String queryName,
                                          List<QueryParameter> queryParameters,

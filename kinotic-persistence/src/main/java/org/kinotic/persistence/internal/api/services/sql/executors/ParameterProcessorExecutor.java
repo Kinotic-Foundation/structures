@@ -55,6 +55,11 @@ public class ParameterProcessorExecutor extends AbstractQueryExecutor {
         return delegate.executePage(context, pageable, type);
     }
 
+    @Override
+    public String permission() {
+        return delegate.permission();
+    }
+
     private void addToQueryMetadata(ParameterDefinition parameterDefinition,
                                     QueryMetadata.QueryMetadataBuilder queryMetadataBuilder){
 

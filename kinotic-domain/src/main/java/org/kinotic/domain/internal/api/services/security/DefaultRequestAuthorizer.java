@@ -24,12 +24,14 @@ import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
+import org.kinotic.domain.api.services.security.RequestPermissionResolver;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.model.FunctionSpec;
 import org.kinotic.domain.internal.api.model.ParameterReference;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ParameterDefinition;
 import org.kinotic.idl.api.schema.decorators.AuthzCheckC3Decorator;
+import org.kinotic.idl.api.schema.decorators.AuthzPermissionChoice;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.beans.factory.ObjectProvider;
@@ -59,7 +61,9 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
  * that stops once it has read the object, or from a tool call's arguments by name, and the engine answers for the
  * caller. A function is served without the engine only when its contract marks it
  * unchecked; a function no contract covers, of a service the directory holds no definition for or one the
- * definition leaves out, is refused. The engine answers for the caller, or for the owner a delegate acts for, from the system's store for an
+ * definition leaves out, is refused. A check naming a permission resolver is made for the permission the resolver
+ * decides from the request, one of the permissions the contract records it may require; a request it decides
+ * nothing for, or one reaching a node without the resolver, is refused. The engine answers for the caller, or for the owner a delegate acts for, from the system's store for an
  * organization's members and the system's own staff, and from the application's store for an application's
  * users. A system user or one of the system's machines, whose scope names no organization, is checked
  * on the system itself wherever a check names the caller's scope, and an application's user on its tenant,
@@ -86,6 +90,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     private static final Resource SYSTEM_LEVEL = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final ObjectProvider<ServiceDirectory> directoryProvider;
+    private final ObjectProvider<RequestPermissionResolver> permissionResolvers;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final JsonMapper jsonMapper;
@@ -122,24 +127,12 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         return authorize(cri, participant, reference -> named(arguments, reference));
     }
 
-    @Override
-    public Future<Void> authorizeOnEntityDefinition(Participant participant, String permission, String entityDefinitionId) {
-        Validate.notBlank(permission, "permission cannot be blank");
-        Validate.notBlank(entityDefinitionId, "entityDefinitionId cannot be blank");
-        AuthzCheckC3Decorator check = new AuthzCheckC3Decorator().setResource(AuthzConstants.ENTITY_DEFINITION_TYPE)
-                                                                 .setResourceId(entityDefinitionId)
-                                                                 .setPermissionResource(AuthzConstants.ENTITY_DEFINITION_TYPE)
-                                                                 .setPermission(permission);
-        // the id is literal, so the check reads no argument
-        return withStore(participant, (scoped, store) -> check(new FunctionSpec(check, List.of()), scoped, store, reference -> null));
-    }
-
     // Authorizes the request, reading a parameter the check names with the given function
     private Future<Void> authorize(CRI cri, Participant participant, Function<ParameterReference, String> arguments) {
         Validate.notNull(cri, "cri cannot be null");
         return withStore(participant, (scoped, store) -> spec(cri).compose(spec -> spec.check() == null
                 ? Future.succeededFuture()
-                : check(spec, scoped, store, arguments)));
+                : permissionOf(spec, scoped, arguments).compose(permission -> check(spec, permission, scoped, store, arguments))));
     }
 
     // Runs the authorization with the store answering for the caller: an application's own user's is the
@@ -201,12 +194,46 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
                     } else {
                         ret.put(function.getName(), check.isUnchecked()
                                 ? FunctionSpec.UNCHECKED
-                                : new FunctionSpec(check, referencesOf(check, parameters, entryId + "/" + function.getName())));
+                                : specOf(check, parameters, entryId + "/" + function.getName()));
                     }
                 }
             }
             return Map.copyOf(ret);
         });
+    }
+
+    private FunctionSpec specOf(AuthzCheckC3Decorator check, List<String> parameters, String function) {
+        RequestPermissionResolver resolver = null;
+        List<ParameterReference> resolverArguments = List.of();
+        if (check.getPermissionResolver() != null) {
+            resolver = permissionResolvers.orderedStream()
+                                          .filter(candidate -> candidate.name().equals(check.getPermissionResolver()))
+                                          .findFirst()
+                                          .orElse(null);
+            if (resolver == null) {
+                log.warn("The contract of {} names the permission resolver {}, which this node does not have; it is refused",
+                         function, check.getPermissionResolver());
+            } else {
+                resolverArguments = argumentsOf(resolver, parameters, function);
+            }
+        }
+        return new FunctionSpec(check, referencesOf(check, parameters, function), resolver, resolverArguments);
+    }
+
+    // Where each parameter the resolver reads is read from, resolved once per contract rather than per request
+    private static List<ParameterReference> argumentsOf(RequestPermissionResolver resolver, List<String> parameters, String function) {
+        List<ParameterReference> ret = new ArrayList<>();
+        for (String parameter : resolver.parameters()) {
+            int position = parameters.indexOf(parameter);
+            // the derivation refuses a contract whose resolver reads a parameter the function lacks, so a stored
+            // one that does is corrupt
+            if (position < 0) {
+                throw new IllegalStateException("The permission resolver " + resolver.name() + " of " + function + " reads the parameter "
+                                                        + parameter + ", which the function does not carry");
+            }
+            ret.add(new ParameterReference(parameter, parameter, position, List.of()));
+        }
+        return ret;
     }
 
     // Where each parameter reference of the check's id is read from, resolved once per contract rather than per
@@ -232,7 +259,57 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         return ret;
     }
 
-    private Future<Void> check(FunctionSpec spec, ScopedParticipant participant, String store, Function<ParameterReference, String> arguments) {
+    // The permission the request needs: the one its check names, else the one its resolver decides from the
+    // request, which must be one the contract records the resolver may require
+    private Future<AuthzPermissionChoice> permissionOf(FunctionSpec spec,
+                                                       ScopedParticipant participant,
+                                                       Function<ParameterReference, String> arguments) {
+        AuthzCheckC3Decorator check = spec.check();
+        String name = check.getPermissionResolver();
+        Future<AuthzPermissionChoice> ret;
+        if (name == null) {
+            ret = Future.succeededFuture(new AuthzPermissionChoice(check.getPermission(), null));
+        } else if (spec.resolver() == null) {
+            ret = Future.failedFuture(securityExceptions.notAuthorized("The check names the permission resolver {}, which this node does not have",
+                                                                       name));
+        } else {
+            try {
+                List<String> values = new ArrayList<>();
+                for (ParameterReference argument : spec.resolverArguments()) {
+                    String value = arguments.apply(argument);
+                    if (value == null || value.isEmpty()) {
+                        throw securityExceptions.notAuthorized("The request names no {}, which its permission resolver needs",
+                                                               argument.parameter());
+                    }
+                    values.add(value);
+                }
+                // a lookup that fails is refused as one the caller holds no permission for, so the refusal tells
+                // nothing about what exists
+                ret = spec.resolver()
+                          .resolve(participant, values)
+                          .recover(e -> Future.failedFuture(e instanceof AuthorizationException
+                                  ? e
+                                  : securityExceptions.notAuthorized("The permission resolver {} decided nothing: {}", name, e.getMessage())))
+                          .compose(choice -> isPossible(check, choice)
+                                  ? Future.succeededFuture(choice)
+                                  : Future.failedFuture(securityExceptions.notAuthorized("The permission resolver {} decided {}, which is not one it may require",
+                                                                                         name, choice == null ? null : choice.getPermission())));
+            } catch (AuthorizationException e) {
+                ret = Future.failedFuture(e);
+            }
+        }
+        return ret;
+    }
+
+    private static boolean isPossible(AuthzCheckC3Decorator check, AuthzPermissionChoice choice) {
+        return choice != null && check.getPossiblePermissions().stream().anyMatch(possible -> possible.getPermission().equals(choice.getPermission()));
+    }
+
+    private Future<Void> check(FunctionSpec spec,
+                               AuthzPermissionChoice permission,
+                               ScopedParticipant participant,
+                               String store,
+                               Function<ParameterReference, String> arguments) {
         AuthzCheckC3Decorator check = spec.check();
         ParticipantScope scope = participant.getScope();
         Future<Void> ret;
@@ -252,19 +329,25 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
                     : AuthzUtil.object(checked.type(), resourceId);
             List<RelationshipTuple> edges = withinTenant ? DomainUtil.tenantDefinitionEdges(resourceId, scope.tenantId()) : List.of();
             RelationshipTuple relationship = new RelationshipTuple(DomainUtil.authzUser(participant),
-                                                                   AuthzUtil.permissionName(check.getPermissionResource(), check.getPermission()),
+                                                                   AuthzUtil.permissionName(check.getPermissionResource(), permission.getPermission()),
                                                                    object);
             Consistency consistency = check.isConsistent() ? Consistency.HIGHER_CONSISTENCY : Consistency.MINIMIZE_LATENCY;
             ret = stores.modelId(store)
                         .compose(modelId -> relationships.check(store, modelId, relationship, consistency, edges))
                         .compose(allowed -> allowed
                                 ? Future.succeededFuture()
-                                : Future.failedFuture(securityExceptions.notAuthorized("{} on {} for {}", relationship.relation(),
-                                                                                       relationship.object(), relationship.user())));
+                                : Future.failedFuture(refusal(relationship, permission.getReason())));
         } catch (AuthorizationException e) {
             ret = Future.failedFuture(e);
         }
         return ret;
+    }
+
+    // A refusal names the permission, and why the request needs it when a resolver decided it
+    private AuthorizationException refusal(RelationshipTuple relationship, String reason) {
+        return reason == null
+                ? securityExceptions.notAuthorized("{} on {} for {}", relationship.relation(), relationship.object(), relationship.user())
+                : securityExceptions.notAuthorized("{} on {} for {}: {}", relationship.relation(), relationship.object(), relationship.user(), reason);
     }
 
     /**

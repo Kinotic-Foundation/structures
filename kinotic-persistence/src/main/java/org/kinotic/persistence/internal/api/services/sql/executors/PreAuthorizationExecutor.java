@@ -43,4 +43,9 @@ public class PreAuthorizationExecutor implements QueryExecutor{
                                       type
                               ));
     }
+
+    @Override
+    public String permission() {
+        return delegate.permission();
+    }
 }
