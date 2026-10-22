@@ -996,7 +996,15 @@ What differs between the three:
     </td>
     
     <td>
-      the portal
+      the portal and the UIs built on Kinotic that the dev-server root's <code>
+        trusted_ui_hostnames
+      </code>
+      
+       names (<code>
+        dev-summit42.kinotic.ai
+      </code>
+      
+      )
     </td>
     
     <td>
