@@ -58,7 +58,18 @@ public class KinoticVertxConfig {
             "vertx.http.server.request.bytes",
             "vertx.http.server.response.bytes",
             "vertx.http.client.request.bytes",
-            "vertx.http.client.response.bytes");
+            "vertx.http.client.response.bytes",
+            // recorded on every event bus message and worker pool task; the event bus and pools are covered
+            // by their pending, handlers and in-use gauges and vertx.eventbus.reply.failures
+            "vertx.eventbus.sent",
+            "vertx.eventbus.published",
+            "vertx.eventbus.received",
+            "vertx.eventbus.delivered",
+            "vertx.eventbus.processed",
+            "vertx.eventbus.discarded",
+            "vertx.pool.queue.time",
+            "vertx.pool.usage",
+            "vertx.pool.completed");
 
     @Bean
     public KinoticIgniteClusterManager clusterManager(Ignite ignite, ZonePartitioningService zonePartitioningService){
