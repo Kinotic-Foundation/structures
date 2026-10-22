@@ -443,7 +443,7 @@ onBeforeUnmount(() => {
       <div class="api__cta" data-reveal>
         <NuxtLink to="/apps/quick-start" class="k-btn k-btn--red">Get Started ↗</NuxtLink>
         <a
-          href="https://github.com/kinotic-ai/claude-plugin"
+          href="https://github.com/kinotic-ai/agent-plugin"
           class="k-btn k-btn--ghost"
           target="_blank"
           rel="noopener"

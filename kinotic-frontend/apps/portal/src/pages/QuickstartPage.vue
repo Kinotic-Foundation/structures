@@ -306,7 +306,7 @@ import claudeCodeIcon from '@/assets/claude-code.svg'
 const debug = createDebug('quickstart')
 
 const QUICK_START_URL = 'https://kinotic.ai/apps/quick-start'
-const PLUGIN_COMMANDS = ['/plugin marketplace add kinotic-ai/claude-plugin', '/plugin install kinotic@kinotic']
+const PLUGIN_COMMANDS = ['/plugin marketplace add kinotic-ai/agent-plugin', '/plugin install kinotic@kinotic']
 const AUTHORIZE_COMMANDS = ['/mcp']
 const NEW_APP_COMMANDS = ['/kinotic:new-app my-app']
 // How many projects the checklist reads to find the most recently updated one
