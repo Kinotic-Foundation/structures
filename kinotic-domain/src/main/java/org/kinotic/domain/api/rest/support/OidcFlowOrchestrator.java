@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -64,6 +65,7 @@ public class OidcFlowOrchestrator {
                     .buildAsync();
     private final SecretReferenceResolver secretReferenceResolver;
     private final OidcConfigurationService oidcConfigurationService;
+    private final KinoticDomainProperties domainProperties;
     private final Vertx vertx;
     private WebClient webClient;
 
@@ -187,22 +189,24 @@ public class OidcFlowOrchestrator {
     /**
      * Begins a {@link OidcFlowPurpose#LOGIN} flow signing in to the organization {@code orgId}, or to none when
      * it is {@code null}: generates state/nonce/PKCE, stores them on the session along with the page at
-     * {@code origin} the completed login is bound to, builds the IdP authorization URL using the supplied
-     * callback URL, and returns the URL. The caller names the origin because a start reached by a link
-     * carries no {@code Origin} of its own.
+     * {@code origin} the completed login is bound to and the browser returns to, builds the IdP authorization URL
+     * using the supplied callback URL, and returns the URL. The caller names the origin because a start reached by
+     * a link carries no {@code Origin} of its own. An origin {@code kinotic.domain.cors.allowedOriginPattern} does
+     * not trust is stored as none, so the flow returns to this server's UI.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,
                                     String callbackUrl,
                                     String orgId,
                                     String origin) {
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, orgId, null, null, null, null, origin);
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, orgId, null, null, null, null, trustedOrigin(origin));
     }
 
     /**
-     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String, String)} for a sign-in to
-     * {@code application}, or to its tenant {@code tenantId} when one is named: stashes the ids of the scope
-     * for the callback to resolve its configuration by.
+     * Begins a {@link OidcFlowPurpose#LOGIN} flow signing in to {@code application}, or to its tenant
+     * {@code tenantId} when one is named, as {@link #startFlow(RoutingContext, OidcConfiguration, String, String, String)}
+     * does, stashing the ids of the scope for the callback to resolve its configuration by. {@code origin} must be
+     * one of the application's UIs, which the caller checks.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,
@@ -214,29 +218,41 @@ public class OidcFlowOrchestrator {
                          tenantId, null, null, origin);
     }
 
-    /** Begins a {@link OidcFlowPurpose#SIGN_UP} flow through one of the platform's org sign-up registrations. */
+    /**
+     * Begins a {@link OidcFlowPurpose#SIGN_UP} flow through one of the platform's org sign-up registrations, which
+     * returns to the page that sent the request when {@code kinotic.domain.cors.allowedOriginPattern} trusts it, and
+     * to this server's UI otherwise.
+     */
     public Future<String> startSignUp(RoutingContext ctx, OidcConfiguration config, String callbackUrl) {
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.SIGN_UP, null, null, null, null, null, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.SIGN_UP, null, null, null, null, null, trustedOrigin(SessionBinding.origin(ctx)));
     }
 
     /**
      * Begins an {@link OidcFlowPurpose#INVITATION} flow accepting the invitation {@code inviteToken} into
      * organization {@code orgId}, stashed for the callback to resolve its configuration by and to complete the
-     * acceptance with.
+     * acceptance with. It returns to the page that sent the request when {@code kinotic.domain.cors.allowedOriginPattern}
+     * trusts it, and to this server's UI otherwise.
      */
     public Future<String> startInvitation(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String inviteToken) {
         Validate.notBlank(inviteToken, "inviteToken cannot be blank");
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.INVITATION, orgId, null, null, inviteToken, null, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.INVITATION, orgId, null, null, inviteToken, null, trustedOrigin(SessionBinding.origin(ctx)));
     }
 
     /**
      * Begins a {@link OidcFlowPurpose#CONNECT} flow binding the identity the provider asserts to organization user
      * {@code organizationUserId}; {@code orgId} is the organization whose configuration the flow runs through, or
-     * {@code null} for one of the platform's registrations.
+     * {@code null} for one of the platform's registrations. It returns to the page that sent the request when
+     * {@code kinotic.domain.cors.allowedOriginPattern} trusts it, and to this server's UI otherwise.
      */
     public Future<String> startConnect(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String organizationUserId) {
         Validate.notBlank(organizationUserId, "organizationUserId cannot be blank");
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.CONNECT, orgId, null, null, null, organizationUserId, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.CONNECT, orgId, null, null, null, organizationUserId, trustedOrigin(SessionBinding.origin(ctx)));
+    }
+
+    // a flow sends its outcome (a login, a sign-up token, an error saying whether an account exists) to the page it
+    // returns to, so a page outside the CORS pattern gets none of it
+    private String trustedOrigin(String origin) {
+        return domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
     }
 
     private Future<String> startFlow(RoutingContext ctx,
