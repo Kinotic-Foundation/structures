@@ -45,13 +45,13 @@ import java.util.regex.Pattern;
 public class DomainUtil {
 
     /**
-     * The zone for platform services organizations use to manage the system, such as member,
-     * application, and entity definition management
+     * The zone for the services organizations use to manage their members, applications and
+     * entity definitions
      */
     public static final String MANAGEMENT_API_ZONE = "management-api";
 
     /**
-     * The zone for the platform's application facing data services, such as entity persistence
+     * The zone for the application facing data services, such as entity persistence
      * and named query execution
      */
     public static final String APP_API_ZONE = "app-api";

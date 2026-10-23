@@ -1,4 +1,4 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import type { IKinotic, IServiceProxy } from '@kinotic-ai/core'
 import { FunctionalIterablePage, type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
 import type { OwnedOidcConfiguration } from '@/api/model/security/OwnedOidcConfiguration'

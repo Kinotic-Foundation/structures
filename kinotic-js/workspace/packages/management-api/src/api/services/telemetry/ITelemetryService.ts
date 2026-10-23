@@ -1,4 +1,4 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import type { IKinotic, IServiceProxy } from '@kinotic-ai/core'
 import type { TraceQuery } from '@/api/model/telemetry/TraceQuery'
 import type { MetricQuery } from '@/api/model/telemetry/MetricQuery'
