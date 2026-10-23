@@ -1,3 +1,5 @@
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { describe, expect, it } from 'vitest'
 import { firstValueFrom, toArray } from 'rxjs'
 import { ConnectedInfo, Event, EventConstants, type IEvent, type ConnectOptions, type IWebSocket } from '../src'
@@ -20,6 +22,25 @@ function echo(frame: FakeFrame, socket: FakeSocket): void {
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/** An HTTP server that takes every request and never answers it, recording each request's path. */
+async function unansweringServer(): Promise<{ http: Server, paths: string[], options: ConnectOptions }> {
+    const paths: string[] = []
+    const http = createServer(request => paths.push(request.url ?? ''))
+    await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
+    const port = (http.address() as AddressInfo).port
+    // credentials without headers authenticate with the session cookie, so each attempt checks the session first
+    const options: ConnectOptions = {
+        server: { host: '127.0.0.1', port, useSSL: false },
+        credentials: { name: 'session cookie', resolve: async () => ({}) }
+    }
+    return { http, paths, options }
+}
+
+function closeServer(http: Server): void {
+    http.closeAllConnections()
+    http.close()
+}
 
 /** Collects the reason of every connection end that carried one, so an orderly end is not counted. */
 function failures(bus: EventBus): Error[] {
@@ -176,6 +197,33 @@ describe('connection lifecycle', () => {
         await expect(connecting).rejects.toThrow('Deactivated before the connection was established')
         await sleep(200)
         expect(failed).toEqual([])
+    })
+
+    it('disconnects and connects again after a failure in the attempt itself rejected the connect', async () => {
+        const server = new FakeStompServer()
+        const bus = new EventBus()
+        const failingFactory = async (): Promise<IWebSocket> => {
+            throw new Error('refresh failed')
+        }
+        await expect(bus.connect(options(server, { webSocketFactory: failingFactory }))).rejects.toThrow('WebSocket factory failed')
+        await bus.disconnect()
+        await bus.connect(options(server))
+        expect(bus.isConnected()).toBe(true)
+        await bus.disconnect()
+    })
+
+    it('settles a disconnect() issued while the session check is still waiting for the server', async () => {
+        const server = await unansweringServer()
+        try {
+            const bus = new EventBus()
+            const connecting = bus.connect(server.options)
+            await sleep(100)
+            expect(server.paths).toEqual(['/api/auth/me'])
+            await bus.disconnect()
+            await expect(connecting).rejects.toThrow('Deactivated before the connection was established')
+        } finally {
+            closeServer(server.http)
+        }
     })
 
     it('reports the end with its reason when the failure lands with no socket open', async () => {

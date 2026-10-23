@@ -6,6 +6,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
@@ -55,6 +56,8 @@ public class OidcFlowOrchestrator {
 
     private static final String OIDC_FLOW_SESSION_KEY = "oidcFlow";
     private static final String USER_AGENT = "kinotic-platform";
+    // github.com's token endpoint answers with a ~9 KB Content-Security-Policy header, past Vert.x's 8 KB default
+    private static final int IDP_MAX_HEADER_SIZE = 32 * 1024;
 
     private final AsyncCache<String, OAuth2Auth> oauth2AuthCache =
             Caffeine.newBuilder()
@@ -73,7 +76,8 @@ public class OidcFlowOrchestrator {
     @PostConstruct
     public void start() {
         // an identity endpoint answers with the profile itself; a redirect is not followed to wherever it points
-        this.webClient = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false));
+        this.webClient = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false)
+                                                                       .setMaxHeaderSize(IDP_MAX_HEADER_SIZE));
     }
 
     @PreDestroy
@@ -321,6 +325,7 @@ public class OidcFlowOrchestrator {
                         .setSite(config.getAuthority())
                         .setAuthorizationPath(explicit.getAuthorizationUri())
                         .setTokenPath(explicit.getTokenUri())
+                        .setHttpClientOptions(new HttpClientOptions().setMaxHeaderSize(IDP_MAX_HEADER_SIZE))
                         // some providers (github.com) reject requests that carry no User-Agent
                         .setHeaders(new JsonObject().put("User-Agent", USER_AGENT));
                 if (clientSecret != null) {
@@ -335,6 +340,7 @@ public class OidcFlowOrchestrator {
             OAuth2Options options = new OAuth2Options()
                     .setClientId(config.getClientId())
                     .setSite(config.getAuthority())
+                    .setHttpClientOptions(new HttpClientOptions().setMaxHeaderSize(IDP_MAX_HEADER_SIZE))
                     // Microsoft /common returns a discovery doc whose `issuer` is the literal template
                     // "https://login.microsoftonline.com/{tenantid}/v2.0" — Vert.x's strict
                     // {site == issuer} comparison fails. JWKS-backed signature verification remains

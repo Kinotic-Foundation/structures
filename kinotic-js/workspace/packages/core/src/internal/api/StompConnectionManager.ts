@@ -213,9 +213,9 @@ export class StompConnectionManager {
 
             // Server-issued ERROR frames close the connection and indicate an unrecoverable
             // condition (auth failure, protocol error), so one ends the connection here.
-            activation.own(this.rxStomp.stompErrors$.subscribe(async (frame: IFrame) => {
+            activation.own(this.rxStomp.stompErrors$.subscribe((frame: IFrame) => {
                 const stompError = new Error(frame.headers['message'] as string, { cause: frame })
-                await this.failConnection(activation, new Error('STOMP connection error', { cause: stompError }))
+                this.failConnection(activation, new Error('STOMP connection error', { cause: stompError }))
             }))
 
             // The first connection of this activation: from here the connect can only resolve. Each connection
@@ -237,13 +237,13 @@ export class StompConnectionManager {
             // the destination is set before anything can be sent on the new connection.
             activation.own(this.rxStomp.serverHeaders$
                                                  .pipe(skip(this.rxStompHasConnected ? 1 : 0))
-                                                 .subscribe(async (value: StompHeaders) => {
+                                                 .subscribe((value: StompHeaders) => {
                 this.rxStompHasConnected = true
 
                 const connectedInfoJson: string | undefined = value[EventConstants.CONNECTED_INFO_HEADER]
                 if (connectedInfoJson == null) {
                     if (!this.initialConnectionSuccessful) {
-                        await this.deactivate(undefined, new Error('Server did not return proper data for successful login'))
+                        this.failConnection(activation, new Error('Server did not return proper data for successful login'))
                     }
                     return
                 }
@@ -251,7 +251,7 @@ export class StompConnectionManager {
                 const connectedInfo: ConnectedInfo = JSON.parse(connectedInfoJson)
                 if (connectedInfo.replyToId == null) {
                     if (!this.initialConnectionSuccessful) {
-                        await this.deactivate(undefined, new Error('Server did not return a replyToId for successful login'))
+                        this.failConnection(activation, new Error('Server did not return a replyToId for successful login'))
                     }
                     return
                 }
@@ -285,7 +285,7 @@ export class StompConnectionManager {
                         // reads the deactivation this causes before it schedules a reconnect.
                         if (options.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
                             this.maxConnectionAttemptsReached = true
-                            void this.failConnection(activation, new Error(
+                            this.failConnection(activation, new Error(
                                 'Max number of reconnection attempts reached',
                                 { cause: this.lastWebsocketError ?? undefined }
                             ))
@@ -324,16 +324,22 @@ export class StompConnectionManager {
         if(!usesPreparedSocket){
             const sessionCheckUrl = buildServerUrl(server, 'http') + SESSION_CHECK_PATH
             try {
-                const res = await fetch(sessionCheckUrl, { credentials: 'include' })
+                // bounded like the socket attempt, since stompjs starts its connectionTimeout only after this
+                // attempt, and the teardown of a deactivate() waits for the attempt to settle
+                const res = await fetch(sessionCheckUrl, {
+                    credentials: 'include',
+                    signal: AbortSignal.any([activation.signal, AbortSignal.timeout(this.CONNECTION_TIMEOUT)])
+                })
                 if(res.status === 401){
                     // Not signed in (or the session expired) — an expected outcome, not a
                     // failure; fail the connect and the app routes to /login from here.
-                    await this.failConnection(activation, new Error('Authentication required'))
+                    this.failConnection(activation, new Error('Authentication required'))
                     return
                 }
             } catch (e) {
-                // Couldn't reach the check (network/CORS) — treat as transient and let the socket
-                // try; the connection attempt that follows reports the real outcome.
+                // Couldn't reach the check in time (network, CORS, no answer) — treat as transient and let the
+                // socket try; the connection attempt that follows reports the real outcome. One the activation's
+                // end aborted stops at the ended check below.
                 this.debugLogger('Session check at %s failed: %O', sessionCheckUrl, e)
             }
         }
@@ -352,14 +358,14 @@ export class StompConnectionManager {
             try {
                 activation.preparedSocket = await userWebSocketFactory()
             } catch (e) {
-                await this.failConnection(activation, new Error('WebSocket factory failed', { cause: e }))
+                this.failConnection(activation, new Error('WebSocket factory failed', { cause: e }))
             }
         } else if (headerAuth) {
             // resolved on every attempt so short-lived credentials refresh each connect
             try {
                 const resolved = await credentialsResolver!.resolve(server)
                 if (resolved?.authHeaders == null) {
-                    await this.failConnection(activation, new Error(
+                    this.failConnection(activation, new Error(
                         'Credentials resolver no longer supplies auth headers: ' + credentialsResolver!.name))
                 } else {
                     // The Node/Bun WebSocket accepts a `headers` option that the DOM lib typings omit.
@@ -368,7 +374,7 @@ export class StompConnectionManager {
                     activation.preparedSocket = new WS(url, {headers: resolved.authHeaders})
                 }
             } catch (e) {
-                await this.failConnection(activation, new Error('Credential resolution failed', { cause: e }))
+                this.failConnection(activation, new Error('Credential resolution failed', { cause: e }))
             }
         }
         // a deactivate() landed while the socket was being produced; stompjs will not take it
@@ -437,13 +443,16 @@ export class StompConnectionManager {
     /**
      * Ends the activation the failure belongs to, which reports the connection's end with the failure as
      * its reason. The connection is already in its terminal state when the report goes out — no further
-     * reconnection attempts — so a subscriber reacts without racing the cleanup.
+     * reconnection attempts — so a subscriber reacts without racing the cleanup. The socket finishes closing
+     * afterwards, and the next {@link activate} or {@link deactivate} waits for it.
      */
-    private async failConnection(activation: StompActivation, err: Error): Promise<void> {
+    private failConnection(activation: StompActivation, err: Error): void {
         // deactivate() has ended and reported this activation; a failure of its attempt is nobody's news
         if (!activation.ended) {
             this.debugLogger('Connection failed, ending it: %O', err)
-            await this.deactivate(undefined, err)
+            // The teardown is held in this.teardown for whoever connects or disconnects next. A failing attempt
+            // must not wait for it: the teardown waits for the attempt to settle.
+            this.deactivate(undefined, err).catch(e => this.debugLogger('Closing the failed connection failed: %O', e))
         }
     }
 
