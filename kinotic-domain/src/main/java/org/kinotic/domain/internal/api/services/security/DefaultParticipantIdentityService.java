@@ -34,6 +34,7 @@ import org.kinotic.domain.internal.api.repositories.OrganizationMembershipReposi
 import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.internal.api.services.AbstractCrudService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -414,10 +415,10 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     private <T extends UserParticipantIdentity> Future<T> endUser(T user) {
         Future<Void> written;
         if (user instanceof ApplicationParticipantIdentity applicationUser) {
-            List<RelationshipTuple> inApplication = DomainUtil.applicationUserTuples(applicationUser);
+            List<RelationshipTuple> inApplication = AuthzGraphUtil.applicationUserTuples(applicationUser);
             written = relationships.ensure(AuthzStoreService.SYSTEM, List.of(inApplication.getFirst()))
-                                   .compose(v -> relationships.ensure(DomainUtil.authzApplicationId(applicationUser.getOrganizationId(),
-                                                                                                    applicationUser.getApplicationId()),
+                                   .compose(v -> relationships.ensure(AuthzGraphUtil.authzApplicationId(applicationUser.getOrganizationId(),
+                                                                                                        applicationUser.getApplicationId()),
                                                                       inApplication));
         } else {
             written = Future.succeededFuture();
@@ -646,7 +647,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
             String user = AuthzUtil.object(AuthzConstants.USER_TYPE, identity.getId());
             ParticipantScope scope = DomainUtil.scopeOf(identity);
             if (scope.applicationId() != null) {
-                ret = relationships.removeSubject(DomainUtil.authzApplicationId(scope.organizationId(), scope.applicationId()), user);
+                ret = relationships.removeSubject(AuthzGraphUtil.authzApplicationId(scope.organizationId(), scope.applicationId()), user);
             }
             ret = ret.compose(v -> relationships.removeSubject(AuthzStoreService.SYSTEM, user));
         }

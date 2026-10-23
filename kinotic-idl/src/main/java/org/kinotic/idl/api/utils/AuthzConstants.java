@@ -14,11 +14,20 @@ public final class AuthzConstants {
      */
     public static final String SCOPE_REFERENCE_PREFIX = "@";
 
+    /** The template references to the calling participant's scope: its organization, application and tenant. */
+    public static final String ORGANIZATION_ID_REFERENCE = SCOPE_REFERENCE_PREFIX + "organizationId";
+    public static final String APPLICATION_ID_REFERENCE = SCOPE_REFERENCE_PREFIX + "applicationId";
+    public static final String TENANT_ID_REFERENCE = SCOPE_REFERENCE_PREFIX + "tenantId";
+    public static final Set<String> SCOPE_REFERENCES = Set.of(ORGANIZATION_ID_REFERENCE, APPLICATION_ID_REFERENCE, TENANT_ID_REFERENCE);
+
     /** The type of the system itself, the root every organization sits under. */
     public static final String SYSTEM_TYPE = "system";
 
     /** The id of the one system object, so a check on the system needs no id from the request. */
     public static final String SYSTEM_OBJECT_ID = "kinotic";
+
+    /** The one system object, {@code system:kinotic}. */
+    public static final String SYSTEM_OBJECT = AuthzUtil.object(SYSTEM_TYPE, SYSTEM_OBJECT_ID);
 
     /** The kernel types every store has: the identities. */
     public static final String USER_TYPE = "user";

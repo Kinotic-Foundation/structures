@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
@@ -20,14 +19,13 @@ import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.model.IdentityCredential;
 import org.kinotic.domain.internal.api.repositories.IdentityCredentialRepository;
 import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.OrganizationMembershipRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
-import org.kinotic.idl.api.utils.AuthzConstants;
-import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -176,7 +174,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
                 // the graph before the record: a removal that fails leaves the member to be removed again
                 // the membership leaves the organization, every group and every grant, so an organization user
                 // joining again starts with none
-                .compose(v -> relationships.removeSubject(AuthzStoreService.SYSTEM, DomainUtil.authzMember(organizationUserId, organizationId)))
+                .compose(v -> relationships.removeSubject(AuthzStoreService.SYSTEM, AuthzGraphUtil.authzMember(organizationUserId, organizationId)))
                 // sync so the console's immediate re-query no longer shows the member
                 .compose(v -> membershipRepository.deleteByIdSync(OrganizationMembership.idOf(organizationUserId, organizationId)));
     }
@@ -185,19 +183,14 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
     // members reaches
     private Future<Void> joined(OrganizationMembership membership) {
         return membership.isEnabled()
-                ? relationships.ensure(AuthzStoreService.SYSTEM, List.of(memberOf(membership.getOrganizationUserId(), membership.getOrganizationId())))
+                ? relationships.ensure(AuthzStoreService.SYSTEM, List.of(AuthzGraphUtil.organizationMember(membership.getOrganizationUserId(), membership.getOrganizationId())))
                 : Future.succeededFuture();
     }
 
     private Future<Void> left(String organizationUserId, String organizationId) {
-        return relationships.remove(AuthzStoreService.SYSTEM, List.of(memberOf(organizationUserId, organizationId)));
+        return relationships.remove(AuthzStoreService.SYSTEM, List.of(AuthzGraphUtil.organizationMember(organizationUserId, organizationId)));
     }
 
-    private static RelationshipTuple memberOf(String organizationUserId, String organizationId) {
-        return new RelationshipTuple(DomainUtil.authzMember(organizationUserId, organizationId),
-                                     AuthzConstants.MEMBER_RELATION,
-                                     AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId));
-    }
 
     private Future<OrganizationMembership> requireMembership(String organizationUserId, String organizationId) {
         return findMembership(organizationUserId, organizationId).map(membership -> {

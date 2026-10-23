@@ -18,6 +18,7 @@ import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.schema.AnyC3Type;
 import org.kinotic.idl.api.schema.FunctionDefinition;
@@ -38,9 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,9 +98,9 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
 
         // the gateway refuses a runtime the application has not granted the role to
         assertRefused(DIRECTORY_SERVICE, "register", runtimeCaller, List.of(entry),
-                      AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES) + " on application:" + DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID));
+                      AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES) + " on application:" + AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID));
         await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         assertTrue(awaitUntil(() -> admitted(DIRECTORY_SERVICE, "register", runtimeCaller, List.of(entry))), "the runtime was never admitted");
 
         await(runAs(runtimeCaller, () -> directoryService.register(entry)));
@@ -167,7 +166,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         MachineParticipantIdentity runtime = runtime();
         Participant runtimeCaller = machine(runtime.getId());
         await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         String type = "report" + suffix();
         String name = "ReportService" + suffix();
         String service = ZONE + "~" + NAMESPACE + "." + name;
@@ -192,7 +191,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         MachineParticipantIdentity runtime = runtime();
         Participant runtimeCaller = machine(runtime.getId());
         await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.APPLICATION_RUNTIME_ROLE,
-                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
+                                 AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()), AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID))));
         String type = "report" + suffix();
         String name = "ReportService" + suffix();
         // the address @Publish() serves at: the zone and the name, no namespace between them
@@ -261,7 +260,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
     private boolean seeded(String roleId) {
         boolean ret;
         try {
-            ret = !await(relationships.read(DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID), AuthzUtil.roleObject(roleId))).isEmpty();
+            ret = !await(relationships.read(AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID), AuthzUtil.roleObject(roleId))).isEmpty();
         } catch (Exception e) {
             ret = false;
         }

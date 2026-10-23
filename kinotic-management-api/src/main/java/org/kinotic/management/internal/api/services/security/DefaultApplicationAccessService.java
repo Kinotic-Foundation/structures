@@ -11,7 +11,6 @@ import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
@@ -22,6 +21,7 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -38,7 +38,6 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     private final SecurityContext securityContext;
     private final ApplicationRepository applications;
     private final ParticipantIdentityService identities;
-    private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final EntityDefinitionRepository entityDefinitions;
     private final AuthzModelService models;
@@ -52,7 +51,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     public Future<List<Grant>> findGrants(String applicationId, Resource resource) {
         validate(applicationId, resource);
         return requireApplication(applicationId).compose(application -> grantsOn(application, resource))
-                                                .map(grants -> grants.stream().map(DomainUtil::localGrant).toList());
+                                                .map(grants -> grants.stream().map(AuthzGraphUtil::localGrant).toList());
     }
 
     @Override
@@ -64,7 +63,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
                 .compose(application -> requireGrantable(application, roleId, resource.type())
                         .compose(v -> requireSubject(application, subject))
                         .compose(v -> contained(application, resource))
-                        .compose(v -> relationships.bind(storeOf(application), roleId, userOf(subject), objectOf(application, resource))))
+                        .compose(v -> relationships.bind(storeOf(application), roleId, AuthzGraphUtil.authzSubject(subject), objectOf(application, resource))))
                 .map(bindingId -> new Grant(bindingId, roleId, subject, resource));
     }
 
@@ -83,12 +82,11 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         Validate.notBlank(permission, "permission cannot be blank");
         return requireApplication(applicationId).compose(application -> {
             String store = storeOf(application);
-            RelationshipTuple holds = new RelationshipTuple(userOf(subject), permission, objectOf(application, resource));
+            RelationshipTuple holds = new RelationshipTuple(AuthzGraphUtil.authzSubject(subject), permission, objectOf(application, resource));
             return requireSubject(application, subject)
                     .compose(v -> grantsOn(application, resource))
-                    .compose(grants -> stores.modelId(store)
-                                             .compose(modelId -> relationships.explain(store, modelId, subject, holds, edgesOf(resource), grants)))
-                    .map(DomainUtil::localExplanation);
+                    .compose(grants -> relationships.explain(store, subject, holds, edgesOf(resource), grants))
+                    .map(AuthzGraphUtil::localExplanation);
         });
     }
 
@@ -139,9 +137,9 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     // A tenant is placed under its application when it is first granted on, so the grant and every one made on
     // the application reach it; the application itself is where the graph starts
     private Future<Void> placed(Application application, String tenantId) {
-        return relationships.ensure(storeOf(application), List.of(new RelationshipTuple(applicationObjectOf(application),
-                                                                                        AuthzConstants.APPLICATION_TYPE,
-                                                                                        AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenantId))));
+        return relationships.ensure(storeOf(application),
+                                    List.of(AuthzGraphUtil.containment(AuthzGraphUtil.authzApplication(application.getOrganizationId(), application.getId()),
+                                                                       AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenantId))));
     }
 
     // A grant on a definition is made on one the application holds, which placed it in the store when it was created
@@ -156,7 +154,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
 
     private static List<RelationshipTuple> edgesOf(Resource resource) {
         return AuthzConstants.TENANT_DEFINITION_TYPE.equals(resource.type())
-                ? DomainUtil.tenantDefinitionEdges(AuthzUtil.definitionOf(resource.id()), AuthzUtil.tenantOf(resource.id()))
+                ? AuthzGraphUtil.tenantDefinitionEdges(AuthzUtil.definitionOf(resource.id()), AuthzUtil.tenantOf(resource.id()))
                 : List.of();
     }
 
@@ -203,15 +201,12 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     }
 
     private static String storeOf(Application application) {
-        return DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId());
+        return AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId());
     }
 
-    private static String applicationObjectOf(Application application) {
-        return AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
-    }
 
     private static String objectOf(Application application, Resource resource) {
-        return DomainUtil.authzObject(application.getOrganizationId(), resource);
+        return AuthzGraphUtil.authzObject(application.getOrganizationId(), resource);
     }
 
     private static void validate(String applicationId, Resource resource) {
@@ -234,7 +229,4 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 
-    private static String userOf(Subject subject) {
-        return AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id());
-    }
 }

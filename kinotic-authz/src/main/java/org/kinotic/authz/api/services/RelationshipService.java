@@ -119,24 +119,13 @@ public interface RelationshipService {
      * nothing twice.
      *
      * @param store     the store, named as its record is
-     * @param bindingId the binding's id, which {@link #unbind} revokes it by
+     * @param bindingId the binding's id, which {@link #revoke} revokes it by
      * @param roleId    the role granted
      * @param member    who holds it, in {@code type:id} form, or a userset such as {@code group:id#member}
      * @param object    the resource the grant is made on, in {@code type:id} form
      * @return completes when the binding is held
      */
     Future<Void> ensureBound(String store, String bindingId, String roleId, String member, String object);
-
-    /**
-     * Revokes a binding: its role, its members and its attachment to the object are removed, leaving nothing of
-     * it. A binding already gone leaves nothing to remove.
-     *
-     * @param store     the store, named as its record is
-     * @param bindingId the id {@link #bind} returned
-     * @param object    the resource the binding was made on, in {@code type:id} form
-     * @return completes when nothing of the binding is held
-     */
-    Future<Void> unbind(String store, String bindingId, String object);
 
     /**
      * Takes a resource out of a store: every grant made on it, and every relationship on it, such as its place
@@ -159,8 +148,8 @@ public interface RelationshipService {
     Future<Void> removeSubject(String store, String user);
 
     /**
-     * Revokes a grant where it was made: the binding is removed as {@link #unbind} removes it, once the store
-     * confirms it is attached to the object, so a grant's id guessed from elsewhere unbinds nothing.
+     * Revokes a grant where it was made: its role, its members and its attachment to the object are removed, once
+     * the store confirms it is attached to the object, so a grant's id guessed from elsewhere revokes nothing.
      *
      * @param store     the store, named as its record is
      * @param bindingId the grant's id, the one {@link #bind} returned
@@ -181,48 +170,33 @@ public interface RelationshipService {
     Future<List<Grant>> findGrants(String store, String object);
 
     /**
-     * Whether a grant gives a subject a permission: the grant's role bundles the permission or one implying it,
-     * and the grant was made to the subject, or to a group the subject is a member of.
-     *
-     * @param store      the store, named as its record is
-     * @param modelId    the model version to evaluate the role and a group's membership against
-     * @param grant      the grant
-     * @param subject    the user or group asked about
-     * @param permission the model name of the permission, such as {@code project_can_edit}
-     * @return true when the grant gives it
-     */
-    Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission);
-
-    /**
-     * Whether a subject holds a permission on an object, and which of the given grants give it, as
-     * {@link #explains} decides each. The answer reflects every write that completed before the call.
+     * Whether a subject holds a permission on an object, and which of the given grants give it: a grant gives it
+     * when its role bundles the permission or one implying it, and it was made to the subject, or to a group the
+     * subject is a member of. The answer reflects every write that completed before the call.
      *
      * @param store   the store, named as its record is
-     * @param modelId the model version to evaluate against
      * @param subject the user or group asked about
      * @param holds   the subject's user, the model name of the permission and the object
-     * @param context tuples held for this check only, as {@link #check(String, String, RelationshipTuple, Consistency, List)} takes them
+     * @param context tuples held for this check only, as {@link #check(String, RelationshipTuple, Consistency, List)} takes them
      * @param grants  the grants that reach the object
      * @return whether the permission is held, and the grants giving it as the store holds them
      */
     Future<AccessExplanation> explain(String store,
-                                      String modelId,
                                       Subject subject,
                                       RelationshipTuple holds,
                                       List<RelationshipTuple> context,
                                       List<Grant> grants);
 
     /**
-     * Whether the user holds the relation on the object, directly or through the model's rules.
+     * Whether the user holds the relation on the object, directly or through the rules of the model the store runs.
      *
      * @param store        the store, named as its record is
-     * @param modelId      the model version to evaluate against
      * @param relationship the user, relation and object to check
      * @param consistency  how current the answer must be
      * @return true when the relation is held
      */
-    default Future<Boolean> check(String store, String modelId, RelationshipTuple relationship, Consistency consistency) {
-        return check(store, modelId, relationship, consistency, List.of());
+    default Future<Boolean> check(String store, RelationshipTuple relationship, Consistency consistency) {
+        return check(store, relationship, consistency, List.of());
     }
 
     /**
@@ -230,24 +204,22 @@ public interface RelationshipService {
      * alone, beside the store's: the edges of an object the store keeps no tuples for.
      *
      * @param store        the store, named as its record is
-     * @param modelId      the model version to evaluate against
      * @param relationship the user, relation and object to check
      * @param consistency  how current the answer must be
      * @param context      tuples held for this check only
      * @return true when the relation is held; false when the store's newest model has no such relation or type
      */
-    Future<Boolean> check(String store, String modelId, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context);
+    Future<Boolean> check(String store, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context);
 
     /**
-     * The objects of a type on which the user holds the relation.
+     * The objects of a type on which the user holds the relation, by the rules of the model the store runs.
      *
      * @param store       the store, named as its record is
-     * @param modelId     the model version to evaluate against
      * @param user        who holds the relation
      * @param relation    the relation held
      * @param type        the type of object to list
      * @param consistency how current the answer must be
      * @return the objects, in {@code type:id} form; none when the store's newest model has no such relation or type
      */
-    Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, Consistency consistency);
+    Future<List<String>> listObjects(String store, String user, String relation, String type, Consistency consistency);
 }

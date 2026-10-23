@@ -17,13 +17,12 @@ import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.SignUpService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.internal.api.repositories.PendingSignUpRepository;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -38,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -94,8 +92,8 @@ public class OrganizationIsolationTests extends KinoticTestBase {
         Application theirs = await(runAs(other, () -> applicationService.createApplicationIfNotExist(name, "isolation", null)));
         String applicationId = ours.getId();
         assertEquals(applicationId, theirs.getId());
-        String ourStore = DomainUtil.authzApplicationId(TEST_ORG_ID, applicationId);
-        String theirStore = DomainUtil.authzApplicationId(otherOrganizationId, applicationId);
+        String ourStore = AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, applicationId);
+        String theirStore = AuthzGraphUtil.authzApplicationId(otherOrganizationId, applicationId);
 
         // a record and a store each
         assertEquals(TEST_ORG_ID, await(stores.findById(ourStore)).getOrganizationId());
@@ -104,13 +102,10 @@ public class OrganizationIsolationTests extends KinoticTestBase {
         assertNotNull(await(storeService.modelId(theirStore)));
 
         // the other organization's admin holds its own application and not ours
-        String systemModel = await(storeService.modelId(AuthzStoreService.SYSTEM));
-        String theirAdmin = DomainUtil.authzMember(other.getId(), otherOrganizationId);
-        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, systemModel,
-                                             new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, theirStore)),
+        String theirAdmin = AuthzGraphUtil.authzMember(other.getId(), otherOrganizationId);
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, theirStore)),
                                              Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, systemModel,
-                                              new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, ourStore)),
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(theirAdmin, "application_can_edit", AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, ourStore)),
                                               Consistency.HIGHER_CONSISTENCY)));
 
         // a tenant of the same id in each application, administered in ours

@@ -12,6 +12,7 @@ import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.security.ZoneRules;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.ZoneRulesService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -26,7 +27,6 @@ public class DefaultZoneRulesService implements ZoneRulesService {
     private static final String CAN_REGISTER_SERVICES = AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES);
 
     private final ZonePartitioningService zonePartitioningService;
-    private final AuthzStoreService stores;
     private final RelationshipService relationships;
 
     @Override
@@ -42,18 +42,17 @@ public class DefaultZoneRulesService implements ZoneRulesService {
                 && zonePartitioningService.hostsZone(DomainUtil.APP_ZONE_PREFIX + "." + organization.getOrganizationId())) {
             String organizationId = organization.getOrganizationId();
             String prefix = organizationId + ".";
-            hostedZones = stores.modelId(AuthzStoreService.SYSTEM)
-                                .compose(modelId -> relationships.listObjects(AuthzStoreService.SYSTEM, modelId,
-                                                                              DomainUtil.authzUser(participant),
-                                                                              CAN_REGISTER_SERVICES,
-                                                                              AuthzConstants.APPLICATION_TYPE,
-                                                                              Consistency.MINIMIZE_LATENCY))
-                                .map(applications -> applications.stream()
-                                                                 .map(AuthzUtil::idOf)
-                                                                 // a machine is granted only within its organization
-                                                                 .filter(id -> id.startsWith(prefix))
-                                                                 .map(id -> DomainUtil.applicationZone(organizationId, id.substring(prefix.length())))
-                                                                 .toList());
+            hostedZones = relationships.listObjects(AuthzStoreService.SYSTEM,
+                                                    AuthzGraphUtil.authzUser(participant),
+                                                    CAN_REGISTER_SERVICES,
+                                                    AuthzConstants.APPLICATION_TYPE,
+                                                    Consistency.MINIMIZE_LATENCY)
+                                       .map(applications -> applications.stream()
+                                                                        .map(AuthzUtil::idOf)
+                                                                        // a machine is granted only within its organization
+                                                                        .filter(id -> id.startsWith(prefix))
+                                                                        .map(id -> DomainUtil.applicationZone(organizationId, id.substring(prefix.length())))
+                                                                        .toList());
         } else {
             hostedZones = Future.succeededFuture(List.of());
         }

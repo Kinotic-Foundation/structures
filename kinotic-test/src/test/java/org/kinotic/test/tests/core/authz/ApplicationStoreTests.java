@@ -23,6 +23,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -38,9 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,7 +102,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
         // a definition created now, so the store is seen taking it as it is created
         EntityDefinition car = await(runAsOrganization(() -> testData.createCarEntityDefinitionIfNotExists("Store" + suffix()))).getLeft();
-        String store = DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
+        String store = AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
 
         AuthzStore record = await(stores.findById(store));
         assertEquals(TEST_ORG_ID, record.getOrganizationId());
@@ -238,7 +237,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         Tenant tenant = await(runAsOrganization(() -> tenantService.createTenantIfNotExist(TEST_APP_ID, "Hooli " + suffix(), "A customer")));
         ApplicationParticipantIdentity bob = endUser(TEST_APP_ID, tenant.getId());
         Subject subject = new Subject(SubjectType.USER, bob.getId());
-        String store = DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
+        String store = AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
         String tenantObject = AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenant.getId());
         String withinObject = AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenant.getId()));
         Grant onTenant = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzConstants.TENANT_TYPE, AuthzConstants.ADMIN),
@@ -258,7 +257,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
     @Test
     public void deletingAnApplicationDeletesItsStoreWithEverythingInIt() throws Exception {
         Application application = await(runAsOrganization(() -> applicationService.createApplicationIfNotExist("Store " + suffix(), "lifecycle", null)));
-        String store = DomainUtil.authzApplicationId(TEST_ORG_ID, application.getId());
+        String store = AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, application.getId());
 
         // created with its store, running the kernel model, and the record the worker keeps in step
         AuthzStore record = await(stores.findById(store));
@@ -282,7 +281,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
     public void anApplicationCreatedAgainIsPlacedInTheStoreItsNameWasLeft() throws Exception {
         String name = "Store " + suffix();
         Application application = await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(name, "lifecycle", null)));
-        String store = DomainUtil.authzApplicationId(TEST_ORG_ID, application.getId());
+        String store = AuthzGraphUtil.authzApplicationId(TEST_ORG_ID, application.getId());
         RelationshipTuple placed = new RelationshipTuple(AuthzConstants.EVERYONE, AuthzConstants.PLACED_RELATION, AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, store));
         await(runAsOrganization(() -> applicationService.deleteById(application.getId())));
 

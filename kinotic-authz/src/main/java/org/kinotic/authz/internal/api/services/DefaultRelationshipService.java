@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.UUID;
 
 @Slf4j
@@ -171,8 +169,8 @@ public class DefaultRelationshipService implements RelationshipService {
                        new RelationshipTuple(binding, AuthzConstants.ROLE_BINDING_RELATION, object));
     }
 
-    @Override
-    public Future<Void> unbind(String store, String bindingId, String object) {
+    // Removes a binding's role, its members and its attachment to the object, whatever of them the store holds
+    private Future<Void> unbind(String store, String bindingId, String object) {
         String binding = AuthzUtil.bindingObject(object, bindingId);
         return read(store, binding).compose(held -> {
             List<RelationshipTuple> tuples = new ArrayList<>(held);
@@ -292,33 +290,35 @@ public class DefaultRelationshipService implements RelationshipService {
 
     @Override
     public Future<AccessExplanation> explain(String store,
-                                             String modelId,
                                              Subject subject,
                                              RelationshipTuple holds,
                                              List<RelationshipTuple> context,
                                              List<Grant> grants) {
-        // an administrator asks after changing access, so the answer must not predate the change
-        Future<Boolean> allowed = check(store, modelId, holds, Consistency.HIGHER_CONSISTENCY, context);
-        List<Future<Boolean>> explains = grants.stream()
-                                               .map(grant -> explains(store, modelId, grant, subject, holds.relation()))
-                                               .toList();
-        return Future.all(explains).compose(results -> allowed.map(held -> {
-            List<Grant> through = new ArrayList<>();
-            for (int i = 0; i < grants.size(); i++) {
-                if (results.<Boolean>resultAt(i)) {
-                    through.add(grants.get(i));
+        return stores.modelId(store).compose(modelId -> {
+            // an administrator asks after changing access, so the answer must not predate the change
+            Future<Boolean> allowed = check(store, modelId, holds, Consistency.HIGHER_CONSISTENCY, context);
+            List<Future<Boolean>> explains = grants.stream()
+                                                   .map(grant -> explains(store, modelId, grant, subject, holds.relation()))
+                                                   .toList();
+            return Future.all(explains).compose(results -> allowed.map(held -> {
+                List<Grant> through = new ArrayList<>();
+                for (int i = 0; i < grants.size(); i++) {
+                    if (results.<Boolean>resultAt(i)) {
+                        through.add(grants.get(i));
+                    }
                 }
-            }
-            return new AccessExplanation(held, through);
-        }));
+                return new AccessExplanation(held, through);
+            }));
+        });
     }
 
-    @Override
-    public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
+    // Whether the grant gives the subject the permission: its role bundles the permission or one implying it, and it
+    // was made to the subject or to a group the subject is a member of
+    private Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
         // the role's relation also holds every permission a bundled one implies, which only a check evaluates
         Future<Boolean> bundled = check(store, modelId, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
                                                                               AuthzUtil.roleObject(grant.roleId())),
-                                        Consistency.HIGHER_CONSISTENCY);
+                                        Consistency.HIGHER_CONSISTENCY, List.of());
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);
@@ -327,7 +327,7 @@ public class DefaultRelationshipService implements RelationshipService {
                                                                  AuthzConstants.MEMBER_RELATION,
                                                                  AuthzUtil.object(AuthzConstants.GROUP_TYPE, grant.subject().id()));
             // an admin asks after changing a group, so the answer must not predate the change
-            member = check(store, modelId, membership, Consistency.HIGHER_CONSISTENCY);
+            member = check(store, modelId, membership, Consistency.HIGHER_CONSISTENCY, List.of());
         } else {
             member = Future.succeededFuture(false);
         }
@@ -335,7 +335,11 @@ public class DefaultRelationshipService implements RelationshipService {
     }
 
     @Override
-    public Future<Boolean> check(String store, String modelId, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context) {
+    public Future<Boolean> check(String store, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context) {
+        return stores.modelId(store).compose(modelId -> check(store, modelId, relationship, consistency, context));
+    }
+
+    private Future<Boolean> check(String store, String modelId, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context) {
         CheckRequestTupleKey key = new CheckRequestTupleKey().user(relationship.user())
                                                              .relation(relationship.relation())
                                                              ._object(relationship.object());
@@ -343,8 +347,8 @@ public class DefaultRelationshipService implements RelationshipService {
         for (RelationshipTuple tuple : context) {
             contextual.add(new TupleKey().user(tuple.user()).relation(tuple.relation())._object(tuple.object()));
         }
-        return check(store, modelId, key, contextual, consistency)
-                .recover(e -> onNewestModel(store, modelId, e, newest -> check(store, newest, key, contextual, consistency),
+        return requestCheck(store, modelId, key, contextual, consistency)
+                .recover(e -> onNewestModel(store, modelId, e, newest -> requestCheck(store, newest, key, contextual, consistency),
                                             false, relationship));
     }
 
@@ -385,7 +389,7 @@ public class DefaultRelationshipService implements RelationshipService {
         return e instanceof ApiException api && (api.getStatusCode() == 400 || api.getStatusCode() == 422);
     }
 
-    private Future<Boolean> check(String store, String modelId, CheckRequestTupleKey key, List<TupleKey> contextual, Consistency consistency) {
+    private Future<Boolean> requestCheck(String store, String modelId, CheckRequestTupleKey key, List<TupleKey> contextual, Consistency consistency) {
         CheckRequest request = new CheckRequest().authorizationModelId(modelId).consistency(preference(consistency)).tupleKey(key);
         if (!contextual.isEmpty()) {
             request.contextualTuples(new ContextualTupleKeys().tupleKeys(contextual));
@@ -394,14 +398,14 @@ public class DefaultRelationshipService implements RelationshipService {
     }
 
     @Override
-    public Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, Consistency consistency) {
-        return listObjects(store, modelId, user, relation, type, preference(consistency))
+    public Future<List<String>> listObjects(String store, String user, String relation, String type, Consistency consistency) {
+        return stores.modelId(store).compose(modelId -> requestListObjects(store, modelId, user, relation, type, preference(consistency))
                 .recover(e -> onNewestModel(store, modelId, e,
-                                            newest -> listObjects(store, newest, user, relation, type, preference(consistency)),
-                                            List.of(), user + " " + relation + " " + type));
+                                            newest -> requestListObjects(store, newest, user, relation, type, preference(consistency)),
+                                            List.of(), user + " " + relation + " " + type)));
     }
 
-    private Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, ConsistencyPreference consistency) {
+    private Future<List<String>> requestListObjects(String store, String modelId, String user, String relation, String type, ConsistencyPreference consistency) {
         ListObjectsRequest request = new ListObjectsRequest()
                 .authorizationModelId(modelId)
                 .consistency(consistency)

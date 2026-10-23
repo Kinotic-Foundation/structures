@@ -5,9 +5,8 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-import net.openhft.hashing.LongTupleHashFunction;
+import org.kinotic.core.api.utils.KinoticUtil;
 
-import java.nio.ByteBuffer;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.TreeSet;
@@ -31,8 +30,7 @@ final class ModelHash {
      * a changed one differs in.
      */
     static String of(JsonNode definition) {
-        long[] hash = LongTupleHashFunction.xx128().hashChars(canonical(definition).toString());
-        return HexFormat.of().formatHex(ByteBuffer.allocate(Long.BYTES * 2).putLong(hash[0]).putLong(hash[1]).array());
+        return HexFormat.of().formatHex(KinoticUtil.xx128(canonical(definition).toString()));
     }
 
     /**

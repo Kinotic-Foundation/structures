@@ -1,6 +1,5 @@
 package org.kinotic.test.tests.core.authz;
 
-import io.vertx.core.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AuthzModel;
@@ -26,6 +25,7 @@ import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIde
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -43,8 +43,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,9 +88,6 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     private RelationshipService relationships;
 
     @Autowired
-    private AuthzStoreService storeService;
-
-    @Autowired
     private AuthzStoreRepository stores;
 
     @Autowired
@@ -101,13 +96,10 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     @Autowired
     private ServiceDirectory serviceDirectory;
 
-    private String modelId;
-
     @BeforeEach
     public void awaitSystemModel() throws Exception {
         AuthzModel model = modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
         assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
-        modelId = await(storeService.modelId(AuthzStoreService.SYSTEM));
     }
 
     @Test
@@ -123,8 +115,8 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         // a STOMP request carries the arguments in order, a tool call by name; both name the project the same way
         authorize(PROJECT_SERVICE, "save", caller, List.of(a));
         authorizeToolCall(PROJECT_SERVICE, "save", caller, Map.of("entity", a));
-        assertRefused(PROJECT_SERVICE, "save", caller, List.of(b), "project:" + DomainUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
-        assertToolCallRefused(PROJECT_SERVICE, "save", caller, Map.of("entity", b), "project:" + DomainUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
+        assertRefused(PROJECT_SERVICE, "save", caller, List.of(b), "project:" + AuthzGraphUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
+        assertToolCallRefused(PROJECT_SERVICE, "save", caller, Map.of("entity", b), "project:" + AuthzGraphUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
 
         // editing implies reading, and a declared permission is checked on the project the argument names
         authorize(PROJECT_SERVICE, "findDependencies", caller, List.of(a.getId()));
@@ -207,14 +199,14 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     @Test
     public void theSeededOrganizationIsAdministeredByItsCreator() throws Exception {
         String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, SEEDED_ORGANIZATION_ID);
-        RelationshipTuple manages = new RelationshipTuple(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID),
+        RelationshipTuple manages = new RelationshipTuple(AuthzGraphUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID),
                                                           AuthzUtil.permissionName(AuthzConstants.ORGANIZATION_TYPE, "can_manage_access"),
                                                           organization);
-        assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.SYSTEM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
+        assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.SYSTEM, manages, Consistency.HIGHER_CONSISTENCY))),
                    "the creator was never bound as the administrator");
 
         // every server that started swept the organization and bound its creator under the same binding
-        Subject creator = new Subject(SubjectType.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
+        Subject creator = new Subject(SubjectType.USER, AuthzUtil.idOf(AuthzGraphUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
         long creatorBindings = await(relationships.findGrants(AuthzStoreService.SYSTEM, organization))
                 .stream()
                 .filter(grant -> AuthzConstants.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))

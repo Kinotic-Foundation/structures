@@ -45,8 +45,8 @@ final class AuthzDecorators {
     private static final Set<String> EDIT_VERBS = Set.of("save", "update", "set");
     private static final Set<String> DELETE_VERBS = Set.of("delete", "remove");
     private static final String CREATE_VERB = "create";
-    private static final Set<String> SCOPE_REFERENCES = Set.of("@organizationId", "@applicationId", "@tenantId");
-    private static final Set<String> SCOPED_PARENTS = Set.of("organization", "application", "tenant");
+    private static final Set<String> SCOPED_PARENTS = Set.of(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.APPLICATION_TYPE,
+                                                             AuthzConstants.TENANT_TYPE);
 
     private AuthzDecorators() {
     }
@@ -246,91 +246,115 @@ final class AuthzDecorators {
                                          List<ParameterDefinition> parameters,
                                          ConversionContext conversionContext,
                                          Map<String, AuthzPermissionResolver> resolvers) {
-        String type = resource.getResourceType();
-        String parent = resource.getParent();
         String where = functionName + " on " + declarer;
-        String declaredPermission = declared == null ? null : present(declared.getPermission());
-        String declaredResource = declared == null ? null : present(declared.getResource());
-        String declaredResourceId = declared == null ? null : present(declared.getResourceId());
-        String permissionResolver = declared == null ? null : present(declared.getPermissionResolver());
-        List<String> implies = declared == null || declared.getImplies() == null ? List.of() : declared.getImplies();
+        AuthzCheckC3Decorator ret;
         if (declared != null && declared.isUnchecked()) {
-            return uncheckedOf(where, declared);
-        }
-
-        // a resolver's permission, decided per request, else the function's own, else the one its service requires
-        // of every function, else its verb's
-        String permission;
-        List<AuthzPermissionChoice> possiblePermissions = List.of();
-        if (permissionResolver != null) {
-            if (declaredPermission != null || !implies.isEmpty()) {
-                throw new IllegalStateException("The function " + where + " declares a permission resolver beside a permission;"
-                                                        + " the resolver decides the permission");
-            }
-            possiblePermissions = possiblePermissionsOf(where, resolvers.get(permissionResolver), permissionResolver, parameters);
-            permission = null;
-        } else if (declaredPermission != null) {
-            permission = declaredPermission;
-        } else if (resource.getPermission() != null) {
-            permission = resource.getPermission();
+            ret = uncheckedOf(where, declared);
         } else {
-            permission = derivedPermission(functionName);
+            String permissionResolver = declared == null ? null : present(declared.getPermissionResolver());
+            List<String> implies = declared == null || declared.getImplies() == null ? List.of() : declared.getImplies();
+            List<AuthzPermissionChoice> possiblePermissions = List.of();
+            if (permissionResolver != null) {
+                if (present(declared.getPermission()) != null || !implies.isEmpty()) {
+                    throw new IllegalStateException("The function " + where + " declares a permission resolver beside a permission;"
+                                                            + " the resolver decides the permission");
+                }
+                possiblePermissions = possiblePermissionsOf(where, resolvers.get(permissionResolver), permissionResolver, parameters);
+            }
+            // a resolver decides the permission per request
+            String permission = permissionResolver == null ? permissionOf(where, resource, functionName, declared) : null;
+            CheckedResource checked = checkedResourceOf(where, resource, functionName, declared, parameters, conversionContext);
+            requireKnownReferences(where, checked.resourceId(), parameters);
+            for (String implied : implies) {
+                if (!AuthzUtil.isIdentifier(implied)) {
+                    throw new IllegalStateException("The implied permission '" + implied + "' of " + where
+                                                            + " is not a lowercase identifier");
+                }
+            }
+            ret = new AuthzCheckC3Decorator()
+                    .setResource(checked.resource())
+                    .setResourceId(checked.resourceId())
+                    .setPermissionResource(checked.permissionResource())
+                    .setPermission(permission)
+                    .setImplies(implies)
+                    .setPermissionResolver(permissionResolver)
+                    .setPossiblePermissions(possiblePermissions)
+                    .setConsistent(declared != null && declared.isConsistent());
         }
-        if (permission == null && permissionResolver == null) {
+        return ret;
+    }
+
+    // The function's own permission, else the one its service requires of every function, else its verb's
+    private static String permissionOf(String where, AuthzResourceC3Decorator resource, String functionName, AuthzCheckC3Decorator declared) {
+        String ret = declared == null ? null : present(declared.getPermission());
+        if (ret == null) {
+            ret = resource.getPermission() != null ? resource.getPermission() : derivedPermission(functionName);
+        }
+        if (ret == null) {
             throw new IllegalStateException("The function " + where + " derives no permission from its name;"
                                                     + " declare one with @AuthzCheck(permission = ...)");
         }
-        if (permission != null && !AuthzUtil.isIdentifier(permission)) {
-            throw new IllegalStateException("The permission '" + permission + "' of " + where
-                                                    + " is not a lowercase identifier");
+        if (!AuthzUtil.isIdentifier(ret)) {
+            throw new IllegalStateException("The permission '" + ret + "' of " + where + " is not a lowercase identifier");
         }
+        return ret;
+    }
 
-        String checkedResource;
-        String resourceId;
-        String permissionResource;
+    // The resource a function is checked on, from what it declares, else the object its service names, else the
+    // parent for a create or a function naming no resource of the service's type, else that resource
+    private static CheckedResource checkedResourceOf(String where,
+                                                     AuthzResourceC3Decorator resource,
+                                                     String functionName,
+                                                     AuthzCheckC3Decorator declared,
+                                                     List<ParameterDefinition> parameters,
+                                                     ConversionContext conversionContext) {
+        String type = resource.getResourceType();
+        String parent = resource.getParent();
+        String declaredResource = declared == null ? null : present(declared.getResource());
+        String declaredResourceId = declared == null ? null : present(declared.getResourceId());
+        CheckedResource ret;
         if (declaredResource != null || declaredResourceId != null) {
-            checkedResource = declaredResource != null ? declaredResource : type;
-            resourceId = declaredResourceId != null ? declaredResourceId
-                    : resourceIdOf(checkedResource, type, parent, parameters, conversionContext);
+            String checked = declaredResource != null ? declaredResource : type;
+            String resourceId = declaredResourceId != null ? declaredResourceId
+                    : resourceIdOf(checked, type, parent, parameters, conversionContext);
             // a check made on the parent is about this type within it, as a derived create or listing is;
             // any other explicit resource is a permission of that resource itself
-            permissionResource = checkedResource.equals(parent) ? type : checkedResource;
+            ret = new CheckedResource(checked, resourceId, checked.equals(parent) ? type : checked);
         } else if (resource.getResourceId() != null) {
             // the service names the object its functions act on; what a function's arguments carry, a role, a
             // member, a machine, is what it acts with, not a resource of the service's type
-            checkedResource = type;
-            resourceId = resource.getResourceId();
-            permissionResource = type;
+            ret = new CheckedResource(type, resource.getResourceId(), type);
         } else if (CREATE_VERB.equals(leadingWord(functionName))) {
-            checkedResource = requireParent(parent, where, "a create");
-            resourceId = parentId(parent, parameters, conversionContext);
-            permissionResource = type;
+            ret = new CheckedResource(requireParent(parent, where, "a create"), parentId(parent, parameters, conversionContext), type);
         } else {
             String ownId = resourceId(type, parameters, conversionContext);
             if (ownId != null) {
-                checkedResource = type;
-                resourceId = ownId;
+                ret = new CheckedResource(type, ownId, type);
             } else {
                 // no resource of this type is named, so the check is on the collection within the parent
-                checkedResource = requireParent(parent, where, "a function naming no resource id");
-                resourceId = parentId(parent, parameters, conversionContext);
+                ret = new CheckedResource(requireParent(parent, where, "a function naming no resource id"),
+                                          parentId(parent, parameters, conversionContext),
+                                          type);
             }
-            permissionResource = type;
         }
-        if (resourceId == null) {
+        if (ret.resourceId() == null) {
             throw new IllegalStateException("The function " + where + " names no resource to check;"
                                                     + " declare one with @AuthzCheck(resourceId = ...)");
         }
-
         // a type is a constant: which resource of it a function acts on is named by the id alone
-        if (!AuthzUtil.isIdentifier(checkedResource)) {
-            throw new IllegalStateException("The checked resource's type '" + checkedResource + "' of " + where
+        if (!AuthzUtil.isIdentifier(ret.resource())) {
+            throw new IllegalStateException("The checked resource's type '" + ret.resource() + "' of " + where
                                                     + " is not a lowercase identifier");
         }
+        return ret;
+    }
+
+    // Every reference of the resource id names the caller's scope or a parameter the request carries
+    private static void requireKnownReferences(String where, String resourceId, List<ParameterDefinition> parameters) {
         for (String reference : AuthzUtil.templateReferences(resourceId)) {
             String parameterName = AuthzUtil.referencedParameter(reference);
             if (parameterName == null) {
-                if (!SCOPE_REFERENCES.contains(reference)) {
+                if (!AuthzConstants.SCOPE_REFERENCES.contains(reference)) {
                     throw new IllegalStateException("The template '" + resourceId + "' of " + where
                                                             + " references the unknown scope value '" + reference + "'");
                 }
@@ -340,23 +364,6 @@ final class AuthzDecorators {
                                                         + "', which is not a parameter the request carries");
             }
         }
-
-        for (String implied : implies) {
-            if (!AuthzUtil.isIdentifier(implied)) {
-                throw new IllegalStateException("The implied permission '" + implied + "' of " + where
-                                                        + " is not a lowercase identifier");
-            }
-        }
-
-        return new AuthzCheckC3Decorator()
-                .setResource(checkedResource)
-                .setResourceId(resourceId)
-                .setPermissionResource(permissionResource)
-                .setPermission(permission)
-                .setImplies(implies)
-                .setPermissionResolver(permissionResolver)
-                .setPossiblePermissions(possiblePermissions)
-                .setConsistent(declared != null && declared.isConsistent());
     }
 
     // The permissions the named resolver may require, once the function carries every parameter it reads

@@ -3,24 +3,23 @@ package org.kinotic.system.internal.api.services.deployment;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.management.api.model.deployment.MicroserviceDeployment;
 import org.kinotic.management.api.model.Project;
-import org.kinotic.management.api.model.deployment.ProjectDeployment;
 import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -132,21 +131,21 @@ public class ProjectDeployIdentityService {
     // Each role is bound under a binding id of the machine's own, so issuing credentials again binds each role once
     private Future<Void> bind(String machineId, MachineType machineType, Project project) {
         String machine = AuthzUtil.object(AuthzConstants.USER_TYPE, machineId);
-        String projectObject = AuthzUtil.object(AuthzConstants.PROJECT_TYPE,
-                                                DomainUtil.authzId(AuthzConstants.PROJECT_TYPE, project.getOrganizationId(), project.getId()));
-        String application = DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId());
-        List<Map.Entry<String, String>> grants = new ArrayList<>();
-        grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.PROJECT_TYPE, AuthzConstants.EDITOR), projectObject));
+        String projectObject = AuthzGraphUtil.authzObject(project.getOrganizationId(), new Resource(AuthzConstants.PROJECT_TYPE, project.getId()));
+        String application = AuthzGraphUtil.authzApplication(project.getOrganizationId(), project.getApplicationId());
+        // each role to the object it is granted on
+        Map<String, String> grants = new LinkedHashMap<>();
+        grants.put(AuthzUtil.roleId(AuthzConstants.PROJECT_TYPE, AuthzConstants.EDITOR), projectObject);
         if (machineType == MachineType.APP_RUNTIME) {
-            grants.add(Map.entry(AuthzConstants.APPLICATION_RUNTIME_ROLE, application));
-            grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.ADMIN), application));
+            grants.put(AuthzConstants.APPLICATION_RUNTIME_ROLE, application);
+            grants.put(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.ADMIN), application);
         } else {
-            grants.add(Map.entry(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), application));
+            grants.put(AuthzUtil.roleId(AuthzConstants.ENTITY_DEFINITION_TYPE, AuthzConstants.EDITOR), application);
         }
         Future<Void> ret = Future.succeededFuture();
-        for (Map.Entry<String, String> grant : grants) {
+        for (Map.Entry<String, String> grant : grants.entrySet()) {
             String roleId = grant.getKey();
-            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.SYSTEM, roleId + "-of-" + machineId,
+            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.SYSTEM, AuthzUtil.roleBindingIdOf(roleId, machineId),
                                                              roleId, machine, grant.getValue()));
         }
         return ret;

@@ -96,6 +96,17 @@ public final class AuthzUtil {
     }
 
     /**
+     * The id of the one binding of a role to a user, for a binding made under an id its writer chooses, so every
+     * writer making it binds it once: {@code project.editor-of-<userId>}.
+     *
+     * @param roleId the role the binding grants
+     * @param userId the id of the user it is made to
+     */
+    public static String roleBindingIdOf(String roleId, String userId) {
+        return roleId + "-of-" + userId;
+    }
+
+    /**
      * The display name of a built-in role, from its type and level: {@code project.editor} is
      * {@code Project Editor}, {@code vm_node.registrar} is {@code Vm Node Registrar}.
      */

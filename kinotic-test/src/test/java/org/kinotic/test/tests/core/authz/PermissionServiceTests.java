@@ -1,6 +1,5 @@
 package org.kinotic.test.tests.core.authz;
 
-import io.vertx.core.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AccessExplanation;
@@ -28,7 +27,7 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
@@ -42,9 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,9 +73,6 @@ public class PermissionServiceTests extends KinoticTestBase {
     private RelationshipService relationships;
 
     @Autowired
-    private AuthzStoreService storeService;
-
-    @Autowired
     private AuthzStoreRepository stores;
 
     @Autowired
@@ -87,15 +81,12 @@ public class PermissionServiceTests extends KinoticTestBase {
     @Autowired
     private ServiceDirectory serviceDirectory;
 
-    private String modelId;
-
     // The master ticks every two seconds, then writes the model and brings the built-in roles in step, which
     // every grant below binds on
     @BeforeEach
     public void awaitSystemModel() throws Exception {
         AuthzModel model = modelGenerator.systemModel(await(serviceDirectory.findSystemDefinitions()));
         assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
-        modelId = await(storeService.modelId(AuthzStoreService.SYSTEM));
     }
 
     @Test
@@ -170,11 +161,11 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzConstants.SYSTEM_SUPPORT_ROLE, onOrganization))));
 
         // and by the engine for a writer that skips the service
-        String user = DomainUtil.authzMember(subject.id(), TEST_ORG_ID);
+        String user = AuthzGraphUtil.authzMember(subject.id(), TEST_ORG_ID);
         assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.ORGANIZATION_ADMIN_ROLE, user,
-                                                                              DomainUtil.authzObject(TEST_ORG_ID, onProject))));
+                                                                              AuthzGraphUtil.authzObject(TEST_ORG_ID, onProject))));
         assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.SYSTEM, AuthzConstants.SYSTEM_SUPPORT_ROLE, user,
-                                                                              DomainUtil.authzObject(TEST_ORG_ID, onOrganization))));
+                                                                              AuthzGraphUtil.authzObject(TEST_ORG_ID, onOrganization))));
     }
 
     @Test
@@ -260,9 +251,8 @@ public class PermissionServiceTests extends KinoticTestBase {
     }
 
     private boolean held(UserParticipantIdentity member, String permission, Resource resource) throws Exception {
-        return await(relationships.check(AuthzStoreService.SYSTEM, modelId,
-                                         new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID), permission,
-                                                               DomainUtil.authzObject(TEST_ORG_ID, resource)),
+        return await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(AuthzGraphUtil.authzMember(member.getId(), TEST_ORG_ID), permission,
+                                                               AuthzGraphUtil.authzObject(TEST_ORG_ID, resource)),
                                          Consistency.HIGHER_CONSISTENCY));
     }
 

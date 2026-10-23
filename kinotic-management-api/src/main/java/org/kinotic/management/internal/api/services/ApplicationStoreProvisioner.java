@@ -19,7 +19,7 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.repositories.ProjectRepository;
@@ -80,7 +80,7 @@ public class ApplicationStoreProvisioner {
      * @return a future completing once the store holds nothing of the tenant
      */
     public Future<Void> removeTenant(Tenant tenant) {
-        String store = DomainUtil.authzApplicationId(tenant.getOrganizationId(), tenant.getApplicationId());
+        String store = AuthzGraphUtil.authzApplicationId(tenant.getOrganizationId(), tenant.getApplicationId());
         String tenantObject = AuthzUtil.object(AuthzConstants.TENANT_TYPE, tenant.getId());
         return eachPage(pageable -> entityDefinitions.findAllForApplication(tenant.getApplicationId(), tenant.getOrganizationId(), pageable),
                         page -> {
@@ -103,12 +103,12 @@ public class ApplicationStoreProvisioner {
      * @return the containment tuple
      */
     public static RelationshipTuple containment(String organizationId, String applicationId) {
-        return DomainUtil.containment(AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId),
-                                      DomainUtil.authzApplication(organizationId, applicationId));
+        return AuthzGraphUtil.containment(AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId),
+                                          AuthzGraphUtil.authzApplication(organizationId, applicationId));
     }
 
     private Future<Void> provision(Application application, AuthzModel kernel) {
-        String store = DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId());
+        String store = AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId());
         return stores.ensureStore(store)
                      .compose(id -> records.findById(store))
                      .compose(record -> {
@@ -144,7 +144,7 @@ public class ApplicationStoreProvisioner {
     private Future<Void> placeHoldings(Application application) {
         String organizationId = application.getOrganizationId();
         String applicationId = application.getId();
-        String store = DomainUtil.authzApplicationId(organizationId, applicationId);
+        String store = AuthzGraphUtil.authzApplicationId(organizationId, applicationId);
         return eachPage(pageable -> projects.findAllForApplication(applicationId, organizationId, pageable),
                         page -> relationships.ensure(SYSTEM, page.stream().map(DefaultProjectService::containment).toList()))
                 .compose(v -> eachPage(pageable -> entityDefinitions.findAllForApplication(applicationId, organizationId, pageable),
@@ -157,7 +157,7 @@ public class ApplicationStoreProvisioner {
                                            List<RelationshipTuple> endUsers = new ArrayList<>();
                                            List<RelationshipTuple> inApplication = new ArrayList<>();
                                            page.forEach(user -> {
-                                               List<RelationshipTuple> tuples = DomainUtil.applicationUserTuples(user);
+                                               List<RelationshipTuple> tuples = AuthzGraphUtil.applicationUserTuples(user);
                                                endUsers.add(tuples.getFirst());
                                                inApplication.addAll(tuples);
                                            });

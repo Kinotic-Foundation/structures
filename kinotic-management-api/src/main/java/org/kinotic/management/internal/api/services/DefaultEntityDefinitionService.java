@@ -27,6 +27,7 @@ import org.kinotic.management.api.services.EntityDefinitionService;
 import org.kinotic.management.internal.api.services.security.DefaultPermissionService;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.cache.CacheEvictionEvent;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -167,12 +168,12 @@ public class DefaultEntityDefinitionService extends AbstractProjectScopedService
     }
 
     private static String storeOf(EntityDefinition entityDefinition) {
-        return DomainUtil.authzApplicationId(entityDefinition.getOrganizationId(), entityDefinition.getApplicationId());
+        return AuthzGraphUtil.authzApplicationId(entityDefinition.getOrganizationId(), entityDefinition.getApplicationId());
     }
 
     static RelationshipTuple containment(EntityDefinition entityDefinition) {
-        return DomainUtil.containment(DomainUtil.authzApplication(entityDefinition.getOrganizationId(), entityDefinition.getApplicationId()),
-                                      AuthzUtil.object(EntityDefinitionService.RESOURCE_TYPE, entityDefinition.getId()));
+        return AuthzGraphUtil.containment(AuthzGraphUtil.authzApplication(entityDefinition.getOrganizationId(), entityDefinition.getApplicationId()),
+                                          AuthzUtil.object(EntityDefinitionService.RESOURCE_TYPE, entityDefinition.getId()));
     }
 
     @WithSpan
