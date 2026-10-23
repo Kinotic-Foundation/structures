@@ -67,11 +67,11 @@ final class WorkDispatcher {
 
     private long lowWatermark;
     private long nextToLease;
-    // Requests waiting for the low watermark to be stored and replicated up to at least their key. One save runs at a
-    // time, of the latest watermark, so a later watermark is never overwritten by an earlier one, and the watermarks
-    // done while a save runs share the next one.
-    private final TreeMap<Long, List<Promise<Void>>> awaitingSave = new TreeMap<>();
-    private boolean saving;
+    // One save of the low watermark runs at a time, of the watermark when it began, so a later watermark is never
+    // overwritten by an earlier one. The watermark only grows, so the running save answers every request made before
+    // it began, and the requests made while it runs share the next save. Each is null while there is none.
+    private Promise<Void> saving;
+    private Promise<Void> nextSave;
     private boolean stopped;
     private long lastRequest = System.currentTimeMillis();
     // When the low watermark was last stored, which keeps the group's position from expiring
@@ -209,8 +209,12 @@ final class WorkDispatcher {
             pending.promise().tryFail(notOwner);
         });
         pendingLeases.clear();
-        awaitingSave.values().forEach(waiting -> waiting.forEach(promise -> promise.tryFail(notOwner)));
-        awaitingSave.clear();
+        if (saving != null) {
+            saving.tryFail(notOwner);
+        }
+        if (nextSave != null) {
+            nextSave.tryFail(notOwner);
+        }
     }
 
     // Records the retention deleted are gone for the group too, so its position moves up to the shard's start
@@ -389,19 +393,22 @@ final class WorkDispatcher {
 
     // Completes once the group's position, at least the current low watermark, is stored and on a majority of copies
     private Future<Void> saveLowWatermark() {
-        Promise<Void> ret = Promise.promise();
         if (stopped) {
-            ret.fail(ShardOwner.changedOwner(shardId));
-        } else {
-            awaitingSave.computeIfAbsent(lowWatermark, watermark -> new ArrayList<>()).add(ret);
-            saveNext();
+            return Future.failedFuture(ShardOwner.changedOwner(shardId));
         }
-        return ret.future();
+        if (nextSave == null) {
+            nextSave = Promise.promise();
+        }
+        Future<Void> ret = nextSave.future();
+        saveNext();
+        return ret;
     }
 
     private void saveNext() {
-        if (!saving && !stopped && !awaitingSave.isEmpty()) {
-            saving = true;
+        if (saving == null && nextSave != null && !stopped) {
+            Promise<Void> save = nextSave;
+            saving = save;
+            nextSave = null;
             long watermark = lowWatermark;
             lastSaved = System.currentTimeMillis();
             vertx.<Void>executeBlocking(() -> {
@@ -410,20 +417,13 @@ final class WorkDispatcher {
                  }, false)
                  .compose(v -> replicateOffsets.get())
                  .onComplete(ar -> {
-                     saving = false;
-                     if (ar.failed()) {
+                     saving = null;
+                     if (ar.succeeded()) {
+                         save.tryComplete();
+                     } else {
                          log.warn("Saving the position of group {} on {} failed", groupName, shardId, ar.cause());
+                         save.tryFail(ar.cause());
                      }
-                     // The watermark only grows, so the save answers every request waiting for one no later than it
-                     Map<Long, List<Promise<Void>>> answered = awaitingSave.headMap(watermark, true);
-                     answered.values().forEach(waiting -> waiting.forEach(promise -> {
-                         if (ar.succeeded()) {
-                             promise.tryComplete();
-                         } else {
-                             promise.tryFail(ar.cause());
-                         }
-                     }));
-                     answered.clear();
                      saveNext();
                  });
         }

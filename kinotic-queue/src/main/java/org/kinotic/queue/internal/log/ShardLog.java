@@ -509,7 +509,7 @@ public final class ShardLog implements AutoCloseable {
         if (ret == null || ret.isSealed()) {
             // Named uniquely, so a new segment never opens the directory of one deleted at the same offset
             String name = nextOffset + "-" + UUID.randomUUID();
-            ShardSegment created = ShardSegment.open(directory.resolve(name), nextOffset, -1, System.currentTimeMillis(), 0);
+            ShardSegment created = new ShardSegment(directory.resolve(name), nextOffset, -1, System.currentTimeMillis(), 0);
             List<ShardSegment> updated = new ArrayList<>(segments);
             updated.add(created);
             try {
@@ -632,11 +632,11 @@ public final class ShardLog implements AutoCloseable {
                 String[] fields = line.trim().split(" ");
                 switch (fields[0]) {
                     case START_LINE -> start = new LogStart(Long.parseLong(fields[1]), Long.parseLong(fields[2]));
-                    case SEGMENT_LINE -> opened.add(ShardSegment.open(directory.resolve(fields[1]),
-                                                                      Long.parseLong(fields[2]),
-                                                                      Long.parseLong(fields[3]),
-                                                                      Long.parseLong(fields[4]),
-                                                                      Long.parseLong(fields[5])));
+                    case SEGMENT_LINE -> opened.add(new ShardSegment(directory.resolve(fields[1]),
+                                                                     Long.parseLong(fields[2]),
+                                                                     Long.parseLong(fields[3]),
+                                                                     Long.parseLong(fields[4]),
+                                                                     Long.parseLong(fields[5])));
                     case MEMBERSHIP_LINE -> {
                         long offset = Long.parseLong(fields[1]);
                         Membership membership = new Membership(storageIds(fields[3]), storageIds(fields[4]));

@@ -51,7 +51,7 @@ final class ShardSegment implements AutoCloseable {
     // The offset before which every entry is forced to disk
     private long syncedEnd;
     private volatile long nextOffset;
-    private volatile long sealedEnd = -1;
+    private volatile long sealedEnd;
     /**
      * About how many bytes the segment's entries take: the {@link ShardEntry#size sizes} of the entries written to it,
      * counting ones past its sealed end.
@@ -59,7 +59,15 @@ final class ShardSegment implements AutoCloseable {
     @Getter
     private volatile long bytes;
 
-    private ShardSegment(Path directory, long startOffset, long createdMillis, long bytes) {
+    /**
+     * Opens the segment stored in {@code directory}, creating it empty when there is none.
+     *
+     * @param sealedEnd     the offset the segment was sealed at, or -1 when it is open for writes; a sealed segment
+     *                      ends at the end of the entries on disk when they end before it
+     * @param createdMillis when the segment was created, in epoch milliseconds
+     * @param bytes         the size of the entries written to the segment so far, as last recorded
+     */
+    ShardSegment(Path directory, long startOffset, long sealedEnd, long createdMillis, long bytes) {
         this.directory = directory;
         this.startOffset = startOffset;
         this.createdMillis = createdMillis;
@@ -72,23 +80,10 @@ final class ShardSegment implements AutoCloseable {
         this.cycle = queue.cycle();
         long lastIndex = queue.lastIndex();
         this.nextOffset = lastIndex >= 0 ? startOffset + rollCycle.toSequenceNumber(lastIndex) + 1 : startOffset;
+        // Entries a crash lost before reaching the disk may have been sealed in the manifest, which is always forced
+        this.sealedEnd = sealedEnd >= 0 ? Math.min(sealedEnd, nextOffset) : -1;
         this.syncedEnd = nextOffset;
         this.appender = queue.createAppender();
-    }
-
-    /**
-     * Opens the segment stored in {@code directory}, creating it empty when there is none.
-     *
-     * @param sealedEnd     the offset the segment was sealed at, or -1 when it is open for writes; a sealed segment
-     *                      ends at the end of the entries on disk when they end before it
-     * @param createdMillis when the segment was created, in epoch milliseconds
-     * @param bytes         the size of the entries written to the segment so far, as last recorded
-     */
-    static ShardSegment open(Path directory, long startOffset, long sealedEnd, long createdMillis, long bytes) {
-        ShardSegment ret = new ShardSegment(directory, startOffset, createdMillis, bytes);
-        // Entries a crash lost before reaching the disk may have been sealed in the manifest, which is always forced
-        ret.sealedEnd = sealedEnd >= 0 ? Math.min(sealedEnd, ret.nextOffset) : -1;
-        return ret;
     }
 
     /**
