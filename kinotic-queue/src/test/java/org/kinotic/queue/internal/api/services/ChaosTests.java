@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
 import org.apache.commons.io.FileUtils;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -252,21 +253,17 @@ public class ChaosTests {
         }
         workload.close();
 
-        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(120);
-        while (!received.containsAll(workload.acknowledged()) && System.currentTimeMillis() < deadline) {
-            Thread.sleep(100);
-        }
+        Awaitility.await().atMost(Duration.ofSeconds(120)).untilAsserted(() -> {
+            Set<Integer> missing = new HashSet<>(workload.acknowledged());
+            missing.removeAll(received);
+            assertTrue(missing.isEmpty(), "acknowledged records no worker received: " + missing);
+        });
         // A record whose accept did not take effect comes back once its lease expires, so a worker quiet for longer
         // than a lease has finished every record
-        while (System.currentTimeMillis() - lastReceived.get() < 2 * LEASE.toMillis()) {
-            Thread.sleep(100);
-        }
+        Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> System.currentTimeMillis() - lastReceived.get() >= 2 * LEASE.toMillis());
         working.interrupt();
         working.join();
         await(worker.close());
-        Set<Integer> missing = new HashSet<>(workload.acknowledged());
-        missing.removeAll(received);
-        assertTrue(missing.isEmpty(), "acknowledged records no worker received: " + missing);
         TestWorker checker = TestWorker.start(node("a").vertx(), node("a").queueService(), QUEUE, "jobs",
                                               new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofMinutes(1)));
         assertNull(checker.poll(3_000), "the group still had records to work after its worker finished");

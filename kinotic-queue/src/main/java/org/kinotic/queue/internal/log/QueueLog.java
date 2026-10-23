@@ -246,11 +246,18 @@ public final class QueueLog implements AutoCloseable {
     }
 
     /**
-     * @return a number that grows whenever a position stored for the shard changes
+     * @return the version of the positions on the shard; reading it never waits for a write to the positions
      */
-    public long positionsVersion(int shard) {
-        // Both versions only grow, so their sum grows whenever either repository changes
-        return consumerOffsets.version(shard) + groupOffsets.version(shard);
+    public PositionsVersion positionsVersion(int shard) {
+        return new PositionsVersion(consumerOffsets.version(shard), groupOffsets.version(shard));
+    }
+
+    /**
+     * @return the positions on the shard that changed after the version and have not expired
+     */
+    public ShardPositions positionsChangedSince(int shard, PositionsVersion version) {
+        return new ShardPositions(consumerOffsets.findChangedSince(shard, version.consumers()),
+                                  groupOffsets.findChangedSince(shard, version.groups()));
     }
 
     /**

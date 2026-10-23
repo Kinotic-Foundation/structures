@@ -48,8 +48,9 @@ public interface QueueService {
      * queue retries after a lost reply or a change of the shard's owner is written once, as long as fewer than 64 MB
      * of other records were written to the shard after it. Completes once a majority of the shard's copies has the
      * record, and fails when the queue does not exist, the key and payload together exceed
-     * {@code kinotic.maxEventPayloadSize} bytes, or no majority of copies is reachable. A failed append may still
-     * have been written, so retrying it can deliver the record twice.
+     * {@code kinotic.maxEventPayloadSize} bytes, or no majority of copies is reachable. Fails at once when the appends
+     * this node holds for the shard, waiting for their turn, already take 64 MB, as they do while the shard has no
+     * owner. A failed append may still have been written, so retrying it can deliver the record twice.
      *
      * @param queue   the queue name
      * @param key     decides the shard the record is written to

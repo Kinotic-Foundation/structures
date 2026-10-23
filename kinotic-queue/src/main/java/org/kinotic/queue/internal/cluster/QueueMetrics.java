@@ -1,21 +1,21 @@
 package org.kinotic.queue.internal.cluster;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.MultiGauge;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This node's queue meters, registered with Micrometer's global registry, which the platform exports. Counters count
@@ -27,22 +27,8 @@ public class QueueMetrics {
 
     private final MeterRegistry registry = Metrics.globalRegistry;
     private final Set<Meter> eventMeters = ConcurrentHashMap.newKeySet();
-    private final MultiGauge consumerLag = MultiGauge.builder("kinotic.queue.consumer.lag")
-                                                     .description("Committed records the consumer has not committed, over the shards this node owns")
-                                                     .register(registry);
-    private final MultiGauge groupLag = MultiGauge.builder("kinotic.queue.group.lag")
-                                                  .description("Committed records the worker group has not finished, over the shards this node owns")
-                                                  .register(registry);
-    private final MultiGauge replicaLag = MultiGauge.builder("kinotic.queue.replica.lag")
-                                                    .description("Records the copies on a node lack, over the shards this node owns")
-                                                    .register(registry);
-    private final MultiGauge size = MultiGauge.builder("kinotic.queue.size")
-                                              .description("About how much space the copies of the queue's shards on this node take")
-                                              .baseUnit("bytes")
-                                              .register(registry);
-    private final MultiGauge shardsOwned = MultiGauge.builder("kinotic.queue.shards.owned")
-                                                     .description("The shards of the queue this node owns")
-                                                     .register(registry);
+    // The value each gauge reads, by gauge name and then tags; a gauge is registered once and changes value in place
+    private final Map<String, Map<Tags, AtomicLong>> gauges = new HashMap<>();
 
     /**
      * Counts records whose append this node acknowledged as their shard's owner, and how long the batch took.
@@ -85,16 +71,19 @@ public class QueueMetrics {
      * @param sizes        bytes by queue
      * @param owned        shards owned by queue
      */
-    public void refresh(Map<String, Map<String, Long>> consumerLags,
-                        Map<String, Map<String, Long>> groupLags,
-                        Map<String, Map<String, Long>> replicaLags,
-                        Map<String, Long> sizes,
-                        Map<String, Long> owned) {
-        consumerLag.register(rows(consumerLags, "consumer"), true);
-        groupLag.register(rows(groupLags, "group"), true);
-        replicaLag.register(rows(replicaLags, "replica"), true);
-        size.register(rows(sizes), true);
-        shardsOwned.register(rows(owned), true);
+    public synchronized void refresh(Map<String, Map<String, Long>> consumerLags,
+                                     Map<String, Map<String, Long>> groupLags,
+                                     Map<String, Map<String, Long>> replicaLags,
+                                     Map<String, Long> sizes,
+                                     Map<String, Long> owned) {
+        refreshGauge("kinotic.queue.consumer.lag", "Committed records the consumer has not committed, over the shards this node owns",
+                     null, rows(consumerLags, "consumer"));
+        refreshGauge("kinotic.queue.group.lag", "Committed records the worker group has not finished, over the shards this node owns",
+                     null, rows(groupLags, "group"));
+        refreshGauge("kinotic.queue.replica.lag", "Records the copies on a node lack, over the shards this node owns",
+                     null, rows(replicaLags, "replica"));
+        refreshGauge("kinotic.queue.size", "About how much space the copies of the queue's shards on this node take", "bytes", rows(sizes));
+        refreshGauge("kinotic.queue.shards.owned", "The shards of the queue this node owns", null, rows(owned));
     }
 
     /**
@@ -123,15 +112,35 @@ public class QueueMetrics {
         counter.increment(amount);
     }
 
-    private static List<MultiGauge.Row<?>> rows(Map<String, Map<String, Long>> values, String tag) {
-        List<MultiGauge.Row<?>> ret = new ArrayList<>();
-        values.forEach((queue, byName) -> byName.forEach((name, value) -> ret.add(MultiGauge.Row.of(Tags.of("queue", queue, tag, name), value))));
+    // Sets the gauge of each row to its value, registering the gauges of new rows and removing those of rows gone
+    private void refreshGauge(String name, String description, String baseUnit, Map<Tags, Long> rows) {
+        Map<Tags, AtomicLong> values = gauges.computeIfAbsent(name, gauge -> new HashMap<>());
+        rows.forEach((tags, value) -> values.computeIfAbsent(tags, row -> {
+            AtomicLong ret = new AtomicLong();
+            Gauge.builder(name, ret, AtomicLong::get).description(description).baseUnit(baseUnit).tags(row).strongReference(true).register(registry);
+            return ret;
+        }).set(value));
+        values.keySet().removeIf(tags -> {
+            boolean gone = !rows.containsKey(tags);
+            if (gone) {
+                Gauge gauge = registry.find(name).tags(tags).gauge();
+                if (gauge != null) {
+                    registry.remove(gauge);
+                }
+            }
+            return gone;
+        });
+    }
+
+    private static Map<Tags, Long> rows(Map<String, Map<String, Long>> values, String tag) {
+        Map<Tags, Long> ret = new HashMap<>();
+        values.forEach((queue, byName) -> byName.forEach((name, value) -> ret.put(Tags.of("queue", queue, tag, name), value)));
         return ret;
     }
 
-    private static List<MultiGauge.Row<?>> rows(Map<String, Long> byQueue) {
-        List<MultiGauge.Row<?>> ret = new ArrayList<>();
-        byQueue.forEach((queue, value) -> ret.add(MultiGauge.Row.of(Tags.of("queue", queue), value)));
+    private static Map<Tags, Long> rows(Map<String, Long> byQueue) {
+        Map<Tags, Long> ret = new HashMap<>();
+        byQueue.forEach((queue, value) -> ret.put(Tags.of("queue", queue), value));
         return ret;
     }
 }

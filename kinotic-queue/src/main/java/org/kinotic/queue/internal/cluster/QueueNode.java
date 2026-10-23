@@ -56,6 +56,8 @@ import java.util.function.Function;
 public class QueueNode {
 
     private static final long RECONCILE_INTERVAL_MS = 500;
+    // How often the shards placed on this node are computed again when nothing they depend on is seen to change
+    private static final long FULL_RECONCILE_INTERVAL_MS = 10_000;
     private static final long LIFECYCLE_TIMEOUT_SECONDS = 30;
     private static final long METRICS_INTERVAL_MS = 5_000;
 
@@ -73,6 +75,11 @@ public class QueueNode {
     private long reconcileTimer;
     private long metricsTimer;
     private boolean reconciling;
+    // What the last applied assignment was computed from: the placement, the queues and the shards this node served
+    private long reconciledPlacement = -1;
+    private long reconciledDefinitions = -1;
+    private Set<ShardId> reconciledActing = Set.of();
+    private long reconciledAt;
     private volatile boolean stopped;
 
     @PostConstruct
@@ -233,6 +240,8 @@ public class QueueNode {
         }, false));
     }
 
+    // Computes the shards placed on this node again when the placement, the queues or the shards this node serves
+    // changed, an owner stopped, or a while passed
     private void reconcile() {
         if (!reconciling) {
             reconciling = true;
@@ -242,20 +251,35 @@ public class QueueNode {
                     acting.add(shardId);
                 }
             });
-            vertx.executeBlocking(() -> assignedShards(acting), false)
-                 .compose(assignments -> {
-                     // A reconcile that finishes after stop() would start owners nothing stops
+            long placementVersion = placement.version();
+            long definitionsVersion = definitions.version();
+            long now = System.currentTimeMillis();
+            boolean due = placementVersion != reconciledPlacement
+                    || definitionsVersion != reconciledDefinitions
+                    || !acting.equals(reconciledActing)
+                    || owners.values().stream().anyMatch(ShardOwner::stopped)
+                    || now - reconciledAt >= FULL_RECONCILE_INTERVAL_MS;
+            Future<Void> assigned = Future.succeededFuture();
+            if (due) {
+                assigned = vertx.executeBlocking(() -> assignedShards(acting), false).map(assignments -> {
+                    // A reconcile that finishes after stop() would start owners nothing stops
+                    if (!stopped) {
+                        applyAssignments(assignments);
+                        reconciledPlacement = placementVersion;
+                        reconciledDefinitions = definitionsVersion;
+                        reconciledActing = acting;
+                        reconciledAt = now;
+                    }
+                    return null;
+                });
+            }
+            // Once the deleted queues' owners stopped, their copies go
+            assigned.compose(v -> vertx.executeBlocking(() -> {
                      if (!stopped) {
-                         applyAssignments(assignments);
+                         localQueues.syncIfDue();
                      }
-                     // Once the deleted queues' owners stopped, their copies go
-                     return vertx.executeBlocking(() -> {
-                         if (!stopped) {
-                             localQueues.syncIfDue();
-                         }
-                         return null;
-                     }, false);
-                 })
+                     return null;
+                 }, false))
                  .onComplete(ar -> {
                      reconciling = false;
                      if (ar.failed()) {

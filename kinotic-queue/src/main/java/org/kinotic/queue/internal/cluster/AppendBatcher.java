@@ -17,10 +17,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 /**
  * Sends one client's appends to each shard in batches, one batch per shard at a time and in the order the appends
@@ -32,6 +34,9 @@ final class AppendBatcher {
 
     private static final int MAX_BATCH_RECORDS = 1_000;
     private static final long MAX_BATCH_BYTES = 1024 * 1024;
+    // Appends to a shard with no owner wait up to the client's retry deadline; past this many bytes waiting for the
+    // shard, an append fails at once rather than holding more memory
+    private static final long MAX_WAITING_BYTES = 64L * 1024 * 1024;
 
     private final Context context;
     private final Function<AppendRequest, Future<List<Long>>> send;
@@ -79,10 +84,18 @@ final class AppendBatcher {
                 StoredQueue stored = append.queue().result();
                 int shard = QueueLog.shardOf(append.key(), stored.definition().shardCount());
                 ShardAppendQueue shardQueue = queues.computeIfAbsent(stored.shardId(shard), ShardAppendQueue::new);
-                shardQueue.getWaiting().add(append);
-                sendNext(shardQueue);
+                long size = ShardEntry.size(append.key(), append.payload());
+                if (shardQueue.getWaitingBytes() + size > MAX_WAITING_BYTES) {
+                    complete(List.of(append), index -> Future.failedFuture(new IllegalStateException(
+                            "Appends to " + shardQueue.getShardId() + " waiting to be sent already take " + shardQueue.getWaitingBytes()
+                                    + " bytes; the shard may have no owner")));
+                } else {
+                    shardQueue.getWaiting().add(append);
+                    shardQueue.setWaitingBytes(shardQueue.getWaitingBytes() + size);
+                    sendNext(shardQueue);
+                }
             } else {
-                complete(append, Future.failedFuture(append.queue().cause()));
+                complete(List.of(append), index -> Future.failedFuture(append.queue().cause()));
             }
         }
         if (appends.isEmpty()) {
@@ -104,6 +117,7 @@ final class AppendBatcher {
                 batch.add(append);
                 bytes += ShardEntry.size(append.key(), append.payload());
             }
+            shardQueue.setWaitingBytes(shardQueue.getWaitingBytes() - bytes);
             long sequence = shardQueue.getNextSequence();
             shardQueue.setNextSequence(sequence + 1);
             shardQueue.setInFlight(true);
@@ -112,21 +126,25 @@ final class AppendBatcher {
             send.apply(new AppendRequest(shardId, producerId, sequence, records))
                 .onComplete(ar -> {
                     shardQueue.setInFlight(false);
-                    for (int i = 0; i < batch.size(); i++) {
-                        int index = i;
-                        complete(batch.get(i), ar.map(offsets -> new QueuePosition(shardId.queue(), shardId.shard(), offsets.get(index))));
-                    }
+                    complete(batch, index -> ar.map(offsets -> new QueuePosition(shardId.queue(), shardId.shard(), offsets.get(index))));
                     sendNext(shardQueue);
                 });
         }
     }
 
-    private static void complete(QueuedAppend append, AsyncResult<QueuePosition> result) {
-        Runnable completion = () -> append.promise().handle(result);
-        if (append.caller() != null) {
-            append.caller().runOnContext(v -> completion.run());
-        } else {
-            completion.run();
+    // Completes each append with its result, on its caller's context, with one task per context
+    private static void complete(List<QueuedAppend> appends, IntFunction<AsyncResult<QueuePosition>> result) {
+        Map<Context, List<Runnable>> byCaller = new LinkedHashMap<>();
+        for (int i = 0; i < appends.size(); i++) {
+            QueuedAppend append = appends.get(i);
+            AsyncResult<QueuePosition> appended = result.apply(i);
+            Runnable completion = () -> append.promise().handle(appended);
+            if (append.caller() != null) {
+                byCaller.computeIfAbsent(append.caller(), caller -> new ArrayList<>()).add(completion);
+            } else {
+                completion.run();
+            }
         }
+        byCaller.forEach((caller, completions) -> caller.runOnContext(v -> completions.forEach(Runnable::run)));
     }
 }

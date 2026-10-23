@@ -42,11 +42,29 @@ public final class Wire {
         this.position = Byte.BYTES;
     }
 
+    // About the bytes an entry takes besides its key and payload: offset, epoch, kind, lengths and batch slot
+    private static final int ENTRY_OVERHEAD_BYTES = 64;
+
     /**
      * @return an empty message, to append values to with the static methods
      */
     public static Buffer buffer() {
         return Buffer.buffer().appendByte(VERSION);
+    }
+
+    /**
+     * @return an empty message with room for about {@code expectedBytes}, so appending them does not grow it over and
+     * over
+     */
+    public static Buffer buffer(int expectedBytes) {
+        return Buffer.buffer(Byte.BYTES + expectedBytes).appendByte(VERSION);
+    }
+
+    /**
+     * @return an empty message with room for the entries
+     */
+    public static Buffer buffer(List<ShardEntry> entries) {
+        return buffer(entries.stream().mapToInt(entry -> entry.size() + ENTRY_OVERHEAD_BYTES).sum());
     }
 
     public static Buffer appendString(Buffer buffer, String value) {

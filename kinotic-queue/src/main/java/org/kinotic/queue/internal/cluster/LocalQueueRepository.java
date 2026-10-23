@@ -98,7 +98,7 @@ public class LocalQueueRepository {
      * @throws QueueFailureException with {@link QueueFailure#NO_QUEUE} when the queue was deleted
      */
     public QueueLog openOrCreate(ShardId shardId) {
-        return openOrCreate(definitions.requireStored(shardId.queue(), shardId.incarnation()));
+        return openOrCreate(definitions.requireKnown(shardId.queue(), shardId.incarnation()));
     }
 
     /**
@@ -106,7 +106,7 @@ public class LocalQueueRepository {
      * @throws QueueFailureException with {@link QueueFailure#NO_QUEUE} when the queue was deleted
      */
     public QueueLog findQueue(ShardId shardId) {
-        StoredQueue queue = definitions.requireStored(shardId.queue(), shardId.incarnation());
+        StoredQueue queue = definitions.requireKnown(shardId.queue(), shardId.incarnation());
         QueueLog ret = logs.get(queue.name());
         if (ret != null && !ret.incarnation().equals(queue.incarnation())) {
             ret = null;
@@ -165,9 +165,14 @@ public class LocalQueueRepository {
     private void sync() throws IOException {
         Path dataDirectory = Path.of(properties.getQueue().getDataDirectory());
         Map<String, String> recorded = QueueLog.findDeletedQueues(dataDirectory);
-        Map<String, String> deleted = new HashMap<>(definitions.findDeleted());
+        Map<String, String> clusterDeleted = definitions.findDeleted();
+        Map<String, String> deleted = new HashMap<>(clusterDeleted);
         deleted.putAll(recorded);
-        definitions.saveDeleted(deleted);
+        if (!clusterDeleted.keySet().containsAll(recorded.keySet())) {
+            Map<String, String> unrecorded = new HashMap<>(recorded);
+            unrecorded.keySet().removeAll(clusterDeleted.keySet());
+            definitions.saveDeleted(unrecorded);
+        }
         if (!recorded.keySet().containsAll(deleted.keySet())) {
             QueueLog.saveDeletedQueues(dataDirectory, deleted);
         }
@@ -179,7 +184,7 @@ public class LocalQueueRepository {
                     QueueDefinition definition = QueueLog.findDefinition(directory);
                     String incarnation = QueueLog.findIncarnation(directory);
                     if (definition != null && incarnation != null) {
-                        String current = deleted.containsKey(incarnation) ? null : definitions.saveIfAbsent(definition, incarnation);
+                        String current = deleted.containsKey(incarnation) ? null : storedIncarnation(definition, incarnation);
                         if (!incarnation.equals(current)) {
                             delete(definition.name(), incarnation);
                         }
@@ -189,6 +194,13 @@ public class LocalQueueRepository {
         }
         deletedQueues = deleted.keySet();
         syncedAt = System.currentTimeMillis();
+    }
+
+    // The incarnation the cluster stores under the copy's name, storing the copy's own when it stores none; read first,
+    // since the cluster usually stores the queue already and a store goes to the name's primary node
+    private String storedIncarnation(QueueDefinition definition, String incarnation) {
+        StoredQueue stored = definitions.findStored(definition.name());
+        return stored != null ? stored.incarnation() : definitions.saveIfAbsent(definition, incarnation);
     }
 
     // Consumers and groups that stopped using a queue leave positions, which expire unused

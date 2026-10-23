@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
+import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
 /**
@@ -191,11 +193,16 @@ final class ShardSegment implements AutoCloseable {
     }
 
     /**
-     * Reads entries starting at {@code offset}, stopping at the segment's end, at {@code maxEntries}, or once
-     * {@code maxBytes} is reached. Always returns the entry at {@code offset} when the segment holds it, however large.
+     * Reads entries starting at {@code offset}, stopping at the segment's end, at {@code maxEntries}, or once the sizes
+     * of the entries read reach {@code maxBytes}. Always returns the entry at {@code offset} when the segment holds it,
+     * however large.
+     *
+     * @param decoder decodes what is read of an entry from its fields after its offset, given that offset:
+     *                {@link #decodeEntry}, {@link #decodeEpoch} or {@link #decodeSlot}
+     * @param size    the size an entry read counts toward {@code maxBytes}
      */
-    List<ShardEntry> read(long offset, int maxEntries, long maxBytes) {
-        List<ShardEntry> ret = new ArrayList<>();
+    <T> List<T> read(long offset, int maxEntries, long maxBytes, BiFunction<Long, Bytes<?>, T> decoder, ToLongFunction<T> size) {
+        List<T> ret = new ArrayList<>();
         long end = end();
         if (offset >= startOffset && offset < end) {
             try (ExcerptTailer tailer = queue.createTailer()) {
@@ -203,12 +210,53 @@ final class ShardSegment implements AutoCloseable {
                 long expected = offset;
                 long bytesRead = 0;
                 while (expected < end && ret.size() < maxEntries && bytesRead < maxBytes) {
-                    ShardEntry entry = readNext(tailer, expected);
+                    T entry = readNext(tailer, expected, decoder);
                     ret.add(entry);
-                    bytesRead += entry.size();
+                    bytesRead += size.applyAsLong(entry);
                     expected++;
                 }
             }
+        }
+        return ret;
+    }
+
+    /**
+     * Decodes an entry in full.
+     */
+    static ShardEntry decodeEntry(long offset, Bytes<?> bytes) {
+        long epoch = bytes.readLong();
+        return switch (EntryKind.fromCode(bytes.readByte())) {
+            case RECORD -> {
+                String key = bytes.readUtf8();
+                byte[] payload = new byte[bytes.readInt()];
+                bytes.read(payload);
+                yield ShardEntry.record(offset, epoch, key, payload, readSlot(bytes));
+            }
+            case MEMBERSHIP -> ShardEntry.membership(offset, epoch, new Membership(readStorageIds(bytes), readStorageIds(bytes)));
+            case MARKER -> ShardEntry.marker(offset, epoch);
+        };
+    }
+
+    /**
+     * Decodes an entry's epoch, and nothing else of it.
+     */
+    static long decodeEpoch(long offset, Bytes<?> bytes) {
+        return bytes.readLong();
+    }
+
+    /**
+     * Decodes where a record sat in the batch it was appended in, and the record's size, without copying its payload.
+     */
+    static RecordSlot decodeSlot(long offset, Bytes<?> bytes) {
+        bytes.readSkip(Long.BYTES);
+        RecordSlot ret;
+        if (EntryKind.fromCode(bytes.readByte()) == EntryKind.RECORD) {
+            String key = bytes.readUtf8();
+            int payloadLength = bytes.readInt();
+            bytes.readSkip(payloadLength);
+            ret = new RecordSlot(offset, readSlot(bytes), ShardEntry.size(key, payloadLength));
+        } else {
+            ret = new RecordSlot(offset, null, 0);
         }
         return ret;
     }
@@ -237,7 +285,7 @@ final class ShardSegment implements AutoCloseable {
         return rollCycle.toIndex(cycle.getValue(), offset - cycle.getKey());
     }
 
-    private ShardEntry readNext(ExcerptTailer tailer, long expected) {
+    private <T> T readNext(ExcerptTailer tailer, long expected, BiFunction<Long, Bytes<?>, T> decoder) {
         try (DocumentContext dc = tailer.readingDocument()) {
             if (!dc.isPresent()) {
                 throw new IllegalStateException("Offset " + expected + " is missing from " + directory);
@@ -248,19 +296,12 @@ final class ShardSegment implements AutoCloseable {
             if (offset != expected) {
                 throw new IllegalStateException("Expected offset " + expected + " in " + directory + " but read " + offset);
             }
-            long epoch = bytes.readLong();
-            return switch (EntryKind.fromCode(bytes.readByte())) {
-                case RECORD -> {
-                    String key = bytes.readUtf8();
-                    byte[] payload = new byte[bytes.readInt()];
-                    bytes.read(payload);
-                    BatchSlot slot = new BatchSlot(bytes.readLong(), bytes.readLong(), bytes.readInt(), bytes.readInt());
-                    yield ShardEntry.record(offset, epoch, key, payload, slot);
-                }
-                case MEMBERSHIP -> ShardEntry.membership(offset, epoch, new Membership(readStorageIds(bytes), readStorageIds(bytes)));
-                case MARKER -> ShardEntry.marker(offset, epoch);
-            };
+            return decoder.apply(offset, bytes);
         }
+    }
+
+    private static BatchSlot readSlot(Bytes<?> bytes) {
+        return new BatchSlot(bytes.readLong(), bytes.readLong(), bytes.readInt(), bytes.readInt());
     }
 
     private static void writeStorageIds(Bytes<?> bytes, List<String> storageIds) {

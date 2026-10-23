@@ -36,7 +36,7 @@ public record ReplicateRequest(ShardId shardId, ReplicationBatch batch, ShardPos
     }
 
     public Buffer toBuffer() {
-        Buffer ret = Wire.appendShardId(Wire.buffer(), shardId)
+        Buffer ret = Wire.appendShardId(Wire.buffer(batch.entries()), shardId)
                          .appendLong(batch.epoch())
                          .appendLong(batch.prevOffset())
                          .appendLong(batch.prevEpoch())

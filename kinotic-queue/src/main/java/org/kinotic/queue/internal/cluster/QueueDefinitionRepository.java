@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Stores the definition of every queue, shared by all nodes of the cluster, with the incarnation that tells a queue
@@ -34,12 +35,15 @@ public class QueueDefinitionRepository {
     private static final String DEFINITION_CACHE = "kinotic_queue_definitions";
     private static final String DELETED_CACHE = "kinotic_queue_deleted";
 
-    // "<shard count> <incarnation>" by queue name
+    // "<shard count> <incarnation>" by queue name; a string, since every server node holds this replicated cache, also
+    // nodes without the queue module's classes
     private final IgniteCache<String, String> cache;
     // Queue name by incarnation, for every deleted queue
     private final IgniteCache<String, String> deleted;
     // The queues as this node last saw them, kept current by changesSeen, so a lookup on an event loop never blocks
     private final ConcurrentHashMap<String, String> known = new ConcurrentHashMap<>();
+    // Counts the queues this node saw created or deleted
+    private final AtomicLong version = new AtomicLong();
     private final QueryCursor<Cache.Entry<String, String>> changesSeen;
 
     public QueueDefinitionRepository(Ignite ignite) {
@@ -53,6 +57,7 @@ public class QueueDefinitionRepository {
             } else {
                 known.put(event.getKey(), event.getValue());
             }
+            version.incrementAndGet();
         }));
         this.changesSeen = cache.query(changes);
     }
@@ -114,6 +119,22 @@ public class QueueDefinitionRepository {
     }
 
     /**
+     * @return a number that grows whenever this node sees a queue created or deleted
+     */
+    public long version() {
+        return version.get();
+    }
+
+    /**
+     * As {@link #requireStored}, but without reading the cluster's store when this node last saw the queue of the
+     * incarnation; a queue deleted that this node has not seen deleted yet passes.
+     */
+    public StoredQueue requireKnown(String name, String incarnation) {
+        StoredQueue known = findKnown(name);
+        return known != null && known.incarnation().equals(incarnation) ? known : requireStored(name, incarnation);
+    }
+
+    /**
      * @return the queue with the name as the cluster stores it now
      * @throws QueueFailureException with {@link QueueFailure#NO_QUEUE} when the cluster stores no queue of the name
      *                               and incarnation, which was then deleted
@@ -154,6 +175,7 @@ public class QueueDefinitionRepository {
             deleted.put(incarnation(value), name);
             cache.remove(name, value);
             known.remove(name);
+            version.incrementAndGet();
         }
         return value != null ? toStored(name, value) : null;
     }
@@ -183,15 +205,14 @@ public class QueueDefinitionRepository {
      * @param deletedQueues queue names by incarnation
      */
     public void saveDeleted(Map<String, String> deletedQueues) {
-        Map<String, String> unrecorded = new HashMap<>(deletedQueues);
-        unrecorded.keySet().removeAll(findDeleted().keySet());
-        deleted.putAll(unrecorded);
+        deleted.putAll(deletedQueues);
         // A queue made known again by a node that did not know of its deletion
-        unrecorded.forEach((incarnation, name) -> {
+        deletedQueues.forEach((incarnation, name) -> {
             String value = cache.get(name);
             if (value != null && incarnation(value).equals(incarnation)) {
                 cache.remove(name, value);
                 known.remove(name);
+                version.incrementAndGet();
             }
         });
     }
@@ -202,6 +223,7 @@ public class QueueDefinitionRepository {
         String existing = cache.getAndPutIfAbsent(definition.name(), value);
         String ret = existing != null ? existing : value;
         known.put(definition.name(), ret);
+        version.incrementAndGet();
         return ret;
     }
 

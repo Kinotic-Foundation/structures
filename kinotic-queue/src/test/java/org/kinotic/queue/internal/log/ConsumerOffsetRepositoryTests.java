@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -71,6 +72,19 @@ public class ConsumerOffsetRepositoryTests {
             positions.saveAll(0, Map.of("billing", new ConsumerPosition(85, System.currentTimeMillis())));
 
             assertEquals(85, positions.findNextOffset("billing", 0));
+        }
+    }
+
+    @Test
+    public void onlyPositionsChangedAfterAVersionAreFoundAsChanged() {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+            positions.save("billing", 0, 10);
+            long version = positions.version(0);
+            positions.save("audit", 0, 5);
+
+            assertEquals(Set.of("audit"), positions.findChangedSince(0, version).keySet());
+            assertEquals(Set.of("billing", "audit"), positions.findChangedSince(0, -1).keySet());
+            assertTrue(positions.findChangedSince(0, positions.version(0)).isEmpty());
         }
     }
 

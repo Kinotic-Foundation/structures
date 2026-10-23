@@ -2,6 +2,7 @@ package org.kinotic.queue.internal.api.services;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.api.model.QueuePosition;
 import org.kinotic.queue.api.model.QueueRecord;
@@ -16,7 +17,10 @@ import org.kinotic.queue.internal.cluster.message.OffsetQuery;
 import org.kinotic.queue.internal.log.ShardEntry;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 
 /**
@@ -39,6 +43,11 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
     // The next offset to fetch per shard
     private final long[] fetchOffsets;
     private final long[] committedNextOffsets;
+    // The next offset of the commit on its way per shard, or zero when none is; one commit per shard is on its way at a
+    // time, of the highest offset asked for, which answers every commit asked for up to it
+    private final long[] committingNextOffsets;
+    // Commits asked for per shard and not yet answered, by the next offset each stores
+    private final List<TreeMap<Long, List<Promise<Void>>>> awaitingCommit;
     // The offset after the last record handed to the handler, per shard; a commit may not go past it
     private final long[] deliveredNextOffsets;
     private long pendingBytes;
@@ -58,6 +67,8 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
         this.consumerName = consumerName;
         this.fetchOffsets = fetchOffsets;
         this.committedNextOffsets = committedNextOffsets;
+        this.committingNextOffsets = new long[committedNextOffsets.length];
+        this.awaitingCommit = IntStream.range(0, committedNextOffsets.length).mapToObj(shard -> new TreeMap<Long, List<Promise<Void>>>()).toList();
         this.deliveredNextOffsets = fetchOffsets.clone();
     }
 
@@ -121,13 +132,39 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
         int shard = position.shard();
         long nextOffset = position.offset() + 1;
         if (nextOffset > committedNextOffsets[shard]) {
-            // Raised only once stored, so a commit retried after a failure is sent again
-            ret = client.commitOffset(new OffsetCommit(queue.shardId(shard), consumerName, nextOffset))
-                        .onSuccess(v -> committedNextOffsets[shard] = Math.max(committedNextOffsets[shard], nextOffset));
+            Promise<Void> promise = Promise.promise();
+            awaitingCommit.get(shard).computeIfAbsent(nextOffset, offset -> new ArrayList<>()).add(promise);
+            commitNext(shard);
+            ret = promise.future();
         } else {
             ret = Future.succeededFuture();
         }
         return ret;
+    }
+
+    private void commitNext(int shard) {
+        TreeMap<Long, List<Promise<Void>>> awaiting = awaitingCommit.get(shard);
+        if (committingNextOffsets[shard] == 0 && !awaiting.isEmpty()) {
+            long nextOffset = awaiting.lastKey();
+            committingNextOffsets[shard] = nextOffset;
+            client.commitOffset(new OffsetCommit(queue.shardId(shard), consumerName, nextOffset)).onComplete(ar -> {
+                committingNextOffsets[shard] = 0;
+                // Raised only once stored, so a commit retried after a failure is sent again
+                if (ar.succeeded()) {
+                    committedNextOffsets[shard] = Math.max(committedNextOffsets[shard], nextOffset);
+                }
+                Map<Long, List<Promise<Void>>> answered = awaiting.headMap(nextOffset, true);
+                answered.values().forEach(promises -> promises.forEach(promise -> {
+                    if (ar.succeeded()) {
+                        promise.complete();
+                    } else {
+                        promise.fail(ar.cause());
+                    }
+                }));
+                answered.clear();
+                commitNext(shard);
+            });
+        }
     }
 
     @Override
@@ -143,7 +180,8 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
     // expiring; a failed refresh is made again at the next one
     private void refreshCommitted() {
         for (int shard = 0; shard < committedNextOffsets.length; shard++) {
-            if (committedNextOffsets[shard] > 0) {
+            // A commit on its way uses the position too
+            if (committedNextOffsets[shard] > 0 && committingNextOffsets[shard] == 0) {
                 int refreshed = shard;
                 client.commitOffset(new OffsetCommit(queue.shardId(shard), consumerName, committedNextOffsets[shard]))
                       .onFailure(e -> log.debug("Refreshing the position of consumer {} on shard {} of queue {} failed",

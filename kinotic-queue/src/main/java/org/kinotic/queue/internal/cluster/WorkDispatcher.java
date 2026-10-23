@@ -66,8 +66,11 @@ final class WorkDispatcher {
 
     private long lowWatermark;
     private long nextToLease;
-    // Saves run one after another, so a later watermark is never overwritten by an earlier one
-    private Future<Void> lastSave = Future.succeededFuture();
+    // Requests waiting for the low watermark to be stored and replicated up to at least their key. One save runs at a
+    // time, of the latest watermark, so a later watermark is never overwritten by an earlier one, and the watermarks
+    // done while a save runs share the next one.
+    private final TreeMap<Long, List<Promise<Void>>> awaitingSave = new TreeMap<>();
+    private boolean saving;
     private boolean stopped;
     private long lastRequest = System.currentTimeMillis();
     // When the low watermark was last stored, which keeps the group's position from expiring
@@ -235,6 +238,8 @@ final class WorkDispatcher {
             pending.promise().tryFail(notOwner);
         });
         pendingLeases.clear();
+        awaitingSave.values().forEach(waiting -> waiting.forEach(promise -> promise.tryFail(notOwner)));
+        awaitingSave.clear();
     }
 
     // Records the retention deleted are gone for the group too, so its position moves up to the shard's start
@@ -296,10 +301,23 @@ final class WorkDispatcher {
                     });
     }
 
+    // Reads each run of consecutive taken offsets at once, then the new ones
     private List<ShardEntry> readTaken(Map<Long, Integer> taken, long newFrom, long newTo) {
         List<ShardEntry> ret = new ArrayList<>();
+        long runStart = -1;
+        int runLength = 0;
         for (long offset : taken.keySet()) {
-            ret.addAll(shardLog.read(offset, 1, Long.MAX_VALUE));
+            if (offset != runStart + runLength) {
+                if (runLength > 0) {
+                    ret.addAll(shardLog.read(runStart, runLength, Long.MAX_VALUE));
+                }
+                runStart = offset;
+                runLength = 0;
+            }
+            runLength++;
+        }
+        if (runLength > 0) {
+            ret.addAll(shardLog.read(runStart, runLength, Long.MAX_VALUE));
         }
         if (newTo > newFrom) {
             ret.addAll(shardLog.read(newFrom, (int) (newTo - newFrom), ShardOwner.MAX_BATCH_BYTES));
@@ -398,14 +416,45 @@ final class WorkDispatcher {
         return ret;
     }
 
+    // Completes once the group's position, at least the current low watermark, is stored and on a majority of copies
     private Future<Void> saveLowWatermark() {
-        long watermark = lowWatermark;
-        lastSaved = System.currentTimeMillis();
-        lastSave = lastSave.transform(ignored -> vertx.<Void>executeBlocking(() -> {
-            groupOffsets.save(groupName, shardId.shard(), watermark);
-            return null;
-        }, false));
-        lastSave.onFailure(e -> log.warn("Saving the position of group {} on {} failed", groupName, shardId, e));
-        return lastSave.compose(v -> replicateOffsets.get());
+        Promise<Void> ret = Promise.promise();
+        if (stopped) {
+            ret.fail(ShardOwner.changedOwner(shardId));
+        } else {
+            awaitingSave.computeIfAbsent(lowWatermark, watermark -> new ArrayList<>()).add(ret);
+            saveNext();
+        }
+        return ret.future();
+    }
+
+    private void saveNext() {
+        if (!saving && !stopped && !awaitingSave.isEmpty()) {
+            saving = true;
+            long watermark = lowWatermark;
+            lastSaved = System.currentTimeMillis();
+            vertx.<Void>executeBlocking(() -> {
+                     groupOffsets.save(groupName, shardId.shard(), watermark);
+                     return null;
+                 }, false)
+                 .compose(v -> replicateOffsets.get())
+                 .onComplete(ar -> {
+                     saving = false;
+                     if (ar.failed()) {
+                         log.warn("Saving the position of group {} on {} failed", groupName, shardId, ar.cause());
+                     }
+                     // The watermark only grows, so the save answers every request waiting for one no later than it
+                     Map<Long, List<Promise<Void>>> answered = awaitingSave.headMap(watermark, true);
+                     answered.values().forEach(waiting -> waiting.forEach(promise -> {
+                         if (ar.succeeded()) {
+                             promise.tryComplete();
+                         } else {
+                             promise.tryFail(ar.cause());
+                         }
+                     }));
+                     answered.clear();
+                     saveNext();
+                 });
+        }
     }
 }

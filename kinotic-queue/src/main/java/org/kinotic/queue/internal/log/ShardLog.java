@@ -3,6 +3,7 @@ package org.kinotic.queue.internal.log;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import net.openhft.chronicle.bytes.Bytes;
 import org.apache.commons.io.FileUtils;
 import org.kinotic.queue.api.config.QueueProperties;
 
@@ -19,6 +20,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiFunction;
+import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
 /**
@@ -219,7 +222,7 @@ public final class ShardLog implements AutoCloseable {
             promise(batch.epoch());
             long prevOffset = batch.prevOffset();
             boolean prevHeld = prevOffset >= start.offset() - 1 && prevOffset < nextOffset;
-            boolean prevDiffers = prevHeld && epochAt(prevOffset) != batch.prevEpoch();
+            boolean prevDiffers = prevHeld && heldEpochAt(prevOffset) != batch.prevEpoch();
             if (prevOffset + 1 == batch.ownerStartOffset() && (prevOffset >= nextOffset || prevDiffers)) {
                 // Nothing this copy holds continues the owner's entries, and the owner deleted those before its start
                 reset(new LogStart(batch.ownerStartOffset(), batch.prevEpoch()));
@@ -234,7 +237,7 @@ public final class ShardLog implements AutoCloseable {
                 ret = new ReplicationResult(ReplicationStatus.MISMATCH, start.offset());
             } else if (prevDiffers) {
                 // Every entry of the differing epoch is suspect from that epoch's first entry here, or this copy's start
-                long heldEpoch = epochAt(prevOffset);
+                long heldEpoch = heldEpochAt(prevOffset);
                 ret = new ReplicationResult(ReplicationStatus.MISMATCH, firstOffsetOfEpoch(heldEpoch, prevOffset), heldEpoch);
             } else {
                 ret = new ReplicationResult(ReplicationStatus.ACCEPTED, applyContinuing(batch));
@@ -251,26 +254,17 @@ public final class ShardLog implements AutoCloseable {
      *               {@link #nextOffset()} returns no entries
      */
     public List<ShardEntry> read(long offset, int maxEntries, long maxBytes) {
-        List<ShardEntry> ret = new ArrayList<>();
-        segmentsLock.readLock().lock();
-        try {
-            if (offset < start.offset() || offset > nextOffset) {
-                throw new IllegalArgumentException("Offset " + offset + " is outside " + directory + ", which holds offsets "
-                                                           + start.offset() + " to " + nextOffset);
-            }
-            long bytesRead = 0;
-            for (ShardSegment segment : segments) {
-                long from = offset + ret.size();
-                if (ret.size() < maxEntries && bytesRead < maxBytes && from >= segment.startOffset() && from < segment.end()) {
-                    List<ShardEntry> read = segment.read(from, maxEntries - ret.size(), maxBytes - bytesRead);
-                    ret.addAll(read);
-                    bytesRead += read.stream().mapToLong(ShardEntry::size).sum();
-                }
-            }
-        } finally {
-            segmentsLock.readLock().unlock();
-        }
-        return ret;
+        return read(offset, maxEntries, maxBytes, ShardSegment::decodeEntry, ShardEntry::size);
+    }
+
+    /**
+     * Reads where each entry starting at {@code offset} sat in the batch it was appended in, without reading entries'
+     * keys and payloads, stopping at {@code maxEntries} or once the entries' sizes reach {@code maxBytes}.
+     *
+     * @param offset as for {@link #read}
+     */
+    public List<RecordSlot> readSlots(long offset, int maxEntries, long maxBytes) {
+        return read(offset, maxEntries, maxBytes, ShardSegment::decodeSlot, RecordSlot::size);
     }
 
     /**
@@ -283,7 +277,30 @@ public final class ShardLog implements AutoCloseable {
         if (offset == current.offset() - 1) {
             ret = current.epochBefore();
         } else {
-            ret = read(offset, 1, Long.MAX_VALUE).getFirst().epoch();
+            ret = read(offset, 1, Long.MAX_VALUE, ShardSegment::decodeEpoch, epoch -> 0).getFirst();
+        }
+        return ret;
+    }
+
+    private <T> List<T> read(long offset, int maxEntries, long maxBytes, BiFunction<Long, Bytes<?>, T> decoder, ToLongFunction<T> size) {
+        List<T> ret = new ArrayList<>();
+        segmentsLock.readLock().lock();
+        try {
+            if (offset < start.offset() || offset > nextOffset) {
+                throw new IllegalArgumentException("Offset " + offset + " is outside " + directory + ", which holds offsets "
+                                                           + start.offset() + " to " + nextOffset);
+            }
+            long bytesRead = 0;
+            for (ShardSegment segment : segments) {
+                long from = offset + ret.size();
+                if (ret.size() < maxEntries && bytesRead < maxBytes && from >= segment.startOffset() && from < segment.end()) {
+                    List<T> read = segment.read(from, maxEntries - ret.size(), maxBytes - bytesRead, decoder, size);
+                    ret.addAll(read);
+                    bytesRead += read.stream().mapToLong(size).sum();
+                }
+            }
+        } finally {
+            segmentsLock.readLock().unlock();
         }
         return ret;
     }
@@ -415,14 +432,19 @@ public final class ShardLog implements AutoCloseable {
         return batchEnd;
     }
 
+    // Called with this shard's lock held, so the last entry's epoch is the one recorded for it
+    private long heldEpochAt(long offset) {
+        return offset == nextOffset - 1 ? lastEpoch : epochAt(offset);
+    }
+
     // The offset of the first held entry in the batch whose epoch differs from the owner's, or -1 when none does
     private long firstConflict(long from, List<ShardEntry> entries) {
         long ret = -1;
         long held = Math.min(nextOffset, from + entries.size()) - from;
         if (held > 0) {
-            List<ShardEntry> heldEntries = read(from, (int) held, Long.MAX_VALUE);
-            for (int i = 0; i < heldEntries.size(); i++) {
-                if (heldEntries.get(i).epoch() != entries.get(i).epoch()) {
+            List<Long> heldEpochs = read(from, (int) held, Long.MAX_VALUE, ShardSegment::decodeEpoch, epoch -> 0);
+            for (int i = 0; i < heldEpochs.size(); i++) {
+                if (heldEpochs.get(i) != entries.get(i).epoch()) {
                     ret = from + i;
                     break;
                 }

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.internal.cluster.message.ReplicateRequest;
 import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.LogStart;
+import org.kinotic.queue.internal.log.PositionsVersion;
 import org.kinotic.queue.internal.log.QueueLog;
 import org.kinotic.queue.internal.log.ReplicationBatch;
 import org.kinotic.queue.internal.log.ReplicationResult;
@@ -54,16 +55,17 @@ final class ShardReplicator {
      */
     @Getter
     private long matchedOffset;
-    /**
-     * The {@link QueueLog#positionsVersion} of the owner's positions the follower holds.
-     */
-    @Getter
-    private long replicatedPositionsVersion = -1;
+    // The version of the owner's positions the follower holds, so a batch carries only positions changed since
+    private PositionsVersion replicatedPositions = PositionsVersion.NONE;
     private boolean inFlight;
     private boolean changedWhileInFlight;
     private boolean stopped;
     private long retryTimer = -1;
     private long lastSentMillis;
+    // The epoch of this copy's entry at knownEpochOffset, from the last batch built, whose last entry or previous entry
+    // is usually the next batch's previous entry
+    private long knownEpochOffset = -2;
+    private long knownEpoch;
     /**
      * When the last batch the follower answered was sent, in epoch milliseconds; when the replicator was created until
      * the follower first answers.
@@ -123,6 +125,13 @@ final class ShardReplicator {
         }
     }
 
+    /**
+     * @return the {@link PositionsVersion#total() total} of the version of the owner's positions the follower holds
+     */
+    long replicatedPositionsVersion() {
+        return replicatedPositions.total();
+    }
+
     void stop() {
         stopped = true;
         if (retryTimer >= 0) {
@@ -139,15 +148,17 @@ final class ShardReplicator {
             long hint = Math.min(nextToSend, shardLog.nextOffset());
             long conflict = conflictEpoch;
             conflictEpoch = -1;
-            long knownVersion = replicatedPositionsVersion;
-            long[] positionsVersion = new long[1];
-            vertx.executeBlocking(() -> {
-                     positionsVersion[0] = queueLog.positionsVersion(shardId.shard());
-                     boolean changed = positionsVersion[0] > knownVersion;
-                     return batch(resumeAfterConflict(hint, conflict), changed ? queueLog.positions(shardId.shard()) : ShardPositions.NONE);
-                 }, false)
+            // Read before the positions, so the positions sent include every change up to it
+            PositionsVersion version = queueLog.positionsVersion(shardId.shard());
+            PositionsVersion held = replicatedPositions;
+            long epochOffset = knownEpochOffset;
+            long epoch = knownEpoch;
+            vertx.executeBlocking(() -> batch(resumeAfterConflict(hint, conflict),
+                                              version.equals(held) ? ShardPositions.NONE : queueLog.positionsChangedSince(shardId.shard(), held),
+                                              epochOffset, epoch), false)
+                 .onSuccess(this::rememberLastEpoch)
                  .compose(request -> client.replicate(follower, request))
-                 .onComplete(reply -> onReply(reply, positionsVersion[0], sentMillis));
+                 .onComplete(reply -> onReply(reply, version, sentMillis));
         }
     }
 
@@ -165,12 +176,13 @@ final class ShardReplicator {
         return ret;
     }
 
-    private ReplicateRequest batch(long from, ShardPositions positions) {
+    // The epoch at knownOffset saves reading the entry before the batch again
+    private ReplicateRequest batch(long from, ShardPositions positions, long knownOffset, long knownOffsetEpoch) {
         // A follower that ends before this copy's start receives the entries from the start, and drops its own
         LogStart start = shardLog.start();
         long first = Math.max(from, start.offset());
         // The epoch of the entry before the batch lets the follower check it continues the same history
-        long prevEpoch = shardLog.epochAt(first - 1);
+        long prevEpoch = first - 1 == knownOffset ? knownOffsetEpoch : shardLog.epochAt(first - 1);
         List<ShardEntry> entries = shardLog.read(first, BATCH_SIZE, ShardOwner.MAX_BATCH_BYTES);
         // Read after the entries, so the owner's end covers every entry in the batch
         long ownerNextOffset = shardLog.nextOffset();
@@ -178,7 +190,19 @@ final class ShardReplicator {
                                     positions);
     }
 
-    private void onReply(AsyncResult<ReplicationResult> reply, long positionsVersion, long sentMillis) {
+    // This copy's entries keep their epochs while it is the owner's, so an epoch read once stays true
+    private void rememberLastEpoch(ReplicateRequest request) {
+        List<ShardEntry> entries = request.batch().entries();
+        if (entries.isEmpty()) {
+            knownEpochOffset = request.batch().prevOffset();
+            knownEpoch = request.batch().prevEpoch();
+        } else {
+            knownEpochOffset = entries.getLast().offset();
+            knownEpoch = entries.getLast().epoch();
+        }
+    }
+
+    private void onReply(AsyncResult<ReplicationResult> reply, PositionsVersion positionsVersion, long sentMillis) {
         inFlight = false;
         boolean changed = changedWhileInFlight;
         changedWhileInFlight = false;
@@ -196,8 +220,8 @@ final class ShardReplicator {
             lastAnsweredMillis = Math.max(lastAnsweredMillis, sentMillis);
             switch (result.status()) {
                 case ACCEPTED -> {
-                    boolean progressed = positionsVersion > replicatedPositionsVersion || result.nextOffset() > matchedOffset;
-                    replicatedPositionsVersion = positionsVersion;
+                    boolean progressed = positionsVersion.total() > replicatedPositions.total() || result.nextOffset() > matchedOffset;
+                    replicatedPositions = positionsVersion;
                     nextToSend = result.nextOffset();
                     matchedOffset = Math.max(matchedOffset, result.nextOffset());
                     if (progressed) {
@@ -208,8 +232,8 @@ final class ShardReplicator {
                     }
                 }
                 case MISMATCH -> {
-                    boolean progressed = positionsVersion > replicatedPositionsVersion;
-                    replicatedPositionsVersion = positionsVersion;
+                    boolean progressed = positionsVersion.total() > replicatedPositions.total();
+                    replicatedPositions = positionsVersion;
                     nextToSend = result.nextOffset();
                     conflictEpoch = result.conflictEpoch();
                     matchedOffset = Math.min(matchedOffset, result.nextOffset());

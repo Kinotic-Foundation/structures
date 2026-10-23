@@ -17,6 +17,7 @@ import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.BatchSlot;
 import org.kinotic.queue.internal.log.Membership;
 import org.kinotic.queue.internal.log.QueueLog;
+import org.kinotic.queue.internal.log.RecordSlot;
 import org.kinotic.queue.internal.log.ShardEntry;
 import org.kinotic.queue.internal.log.ShardLog;
 import org.kinotic.queue.internal.log.StaleEpochException;
@@ -86,7 +87,7 @@ final class ShardOwner {
     private final ShardLog shardLog;
     private final Map<String, ShardReplicator> replicators = new HashMap<>();
     private final TreeMap<Long, PendingMajority<Long>> pendingAppends = new TreeMap<>();
-    // Keyed by the QueueLog.positionsVersion a majority of copies must hold
+    // Keyed by the total of the QueueLog.positionsVersion a majority of copies must hold
     private final TreeMap<Long, PendingMajority<Void>> pendingOffsetReplications = new TreeMap<>();
     private final List<PendingFetch> pendingFetches = new ArrayList<>();
     private final Map<String, Future<WorkDispatcher>> dispatchers = new HashMap<>();
@@ -263,9 +264,9 @@ final class ShardOwner {
         long to = shardLog.nextOffset();
         while (to > start && scannedBytes < PRODUCER_SCAN_BYTES) {
             long from = Math.max(start, to - PRODUCER_SCAN_CHUNK);
-            List<ShardEntry> chunk = shardLog.read(from, (int) (to - from), Long.MAX_VALUE);
+            List<RecordSlot> chunk = shardLog.readSlots(from, (int) (to - from), Long.MAX_VALUE);
             to = from;
-            for (ShardEntry entry : chunk) {
+            for (RecordSlot entry : chunk) {
                 scannedBytes += entry.size();
                 BatchSlot slot = entry.slot();
                 if (slot != null && slot.sequence() >= sequences.getOrDefault(slot.producerId(), -1L)) {
@@ -385,21 +386,15 @@ final class ShardOwner {
      * @return completes once a majority of the shard's copies holds every offset this copy holds now
      */
     Future<Void> replicateOffsets() {
-        if (!active) {
-            return Future.failedFuture(recovering());
+        Future<Void> ret;
+        if (active) {
+            ret = awaitMajority(pendingOffsetReplications, queueLog.positionsVersion(shardId.shard()).total()).future();
+            replicators.values().forEach(ShardReplicator::notifyChanged);
+            completeReplicatedOffsets();
+        } else {
+            ret = Future.failedFuture(stopped ? changedOwner(shardId) : recovering());
         }
-        return vertx.executeBlocking(() -> queueLog.positionsVersion(shardId.shard()), false)
-                    .compose(version -> {
-                        Future<Void> ret;
-                        if (stopped) {
-                            ret = Future.failedFuture(changedOwner(shardId));
-                        } else {
-                            ret = awaitMajority(pendingOffsetReplications, version).future();
-                            replicators.values().forEach(ShardReplicator::notifyChanged);
-                            completeReplicatedOffsets();
-                        }
-                        return ret;
-                    });
+        return ret;
     }
 
     void updateFollowers(Map<String, String> followers) {
@@ -617,20 +612,37 @@ final class ShardOwner {
         if (majorityOffset > epochStartOffset && majorityOffset > committedOffset) {
             committedOffset = majorityOffset;
             completeCommittedAppends();
-            Iterator<PendingFetch> iterator = pendingFetches.iterator();
-            while (iterator.hasNext()) {
-                PendingFetch pending = iterator.next();
-                if (pending.from() < committedOffset) {
-                    iterator.remove();
-                    vertx.cancelTimer(pending.timerId());
-                    readCommitted(pending.from(), pending.max(), pending.maxBytes()).onComplete(pending.promise());
-                }
-            }
+            answerPendingFetches();
             scheduleStateSave();
             // A dispatcher still opening holds no lease requests yet
             dispatchers.values().stream().filter(Future::succeeded).forEach(dispatcher -> dispatcher.result().onCommitted());
         }
         membership.advance(committedOffset, copy -> progress(copy, ownOffset, ShardReplicator::matchedOffset));
+    }
+
+    // Fetches waiting at the same offset, usually consumers caught up with the shard, share one read
+    private void answerPendingFetches() {
+        Map<Long, List<PendingFetch>> answerable = new HashMap<>();
+        Iterator<PendingFetch> iterator = pendingFetches.iterator();
+        while (iterator.hasNext()) {
+            PendingFetch pending = iterator.next();
+            if (pending.from() < committedOffset) {
+                iterator.remove();
+                vertx.cancelTimer(pending.timerId());
+                answerable.computeIfAbsent(pending.from(), from -> new ArrayList<>()).add(pending);
+            }
+        }
+        answerable.forEach((from, fetches) -> {
+            int max = fetches.stream().mapToInt(PendingFetch::max).max().orElseThrow();
+            long maxBytes = fetches.stream().mapToLong(PendingFetch::maxBytes).max().orElseThrow();
+            readCommitted(from, max, maxBytes).onComplete(ar -> fetches.forEach(pending -> {
+                if (ar.succeeded()) {
+                    pending.promise().complete(ar.result().limit(pending.max(), Math.min(pending.maxBytes(), MAX_BATCH_BYTES)));
+                } else {
+                    pending.promise().fail(ar.cause());
+                }
+            }));
+        });
     }
 
     // A newer owner reached this copy, so the copies this owner counts may already hold that owner's entries

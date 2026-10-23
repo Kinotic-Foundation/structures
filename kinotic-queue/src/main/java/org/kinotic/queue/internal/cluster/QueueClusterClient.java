@@ -235,14 +235,19 @@ public class QueueClusterClient {
                 : request(replicas.getFirst(), action, body));
     }
 
-    // Placement can block while the cluster changes topology, so it is looked up off the event loop
+    // A placement not looked up since the topology changed can block, so it is looked up off the event loop
     private Future<List<String>> replicas(ShardId shardId) {
+        List<String> known = placement.findKnownReplicas(shardId.queue(), shardId.shard());
         Future<List<String>> ret;
-        try {
-            ret = vertx.executeBlocking(() -> placement.replicas(shardId.queue(), shardId.shard()), false);
-        } catch (RejectedExecutionException e) {
-            // Vert.x throws rather than failing the future once it has closed its worker pool
-            ret = Future.failedFuture(e);
+        if (known != null) {
+            ret = Future.succeededFuture(known);
+        } else {
+            try {
+                ret = vertx.executeBlocking(() -> placement.replicas(shardId.queue(), shardId.shard()), false);
+            } catch (RejectedExecutionException e) {
+                // Vert.x throws rather than failing the future once it has closed its worker pool
+                ret = Future.failedFuture(e);
+            }
         }
         return ret;
     }

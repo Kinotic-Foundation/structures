@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.cluster.message;
 
 import io.vertx.core.buffer.Buffer;
+import org.kinotic.queue.internal.log.ShardEntry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +45,9 @@ public record AppendRequest(ShardId shardId, long producerId, long sequence, Lis
     }
 
     public Buffer toBuffer() {
-        Buffer ret = Wire.appendShardId(Wire.buffer(), shardId).appendLong(producerId).appendLong(sequence).appendInt(records.size());
+        // Each record is its key and payload, each after its length
+        int expected = records.stream().mapToInt(record -> ShardEntry.size(record.key(), record.payload()) + 2 * Integer.BYTES).sum();
+        Buffer ret = Wire.appendShardId(Wire.buffer(expected), shardId).appendLong(producerId).appendLong(sequence).appendInt(records.size());
         for (AppendRecord record : records) {
             Wire.appendString(ret, record.key());
             Wire.appendBytes(ret, record.payload());

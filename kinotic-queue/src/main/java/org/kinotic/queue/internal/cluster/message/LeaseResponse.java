@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.cluster.message;
 
 import io.vertx.core.buffer.Buffer;
+import org.kinotic.queue.internal.log.ShardEntry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,8 @@ public record LeaseResponse(List<LeasedEntry> leased) {
     }
 
     public Buffer toBuffer() {
-        Buffer ret = Wire.appendEntries(Wire.buffer(), leased.stream().map(LeasedEntry::entry).toList());
+        List<ShardEntry> entries = leased.stream().map(LeasedEntry::entry).toList();
+        Buffer ret = Wire.appendEntries(Wire.buffer(entries), entries);
         leased.forEach(entry -> ret.appendInt(entry.deliveryCount()));
         return ret;
     }
