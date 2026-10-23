@@ -49,7 +49,7 @@ import java.util.Set;
  * of any number of organizations: the page offers the methods that organization's login supports,
  * email and password and the configurations {@code GET /api/auth/org/login/:orgId/providers} lists,
  * without asking about an email first, so no route tells whether an email has a user. The portal's
- * landing page, which knows no organization yet, offers the platform's social registrations: a
+ * landing page, which knows no organization yet, offers the system's social registrations: a
  * sign-in there finds the one organization the identity is a member of, and emails a person who does
  * not remember their organizations the list. On success each login establishes the browser session;
  * the STOMP WebSocket handshake then authenticates from that session cookie, so the browser never
@@ -158,7 +158,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     /**
      * {@code GET /api/auth/org/login/providers} — the unique provider keys (e.g. {@code "github"}) of the
-     * platform's org sign-up registrations, for the landing page's social-button row and the invite
+     * system's org sign-up registrations, for the landing page's social-button row and the invite
      * dialog: one key per provider kind, even when several configs share a kind.
      */
     private void handleProviders(RoutingContext ctx) {
@@ -174,7 +174,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                   ctx.response().putHeader("Content-Type", "application/json").end(providers.encode());
               })
               .onFailure(err -> {
-                  log.warn("Failed to list platform providers: {}", err.getMessage());
+                  log.warn("Failed to list system providers: {}", err.getMessage());
                   authEndpointSupport.respondError(ctx, 500, "Failed to list providers");
               });
     }
@@ -223,7 +223,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     /**
      * {@code GET /api/auth/org/login/:orgId/providers} — the enabled configurations the organization's
-     * login offers, {@code [{id, name, provider}]}: the platform's org sign-up registrations followed by
+     * login offers, {@code [{id, name, provider}]}: the system's org sign-up registrations followed by
      * the organization's own. {@code 404} for an organization that does not exist.
      */
     private void handleOrganizationProviders(RoutingContext ctx) {
@@ -307,7 +307,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     /**
      * Signs the identity the callback verified in: to the organization the flow names, or, for a flow the
-     * landing page started through one of the platform's registrations, to the one organization the identity's
+     * landing page started through one of the system's registrations, to the one organization the identity's
      * organization user is a member of. An organization user that is a member of several is sent back with
      * {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS} and those organizations, to choose one and sign in at its
      * own login.
@@ -371,7 +371,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * Logs the organization user bound to the identity into the organization the flow names. An identity bound to no
      * organization user signs in, through one of the organization's own configurations, the member the organization
      * added under the identity's verified email that nobody has signed in as yet, and is bound to that organization
-     * user as its first sign-in method; through a platform registration, or for an email that is no such member's,
+     * user as its first sign-in method; through a system registration, or for an email that is no such member's,
      * there is no one to sign in.
      */
     private void completeOrganizationLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {

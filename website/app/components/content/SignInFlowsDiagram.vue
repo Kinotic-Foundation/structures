@@ -8,7 +8,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
   <div class="sign-in-diagram-wrap">
 
     <!-- ═══════════════════════════ OWNERS: two owners, two keys into one vault ═══════════════════════════ -->
-    <svg v-if="figure === 'owners'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 440" role="img" aria-label="A system user seeds a managed registration, which names its secret in the vault and is read by that name at sign-in. An organization administrator saves its own configuration together with the client secret; the row has no secret field, and the service stores the secret in the organization's scope keyed by the configuration id, reading it back at sign-in. A crossed-out arrow shows that an organization's row cannot reach the platform's named secrets. Clients only ever receive a summary: id, name, provider, type.">
+    <svg v-if="figure === 'owners'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 440" role="img" aria-label="A system user seeds a managed registration, which names its secret in the vault and is read by that name at sign-in. An organization administrator saves its own configuration together with the client secret; the row has no secret field, and the service stores the secret in the organization's scope keyed by the configuration id, reading it back at sign-in. A crossed-out arrow shows that an organization's row cannot reach the system's named secrets. Clients only ever receive a summary: id, name, provider, type.">
       <defs>
         <marker id="si1-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"></polygon></marker>
         <marker id="si1-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-grn" points="0,0 10,5 0,10"></polygon></marker>
@@ -128,7 +128,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-attr" x="72" y="376">authorizationUri, tokenUri: String</text>
       <text class="t-attr" x="72" y="392">userInfoUri, userEmailsUri: String</text>
       <text class="t-attr" x="72" y="408">scopes: String</text>
-      <text class="t-attr-mut" x="72" y="432">seeded by migration; the platform's registration</text>
+      <text class="t-attr-mut" x="72" y="432">seeded by migration; the system's registration</text>
 
       <!-- owned -->
       <rect class="cls-abs" x="800" y="300" width="320" height="150" rx="4"></rect>
@@ -197,7 +197,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
     </svg>
 
     <!-- ═══════════════════════════ OFFERING: which login offers a configuration ═══════════════════════════ -->
-    <svg v-else-if="figure === 'offering'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 490" role="img" aria-label="Five configurations on the left: GitHub, the platform's org sign-up registration; Acme Okta, the organization's own ORGANIZATION kind; a copy of Acme Okta of APPLICATION kind for the orders application; Google, a platform social registration; Globex Entra, a TENANT kind for the globex tenant of orders. Three logins on the right: acme's own login on the management server, the acme--orders application login on the app server, and the globex tenant's login reached from the tenant's sites. GitHub reaches acme's login by right. Acme Okta reaches acme's login; an arrow from it to the application login is crossed out, since an ORGANIZATION kind is offered at the organization's login only. The copy reaches the application login. Google reaches the application login because orders names google in socialProviders. Globex Entra reaches the tenant login, which then also offers what the application login offers.">
+    <svg v-else-if="figure === 'offering'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 490" role="img" aria-label="Five configurations on the left: GitHub, the system's org sign-up registration; Acme Okta, the organization's own ORGANIZATION kind; a copy of Acme Okta of APPLICATION kind for the orders application; Google, a system social registration; Globex Entra, a TENANT kind for the globex tenant of orders. Three logins on the right: acme's own login on the management server, the acme--orders application login on the app server, and the globex tenant's login reached from the tenant's sites. GitHub reaches acme's login by right. Acme Okta reaches acme's login; an arrow from it to the application login is crossed out, since an ORGANIZATION kind is offered at the organization's login only. The copy reaches the application login. Google reaches the application login because orders names google in socialProviders. Globex Entra reaches the tenant login, which then also offers what the application login offers.">
       <defs>
         <marker id="si3-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"></polygon></marker>
         <marker id="si3-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-grn" points="0,0 10,5 0,10"></polygon></marker>
@@ -210,7 +210,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <rect class="chip-ind" x="40" y="50" width="260" height="60" rx="8"></rect>
       <text class="t-name" x="170" y="74" text-anchor="middle">GitHub</text>
-      <text class="t-sub" x="170" y="92" text-anchor="middle">platform · ORG_SIGNUP</text>
+      <text class="t-sub" x="170" y="92" text-anchor="middle">system · ORG_SIGNUP</text>
 
       <rect class="chip-grn" x="40" y="130" width="260" height="60" rx="8"></rect>
       <text class="t-name" x="170" y="154" text-anchor="middle">Acme Okta</text>
@@ -222,7 +222,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <rect class="chip-ind" x="40" y="290" width="260" height="60" rx="8"></rect>
       <text class="t-name" x="170" y="314" text-anchor="middle">Google</text>
-      <text class="t-sub" x="170" y="332" text-anchor="middle">platform · APP_SOCIAL</text>
+      <text class="t-sub" x="170" y="332" text-anchor="middle">system · APP_SOCIAL</text>
 
       <rect class="chip-amb" x="40" y="370" width="260" height="60" rx="8"></rect>
       <text class="t-name" x="170" y="394" text-anchor="middle">Globex Entra</text>
@@ -281,7 +281,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
     </svg>
 
     <!-- ═══════════════════════════ PATHS: where the provider sends the browser back ═══════════════════════════ -->
-    <svg v-else-if="figure === 'paths'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 600" role="img" aria-label="Two sequences over the same four columns: the application's UI, the application's host, the shared host, and the provider. Path A, the organization's own provider: the UI posts start and gets a redirect; the browser goes to the provider; the provider returns to the application's host; the host sets the session and sends the browser back to the page. Path B, a platform social registration: the UI posts start and gets the shared host's authorize URL; the browser opens it; the shared host sends it to Google; Google returns to the shared host, the one registered redirect URI; the shared host stages the verified identity under a single-use code and sends the browser to the application's host with it; that host consumes the code, sets the session and sends the browser back to the page.">
+    <svg v-else-if="figure === 'paths'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 600" role="img" aria-label="Two sequences over the same four columns: the application's UI, the application's host, the shared host, and the provider. Path A, the organization's own provider: the UI posts start and gets a redirect; the browser goes to the provider; the provider returns to the application's host; the host sets the session and sends the browser back to the page. Path B, a system social registration: the UI posts start and gets the shared host's authorize URL; the browser opens it; the shared host sends it to Google; Google returns to the shared host, the one registered redirect URI; the shared host stages the verified identity under a single-use code and sends the browser to the application's host with it; that host consumes the code, sets the session and sends the browser back to the page.">
       <defs>
         <marker id="si4-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"></polygon></marker>
         <marker id="si4-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-grn" points="0,0 10,5 0,10"></polygon></marker>
@@ -331,7 +331,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="24" y1="304" x2="1156" y2="304"></line>
 
       <!-- Path B -->
-      <text class="t-plane-vio" x="24" y="332">B · A PLATFORM SOCIAL REGISTRATION</text>
+      <text class="t-plane-vio" x="24" y="332">B · A SYSTEM SOCIAL REGISTRATION</text>
 
       <circle class="step" cx="36" cy="362" r="11"></circle><text class="t-step" x="36" y="366" text-anchor="middle">1</text>
       <line class="flow" x1="160" y1="362" x2="460" y2="362" marker-end="url(#si4-ink)"></line>

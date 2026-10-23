@@ -31,7 +31,7 @@ describe('Profile', () => {
         expect(methods.some(m => m.id === PASSWORD_SIGN_IN_METHOD_ID && m.type === AuthType.PASSWORD)).toBe(true)
     })
 
-    it('offers the platform\'s GitHub registration to connect', async () => {
+    it('offers the system\'s GitHub registration to connect', async () => {
         const providers = await Kinotic.profile.findConnectableProviders()
         const github = providers.find(p => p.configurationId === 'github-platform')
         expect(github).toBeDefined()

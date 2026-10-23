@@ -14,7 +14,7 @@ export interface IApplicationService extends ICrudServiceProxy<Application> {
      * @param name the name of the application to create
      * @param description the description of the application to create
      * @param tenantManagement who creates and administers the application's tenants, or omitted
-     *        for TENANT_ADMINISTRATORS. PLATFORM applies to users created while it is in force, so
+     *        for TENANT_ADMINISTRATORS. SYSTEM applies to users created while it is in force, so
      *        it is chosen before the application has users
      * @return {@link Promise} emitting the created application, or the existing application
      *         whose id matches the slugified name

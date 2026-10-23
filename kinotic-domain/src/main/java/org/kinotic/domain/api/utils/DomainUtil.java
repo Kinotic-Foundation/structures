@@ -57,7 +57,7 @@ public class DomainUtil {
     public static final String APP_API_ZONE = "app-api";
 
     /**
-     * The zone for services internal to the platform, only reachable by system participants
+     * The zone for the system's own services, only reachable by system participants
      */
     public static final String SYSTEM_API_ZONE = "system-api";
 
@@ -84,19 +84,19 @@ public class DomainUtil {
      */
     public static final String INDEX_PREFIX = "kinotic_";
 
-    /** The platform's id wherever a scope's id names an owner, such as a secret scope; no organization may take it. */
-    public static final String PLATFORM_ID = "system";
+    /** The system's id wherever a scope's id names an owner, such as a secret scope; no organization may take it. */
+    public static final String SYSTEM_ID = "system";
 
     // no organization carries the platform's name: an id beginning with it would put that name on a customer's
     // hosts, <org>--<app> under the apps-api domain and *.<org> under the sites domain
     private static final String RESERVED_ID_PREFIX = "kinotic";
     // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow;
     // the path segments the organization login's own routes claim under /api/auth/org/login/, which an
-    // organization's id would be mistaken for; and the platform's own id
+    // organization's id would be mistaken for; and the system's own id
     private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
                                                                          "console", "mail", "admin", "login", "status", "docs",
                                                                          "find", "social", "sso", "providers", "choices",
-                                                                         PLATFORM_ID);
+                                                                         SYSTEM_ID);
 
     // Project ids may start with a digit because they embed application ids, which may
     // themselves start with a digit
@@ -490,7 +490,7 @@ public class DomainUtil {
                                              .build();
     }
 
-    /** The scope a participant acts in: its own for a scoped participant, the platform's (all null) otherwise. */
+    /** The scope a participant acts in: its own for a scoped participant, the system's (all null) otherwise. */
     public static ParticipantScope scopeOf(Participant participant) {
         return participant instanceof ScopedParticipant scoped ? scoped.getScope() : new ParticipantScope(null, null, null);
     }

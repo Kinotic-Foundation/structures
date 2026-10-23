@@ -7,7 +7,7 @@ import lombok.experimental.Accessors;
 import java.nio.file.Path;
 
 /**
- * Paths to platform-level secret files mounted into the pod by the secret provisioning
+ * Paths to system-level secret files mounted into the pod by the secret provisioning
  * mechanism (Azure Key Vault CSI driver in production, a Kubernetes Secret volume locally).
  * <p>
  * Each file contains a {@link VersionedKeySet} serialized as JSON. Files are watched for
@@ -16,7 +16,7 @@ import java.nio.file.Path;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class PlatformSecretsProperties {
+public class SystemSecretsProperties {
 
     /**
      * Path to the JWT signing key set file (one {@link VersionedKeySet} JSON document).

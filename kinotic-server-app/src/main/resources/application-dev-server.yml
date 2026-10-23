@@ -18,7 +18,7 @@ kinotic:
       enabled: true
       certPath: /etc/kinotic/certs/fullchain.pem
       keyPath: /etc/kinotic/certs/privkey.pem
-  platformSecrets:
+  systemSecrets:
     # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox):
     # an activeKeyId and a keys list, so a key can be added to the set at migration time
     jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys

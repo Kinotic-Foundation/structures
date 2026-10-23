@@ -193,7 +193,7 @@ locals {
       private_ip  = cidrhost(var.private_cidr, 22)
       port        = 58504
       hostnames   = [local.azure.system_api_hostname]
-      description = "the platform's own API: the system console, the nodes' vm-manager"
+      description = "the system's own API: the system console, the nodes' vm-manager"
       env = {
         KINOTIC_SYSTEMSERVER_APIBASEURL     = "https://${local.azure.system_api_hostname}"
         KINOTIC_SYSTEMSERVER_CONSOLEBASEURL = "https://${local.azure.console_hostname}"
@@ -239,7 +239,7 @@ locals {
         SUMMIT42_UIBASEURL = "https://${local.azure.summit42_hostname}"
         # The management server's dev-server profile, which Summit 42's image does not carry
         SPRING_CONFIG_IMPORT                                    = "optional:file:/etc/kinotic/secrets.yml"
-        KINOTIC_PLATFORMSECRETS_JWTSIGNINGKEYSPATH              = "/etc/kinotic/platform-secrets/jwt-signing-keys"
+        KINOTIC_SYSTEMSECRETS_JWTSIGNINGKEYSPATH                = "/etc/kinotic/platform-secrets/jwt-signing-keys"
         KINOTIC_DOMAIN_SECRETSTORAGE_BACKEND                    = "AZURE"
         KINOTIC_MANAGEMENTAPI_ENTITYDEFINITION_NUMBEROFSHARDS   = "1"
         KINOTIC_MANAGEMENTAPI_ENTITYDEFINITION_NUMBEROFREPLICAS = "1"
@@ -278,7 +278,7 @@ locals {
     KINOTIC_IGNITE_LOCALADDRESSES = join(",", [for server in local.servers : "${server.private_ip}:47500"])
 
     # No collector: the agent exports each signal to its store's OTLP endpoint, under the
-    # platform tenant, which is what the compose collector stamps on the servers' telemetry
+    # system tenant, which is what the compose collector stamps on the servers' telemetry
     OTEL_TRACES_EXPORTER                = "otlp"
     OTEL_METRICS_EXPORTER               = "otlp"
     OTEL_LOGS_EXPORTER                  = "otlp"

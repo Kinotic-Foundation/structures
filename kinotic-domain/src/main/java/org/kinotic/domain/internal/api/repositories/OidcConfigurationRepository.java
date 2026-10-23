@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Every {@link OidcConfiguration} in one index, the platform's managed registrations and the organizations' own
+ * Every {@link OidcConfiguration} in one index, the system's managed registrations and the organizations' own
  * alike, told apart by the persisted {@code type} discriminator. The owner-specific finders filter on it, so a
  * lookup for one kind never answers with another.
  */
@@ -70,7 +70,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
 
     /**
      * The enabled social registrations of the given provider kinds, in the order of {@code providers}. A kind
-     * the platform holds no enabled registration for is left out.
+     * the system holds no enabled registration for is left out.
      */
     public Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocialByProviders(Collection<OidcProviderType> providers) {
         Future<List<ApplicationSocialOidcConfiguration>> ret;

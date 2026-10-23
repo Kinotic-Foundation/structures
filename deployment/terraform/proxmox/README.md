@@ -154,8 +154,8 @@ issue summit-42 125 dev-summit42-api.kinotic.ai
 ```
 
 Its UI is on the sites Worker at `dev-summit42.kinotic.ai`, which `redeploy.sh` builds from the
-summit-42 repository's `main` and uploads. It reads the platform LLM configuration named
-`summit-42`, which the system console's **Platform → LLM configurations** page adds.
+summit-42 repository's `main` and uploads. It reads the system LLM configuration named
+`summit-42`, which the system console's **System → LLM configurations** page adds.
 
 The deploy hook runs on every renewal too, which is all the certificate rotation there is.
 `kinotic-dyndns.timer` reads the names to keep current from these certificates and the token

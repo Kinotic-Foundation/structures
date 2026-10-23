@@ -54,12 +54,12 @@ kinotic:
   maxNumberOfCoresToUse: 4
   ignite:
     discoveryType: SHAREDFS
-  platformSecrets:
-    # Seeded on first boot by DevPlatformSecretsGenerator. Each developer machine ends up with
+  systemSecrets:
+    # Seeded on first boot by DevSystemSecretsGenerator. Each developer machine ends up with
     # its own random keys; none of this is committed. Production uses Azure Key Vault via the
     # Secrets Store CSI driver — same file layout, different origin.
     generateMissing: true
-    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-system-secrets/jwt-signing-keys
   # OIDC client secrets resolve via SecretReferenceResolver — Azure Key Vault when
   # kinotic.domain.secretStorage.azure.vaultUrl is set, otherwise from KINOTIC_AKV_<name> properties
   # (uppercased, non-alphanumerics → "_"), set as an env var or a key in any loaded config file,

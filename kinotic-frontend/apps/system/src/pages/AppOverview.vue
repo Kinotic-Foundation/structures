@@ -136,8 +136,8 @@ const facts = computed(() => {
   let tenancy: string
   if (!app) {
     tenancy = '—'
-  } else if (app.tenantManagement === TenantManagement.PLATFORM) {
-    tenancy = 'Platform, one per user'
+  } else if (app.tenantManagement === TenantManagement.SYSTEM) {
+    tenancy = 'System, one per user'
   } else {
     tenancy = 'Tenant administrators'
   }

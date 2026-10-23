@@ -6,10 +6,10 @@ package org.kinotic.domain.api.model;
 public enum TenantManagement {
 
     /**
-     * The platform: every user gets a tenant of its own at creation, and every row the user writes is
+     * The system: every user gets a tenant of its own at creation, and every row the user writes is
      * isolated in it.
      */
-    PLATFORM,
+    SYSTEM,
 
     /**
      * Tenant administrators: a customer signing up, or the organization in the portal, creates a tenant;

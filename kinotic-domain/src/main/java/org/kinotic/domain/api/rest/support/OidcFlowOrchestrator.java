@@ -220,7 +220,7 @@ public class OidcFlowOrchestrator {
     }
 
     /**
-     * Begins a {@link OidcFlowPurpose#SIGN_UP} flow through one of the platform's org sign-up registrations, which
+     * Begins a {@link OidcFlowPurpose#SIGN_UP} flow through one of the system's org sign-up registrations, which
      * returns to the page that sent the request when it is the portal or {@code kinotic.domain.cors.allowedOriginPattern}
      * trusts it, and to this server's UI otherwise.
      */
@@ -242,7 +242,7 @@ public class OidcFlowOrchestrator {
     /**
      * Begins a {@link OidcFlowPurpose#CONNECT} flow binding the identity the provider asserts to organization user
      * {@code organizationUserId}; {@code orgId} is the organization whose configuration the flow runs through, or
-     * {@code null} for one of the platform's registrations. It returns to the page that sent the request when it is the
+     * {@code null} for one of the system's registrations. It returns to the page that sent the request when it is the
      * portal or {@code kinotic.domain.cors.allowedOriginPattern} trusts it, and to this server's UI otherwise.
      */
     public Future<String> startConnect(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String organizationUserId) {
@@ -537,14 +537,14 @@ public class OidcFlowOrchestrator {
 
     /**
      * The client secret {@code config} sends its provider, or null for a public client, read from where
-     * its kind of configuration keeps it: the platform's secret storage, under the name a managed
+     * its kind of configuration keeps it: the system's secret storage, under the name a managed
      * registration's {@code secretNameRef} gives, or the owning organization's scope of the secret storage for a
      * configuration an organization saved.
      */
     private Future<String> clientSecretOf(OidcConfiguration config) {
         return switch (config) {
             case ManagedOidcConfiguration managed -> secretReferenceResolver.resolve(managed.getSecretNameRef());
-            // an organization's administrator controls this row, so nothing on it may name a platform secret
+            // an organization's administrator controls this row, so nothing on it may name a system secret
             case OwnedOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
         };
     }
