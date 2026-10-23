@@ -191,7 +191,7 @@ async function load() {
                .catch(err => failures.push(errorMessage(err, 'Failed to load worker nodes'))),
     scanWorkloads({}).then(list => { workloads.value = list })
                      .catch(err => failures.push(errorMessage(err, 'Failed to load workloads'))),
-    scanJobRuns({ since: Date.now() - RUN_WINDOW_DAYS * DAY_MS }).then(list => { runs.value = list })
+    scanJobRuns({ startedSince: new Date(Date.now() - RUN_WINDOW_DAYS * DAY_MS).toISOString() }).then(list => { runs.value = list })
                                                                   .catch(err => failures.push(errorMessage(err, 'Failed to load job runs'))),
     Kinotic.systemOrganizations.countOrganizations().then(count => { organizationCount.value = count })
            .catch(() => { /* the tile shows an em dash */ })

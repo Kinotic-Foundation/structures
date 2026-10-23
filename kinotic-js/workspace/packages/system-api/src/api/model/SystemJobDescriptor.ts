@@ -1,5 +1,5 @@
 /**
- * A grind job the platform's operators can start on demand, as the console lists it.
+ * A grind job system users can start on demand, as the console lists it.
  */
 export interface SystemJobDescriptor {
 

@@ -149,7 +149,7 @@ async function load() {
       Kinotic.systemOrganizations.findMembers(orgId, firstPage),
       Kinotic.systemOrganizations.findPendingInvites(orgId, null, firstPage),
       scanWorkloads({ organizationId: orgId }),
-      scanJobRuns({ organizationId: orgId, since: Date.now() - RUN_WINDOW_DAYS * DAY_MS })
+      scanJobRuns({ organizationId: orgId, startedSince: new Date(Date.now() - RUN_WINDOW_DAYS * DAY_MS).toISOString() })
     ])
     organization.value = org
     applicationCount.value = apps.totalElements ?? 0
