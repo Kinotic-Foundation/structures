@@ -6,11 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
+import org.kinotic.core.api.exceptions.AuthorizationException;
+import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingSignUp;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
@@ -39,6 +44,7 @@ public class DefaultSignUpService implements SignUpService {
     private final OrganizationService organizationService;
     private final EmailService emailService;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
+    private final ApplicationRepository applicationRepository;
 
     @Override
     public Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate) {
@@ -89,7 +95,7 @@ public class DefaultSignUpService implements SignUpService {
         Validate.notBlank(orgName, "Organization name is required");
         Validate.notBlank(password, "Password is required");
 
-        return pendingSignUpRepository.findValidByToken(token)
+        return findValidOrganizationSignUp(token)
                 .compose(pending -> requireNoOrganizationUser(pending)
                         .compose(v -> createOrgWithFounder(orgName, orgDescription, pending, password))
                         .compose(founder -> pendingSignUpRepository.deleteById(pending.getId())
@@ -99,11 +105,93 @@ public class DefaultSignUpService implements SignUpService {
     @Override
     public Future<Participant> completeOidcWithNewOrg(String token, String orgName, String orgDescription) {
         Validate.notBlank(orgName, "Organization name is required");
-        return pendingSignUpRepository.findValidByToken(token)
+        return findValidOrganizationSignUp(token)
                 .compose(pending -> requireNoOrganizationUser(pending)
                         .compose(v -> createOrgWithFounder(orgName, orgDescription, pending, null))
                         .compose(founder -> pendingSignUpRepository.deleteById(pending.getId())
                                 .map(founder)));
+    }
+
+    @Override
+    public Future<Void> initiateApplicationSignUp(ApplicationKey application, String email, String displayName, String uiBaseUrl) {
+        Validate.notBlank(email, "Email is required");
+        Validate.notBlank(displayName, "Display name is required");
+        Validate.notBlank(uiBaseUrl, "uiBaseUrl is required");
+        String normalizedEmail = DomainUtil.normalizeEmail(email);
+
+        return requirePasswordSignUp(application).compose(found -> identityService
+                .findApplicationUserByEmail(normalizedEmail, application.organizationId(), application.applicationId())
+                .compose(user -> {
+                    Future<Void> ret;
+                    if (user != null) {
+                        // answered as any other email, so the sign-up form cannot be used to learn which emails have a user
+                        log.debug("Sign-up to {} skipped for an email that already has a user", application);
+                        ret = Future.succeededFuture();
+                    } else {
+                        ret = pendingSignUpRepository.findByApplicationAndEmail(application, normalizedEmail)
+                                .compose(earlier -> earlier != null
+                                        ? pendingSignUpRepository.deleteById(earlier.getId())
+                                        : Future.succeededFuture())
+                                .compose(v -> {
+                                    String token = UUID.randomUUID().toString();
+                                    Date now = new Date();
+                                    PendingSignUp pending = new PendingSignUp()
+                                            .setId(UUID.randomUUID().toString())
+                                            .setEmail(normalizedEmail)
+                                            .setDisplayName(displayName)
+                                            .setAuthType(AuthType.PASSWORD)
+                                            .setOrganizationId(application.organizationId())
+                                            .setApplicationId(application.applicationId())
+                                            .setVerificationToken(token)
+                                            .setCreated(now)
+                                            .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
+                                    return pendingSignUpRepository.save(pending)
+                                            .compose(saved -> emailService.sendApplicationVerificationEmail(
+                                                    normalizedEmail, displayName, token, found.getName(), uiBaseUrl));
+                                });
+                    }
+                    return ret;
+                }));
+    }
+
+    @Override
+    public Future<Participant> completeApplicationSignUp(ApplicationKey application, String token, String password) {
+        Validate.notBlank(token, "Verification token is required");
+        Validate.notBlank(password, "Password is required");
+
+        return requirePasswordSignUp(application)
+                .compose(found -> pendingSignUpRepository.findValidByToken(token))
+                .compose(pending -> {
+                    // a token is spent only at the application it was issued for
+                    if (!application.organizationId().equals(pending.getOrganizationId())
+                            || !application.applicationId().equals(pending.getApplicationId())) {
+                        return Future.failedFuture(new IllegalArgumentException("Invalid or already consumed token."));
+                    }
+                    ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
+                    user.setOrganizationId(application.organizationId())
+                        .setApplicationId(application.applicationId())
+                        .setEmail(pending.getEmail())
+                        .setDisplayName(pending.getDisplayName());
+                    return identityService.createUser(user, password)
+                            .compose(created -> pendingSignUpRepository.deleteById(pending.getId())
+                                    .map(v -> DomainUtil.createParticipant(created)));
+                });
+    }
+
+    // the application, when it allows sign-up with a password
+    private Future<Application> requirePasswordSignUp(ApplicationKey application) {
+        return applicationRepository.findById(application.applicationId(), application.organizationId())
+                .compose(found -> found != null && found.isPasswordSignUp()
+                        ? Future.succeededFuture(found)
+                        : Future.failedFuture(new AuthorizationException("The application does not offer sign-up")));
+    }
+
+    // an application's sign-up token founds no organization
+    private Future<PendingSignUp> findValidOrganizationSignUp(String token) {
+        return pendingSignUpRepository.findValidByToken(token)
+                .compose(pending -> pending.getApplicationId() == null
+                        ? Future.succeededFuture(pending)
+                        : Future.failedFuture(new IllegalArgumentException("Invalid or already consumed token.")));
     }
 
     // a person founds one organization at most, by signing up once, and joins others by invitation; checked when the

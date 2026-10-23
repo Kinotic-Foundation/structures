@@ -1,10 +1,19 @@
 Hi {{displayName}},
 
+{{#if applicationName}}
+Verify your email address to finish signing up to {{applicationName}}:
+{{else}}
 Welcome to Kinotic. Verify your email address to activate your account:
+{{/if}}
 
 {{verificationUrl}}
 
+{{#if applicationName}}
+This link expires in 24 hours. If you didn't sign up to {{applicationName}},
+you can safely ignore this email.
+{{else}}
 This link expires in 24 hours. If you didn't sign up for Kinotic,
 you can safely ignore this email.
 
 — The Kinotic Team
+{{/if}}

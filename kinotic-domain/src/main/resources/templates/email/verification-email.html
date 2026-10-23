@@ -24,7 +24,7 @@
 
 <!-- Preheader (hidden) -->
 <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
-    Confirm your email to finish signing up for Kinotic.
+    Confirm your email to finish signing up {{#if applicationName}}to {{applicationName}}{{else}}for Kinotic{{/if}}.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -58,8 +58,13 @@
                         </h1>
 
                         <p style="margin:0 0 32px; font-family:'Inter','Helvetica Neue',Arial,sans-serif; font-size:17px; line-height:140%; color:#AFAFB4;">
+                            {{#if applicationName}}
+                            Hi {{displayName}}. Confirm your email address to finish signing up to
+                            <strong style="color:#FFFFFF;">{{applicationName}}</strong>.
+                            {{else}}
                             Hi {{displayName}}, welcome to Kinotic.
                             Confirm your email address to finish signing up.
+                            {{/if}}
                         </p>
 
                         <!-- CTA (bulletproof) -->
@@ -114,7 +119,7 @@
                 <tr>
                     <td class="px-gutter" style="padding:16px 32px 0;">
                         <p style="margin:0; font-family:'Inter',Arial,sans-serif; font-size:12px; line-height:150%; color:#6b7280;">
-                            This link expires in 24 hours. If you didn't sign up for Kinotic, you can safely ignore this email.
+                            This link expires in 24 hours. If you didn't sign up {{#if applicationName}}to {{applicationName}}{{else}}for Kinotic{{/if}}, you can safely ignore this email.
                         </p>
                     </td>
                 </tr>
@@ -122,9 +127,11 @@
                 <!-- Footer -->
                 <tr>
                     <td class="px-gutter" style="padding:32px 32px 40px;">
+                        {{#unless applicationName}}
                         <p style="margin:0; font-family:'Inter',Arial,sans-serif; font-size:12px; color:#6b7280;">
                             — The Kinotic Team
                         </p>
+                        {{/unless}}
                     </td>
                 </tr>
 

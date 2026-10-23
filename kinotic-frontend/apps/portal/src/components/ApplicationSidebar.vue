@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
 import { createDebug } from '@kinotic-ai/frontend-common'
 import { showErrorToast } from '@kinotic-ai/frontend-common'
-import {type Application, TenantManagement} from "@kinotic-ai/management-api";
+import {Application} from "@kinotic-ai/management-api";
 import {Kinotic} from "@kinotic-ai/core";
 import { USER_STATE } from '@/states/IUserState'
 import { FormDrawer } from '@kinotic-ai/frontend-common'
@@ -59,17 +59,9 @@ function resetForm(): void {
 async function handleSubmit(): Promise<void> {
   try {
     // The server mints the id from the slugified name, so send an empty id.
-    const applicationData: Application = {
-      id: '',
-      name: form.name.trim(),
-      organizationId: USER_STATE.getOrganizationId(),
-      description: form.description,
-      tenantManagement: TenantManagement.TENANT_ADMINISTRATORS,
-      primaryUiId: null,
-      primaryUiUrl: null,
-      socialProviders: [],
-      updated: null
-    }
+    const applicationData = new Application(form.name.trim(), form.description)
+    applicationData.id = ''
+    applicationData.organizationId = USER_STATE.getOrganizationId()
 
     created.value = await create(() => Kinotic.applications.createSync(applicationData))
     await holdReady()

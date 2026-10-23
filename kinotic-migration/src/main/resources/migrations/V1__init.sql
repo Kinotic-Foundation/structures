@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS kinotic_application (
     primaryUiId KEYWORD,
     primaryUiUrl KEYWORD,
     socialProviders KEYWORD,
+    socialSignUp BOOLEAN,
+    passwordSignUp BOOLEAN,
     updated DATE
 );
 
@@ -346,7 +348,8 @@ CREATE TABLE IF NOT EXISTS kinotic_organization (
 
 -- Pending sign-ups (email-verification or OIDC) awaiting completion (PendingSignUp): the identity
 -- to create plus authType, the sign-in method it chose. The organization name is collected at
--- completion, not stored here.
+-- completion, not stored here. organizationId and applicationId are set only on a sign-up to an
+-- application, which creates a user of that application instead of a new organization.
 CREATE TABLE IF NOT EXISTS kinotic_pending_signup (
     id KEYWORD,
     verificationToken KEYWORD,
@@ -356,7 +359,9 @@ CREATE TABLE IF NOT EXISTS kinotic_pending_signup (
     displayName KEYWORD,
     authType KEYWORD,
     oidcSubject KEYWORD,
-    oidcConfigId KEYWORD
+    oidcConfigId KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD
 );
 
 -- Pending member invitations (PendingInvite) awaiting acceptance: the invitee's identity, the

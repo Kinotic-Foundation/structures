@@ -47,6 +47,20 @@ export class Application implements Identifiable<string> {
      */
     public socialProviders: OidcProviderType[] = []
 
+    /**
+     * Whether an identity one of the socialProviders verifies, which no user of this application is bound to,
+     * becomes a user of the application, with a tenant of its own, on its first sign-in. Only an application whose
+     * tenants the platform manages (PLATFORM) may turn it on.
+     */
+    public socialSignUp: boolean = false
+
+    /**
+     * Whether people become users of this application by signing up with their email and a password, once they
+     * open the verification link emailed to them; each gets a tenant of its own. Only an application whose tenants
+     * the platform manages (PLATFORM) may turn it on.
+     */
+    public passwordSignUp: boolean = false
+
     public updated: string | null = null
 
     constructor(name: string, description: string) {

@@ -57,6 +57,20 @@ public class Application implements OrganizationScoped<String> {
      */
     private List<OidcProviderType> socialProviders = new ArrayList<>();
 
+    /**
+     * Whether an identity one of the {@link #socialProviders} verifies, which no user of this application is bound
+     * to, becomes a user of the application, with a tenant of its own, on its first sign-in. Only an application whose
+     * tenants the platform manages ({@link TenantManagement#PLATFORM}) may turn it on.
+     */
+    private boolean socialSignUp = false;
+
+    /**
+     * Whether people become users of this application by signing up with their email and a password, once they
+     * open the verification link emailed to them; each gets a tenant of its own. Only an application whose tenants
+     * the platform manages ({@link TenantManagement#PLATFORM}) may turn it on.
+     */
+    private boolean passwordSignUp = false;
+
     private Date updated = null;
 
     public Application(String name, String description) {

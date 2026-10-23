@@ -3,7 +3,10 @@ package org.kinotic.domain.api.services.security;
 import io.vertx.core.Future;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
+import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 
@@ -54,4 +57,32 @@ public interface SignUpService {
      * @return the founder as the new organization's participant, for the session to sign in
      */
     Future<Participant> completeOidcWithNewOrg(String token, String orgName, String orgDescription);
+
+    /**
+     * Starts a sign-up to an application with an email and password: stores a pending record and emails a
+     * verification link that opens the {@code /signup/verify} page of the application's UI at {@code uiBaseUrl}. The
+     * password is collected at completion, and a later start for the same email replaces the link of an earlier one.
+     * An email that already has a user of the application is sent nothing, and the call succeeds as it does for any
+     * other email, so it does not tell whether an email has a user.
+     *
+     * @param application the application signed up to
+     * @param email       the email to verify
+     * @param displayName the new user's display name
+     * @param uiBaseUrl   the origin of the application's UI the sign-up was made from, with no trailing slash
+     * @return fails with {@link AuthorizationException} unless the application allows
+     *         {@link Application#isPasswordSignUp() password sign-up}
+     */
+    Future<Void> initiateApplicationSignUp(ApplicationKey application, String email, String displayName, String uiBaseUrl);
+
+    /**
+     * Completes a sign-up to an application: validates that the token was issued for the application, creates the
+     * application's user with the email the link verified and {@code password}, with a tenant of its own, and
+     * deletes the pending record. Fails with {@link ExistingUserException} when the email became a user of the
+     * application meanwhile.
+     *
+     * @return the new user as the application's participant, for the session to sign in; fails with
+     *         {@link AuthorizationException} unless the application allows {@link Application#isPasswordSignUp()
+     *         password sign-up}
+     */
+    Future<Participant> completeApplicationSignUp(ApplicationKey application, String token, String password);
 }

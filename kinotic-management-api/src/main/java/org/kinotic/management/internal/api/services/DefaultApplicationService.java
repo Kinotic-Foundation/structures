@@ -124,6 +124,9 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         Validate.noNullElements(entity.getSocialProviders(), "socialProviders cannot hold null");
         Validate.isTrue(entity.getSocialProviders().stream().distinct().count() == entity.getSocialProviders().size(),
                         "socialProviders names a provider twice");
+        // a user that signs itself up is given a tenant of its own, which only the platform hands out
+        Validate.isTrue(!(entity.isSocialSignUp() || entity.isPasswordSignUp()) || entity.getTenantManagement() == TenantManagement.PLATFORM,
+                        "Sign-up needs an application whose tenants the platform manages");
         entity.setUpdated(new Date());
         Future<String> primaryUiUrl;
         if (entity.getPrimaryUiId() == null) {

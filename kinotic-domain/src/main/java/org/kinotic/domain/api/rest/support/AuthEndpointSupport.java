@@ -511,14 +511,29 @@ public abstract class AuthEndpointSupport {
                                                                 String sub,
                                                                 CallbackResult<? extends OidcConfiguration> result) {
         Map<String, Object> claims = result.claims();
-        String email = OAuth2Util.stringClaim(claims, "email");
+        return createUserFromIdentity(template, result.config().getId(), sub, OAuth2Util.stringClaim(claims, "email"),
+                                      OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
+    }
+
+    /**
+     * {@link #createUserFromClaims} for an identity verified through the configuration {@code configurationId}
+     * whose email and display name were read from its claims already.
+     *
+     * @param email       the identity's verified email, or {@code null} when its provider asserted none
+     * @param displayName the identity's name
+     */
+    public Future<ApplicationParticipantIdentity> createUserFromIdentity(ApplicationParticipantIdentity template,
+                                                                         String configurationId,
+                                                                         String sub,
+                                                                         String email,
+                                                                         String displayName) {
         Future<ApplicationParticipantIdentity> ret;
         if (email == null) {
             ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.INVALID_TOKEN));
         } else {
             template.setEmail(email)
-                    .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
-            ret = identityService.createOidcUser(template, result.config().getId(), sub)
+                    .setDisplayName(displayName);
+            ret = identityService.createOidcUser(template, configurationId, sub)
                                  .recover(err -> Future.failedFuture(err instanceof ExistingUserException
                                          ? new OidcCallbackException(OidcErrorCodes.USER_EXISTS) : err));
         }

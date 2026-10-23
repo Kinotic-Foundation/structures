@@ -11,9 +11,12 @@ import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
+import org.kinotic.domain.api.rest.support.OAuth2Util;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
@@ -23,6 +26,7 @@ import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 
 /**
  * Sign-in to an application through one of the platform's social registrations
@@ -50,6 +54,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final SocialLoginHandoffService handoffService;
+    private final ApplicationRepository applicationRepository;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
     private final KinoticDomainProperties domainProperties;
 
@@ -139,12 +144,15 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
             ApplicationKey applicationKey = new ApplicationKey(result.orgId(), result.applicationId());
+            Map<String, Object> claims = result.claims();
             String code = handoffService.stage(new SocialLoginHandoff()
                                                        .setOrganizationId(applicationKey.organizationId())
                                                        .setApplicationId(applicationKey.applicationId())
                                                        .setTenantId(result.tenantId())
                                                        .setConfigurationId(result.config().getId())
                                                        .setSubject(sub)
+                                                       .setEmail(OAuth2Util.stringClaim(claims, "email"))
+                                                       .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"))
                                                        .setOrigin(result.origin())
                                                        .setBinding(ctx.session().remove(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY)));
             ctx.response().setStatusCode(302)
@@ -156,7 +164,10 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     /**
      * {@code GET /api/auth/app/login/social/complete/:code}, at the application's API host — consumes the
      * staged sign-in and logs its identity into the application, or into the tenant the sign-in was to, bound
-     * to the page that started it, as {@link ApplicationLoginHandler}'s own callback does. A code that is unknown,
+     * to the page that started it, as {@link ApplicationLoginHandler}'s own callback does. An identity no user is
+     * bound to becomes a user of the application, with a tenant of its own, on a sign-in to the application when the
+     * application allows {@link org.kinotic.domain.api.model.Application#isSocialSignUp() social sign-up}; an email
+     * the application already holds under another method is refused with {@code user_exists}. A code that is unknown,
      * spent, staged for another application, or presented by a browser other than the one that started the
      * sign-in sends the browser to the application's login page with {@code handoff_invalid}.
      */
@@ -175,9 +186,36 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
             authEndpointSupport.completeLogin(ctx, handoff.getOrigin(),
                     identityService.findApplicationUserByOidcIdentity(handoff.getConfigurationId(), handoff.getSubject(),
                                                                       applicationKey.organizationId(), applicationKey.applicationId())
+                                   .compose(found -> found == null ? signUp(scope, handoff) : Future.succeededFuture(found))
                                    .map(scope::memberOf)
                                    .map(user -> user == null ? null : AuthEndpointSupport.participantOf(user)));
         }
+    }
+
+    // the user an unknown identity becomes, or null when the scope admits none: sign-up is to the application itself,
+    // whose users each get a tenant of their own
+    private Future<ApplicationParticipantIdentity> signUp(LoginScope scope, SocialLoginHandoff handoff) {
+        ApplicationKey applicationKey = scope.application();
+        Future<ApplicationParticipantIdentity> ret;
+        if (scope.tenantId() != null) {
+            ret = Future.succeededFuture();
+        } else {
+            ret = applicationRepository.findById(applicationKey.applicationId(), applicationKey.organizationId())
+                    .compose(application -> {
+                        Future<ApplicationParticipantIdentity> created;
+                        if (application != null && application.isSocialSignUp()) {
+                            ApplicationParticipantIdentity user = new ApplicationParticipantIdentity();
+                            user.setOrganizationId(applicationKey.organizationId())
+                                .setApplicationId(applicationKey.applicationId());
+                            created = authEndpointSupport.createUserFromIdentity(user, handoff.getConfigurationId(), handoff.getSubject(),
+                                                                                 handoff.getEmail(), handoff.getDisplayName());
+                        } else {
+                            created = Future.succeededFuture();
+                        }
+                        return created;
+                    });
+        }
+        return ret;
     }
 
     // the shared host is the callback's base: the one redirect URI the registration lists for every application

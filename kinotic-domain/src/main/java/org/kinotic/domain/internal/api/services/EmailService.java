@@ -117,6 +117,40 @@ public class EmailService {
     }
 
     /**
+     * Sends the verification email of a sign-up to an application, whose link opens the {@code /signup/verify} page
+     * of the application's UI at {@code uiBaseUrl}.
+     *
+     * @param email             the recipient's email address
+     * @param displayName       the recipient's display name for the greeting
+     * @param verificationToken the token to include in the verification URL
+     * @param applicationName   the name of the application signed up to
+     * @param uiBaseUrl         the origin of the application's UI the sign-up was made from
+     * @return a future that completes once the send has finished (or fails if ACS rejects it)
+     */
+    public Future<Void> sendApplicationVerificationEmail(String email,
+                                                         String displayName,
+                                                         String verificationToken,
+                                                         String applicationName,
+                                                         String uiBaseUrl) {
+        String verificationUrl = uiBaseUrl + VERIFICATION_PATH + verificationToken;
+
+        if (!properties.getDomain().getEmail().isEnabled()) {
+            log.warn("Email sending is disabled; verification URL of {} for {} <{}>: {}",
+                    applicationName, displayName, email, verificationUrl);
+            return Future.succeededFuture();
+        }
+
+        Map<String, Object> variables = Map.of("displayName", displayName,
+                                               "applicationName", applicationName,
+                                               "verificationUrl", verificationUrl);
+        return send(email,
+                    displayName,
+                    "Verify your email for " + applicationName,
+                    render(VERIFICATION_HTML, variables),
+                    render(VERIFICATION_TEXT, variables));
+    }
+
+    /**
      * Sends an invitation email carrying the accept link for the given invite. An
      * application invite is rendered with the application's {@link InviteEmailTemplate}
      * when one exists; any other is rendered with {@code template}, or with Kinotic's own when it is {@code null}.
