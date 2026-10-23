@@ -18,6 +18,26 @@ public final class OAuth2Util {
 
     private OAuth2Util() {}
 
+    /**
+     * The identifier {@code provider} asserts for the person that is the same under every client registered with the
+     * provider, so a person is recognized whichever registration verified them: for Microsoft Entra, whose
+     * {@code sub} differs per client, the directory and the object id ({@code <tid>/<oid>}); for every other
+     * provider, and for an Entra token that carries no object id, the {@code sub} claim.
+     *
+     * @param claims   the verified claims of the identity
+     * @param provider the provider kind that verified them
+     * @return the identifier, or {@code null} when the claims carry no {@code sub}
+     */
+    public static String stableSubject(Map<String, Object> claims, OidcProviderType provider) {
+        String ret = stringClaim(claims, "sub");
+        String tid = stringClaim(claims, "tid");
+        String oid = stringClaim(claims, "oid");
+        if (provider == OidcProviderType.AZURE_AD && tid != null && oid != null) {
+            ret = tid + "/" + oid;
+        }
+        return ret;
+    }
+
     public static String firstPresent(Map<String, Object> claims, String... names) {
         for (String name : names) {
             String value = stringClaim(claims, name);

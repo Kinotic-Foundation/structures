@@ -9,8 +9,11 @@ import org.kinotic.appserver.internal.api.services.security.SocialLoginHandoff;
 import org.kinotic.appserver.internal.api.services.security.SocialLoginHandoffService;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
+import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
+import org.kinotic.domain.api.model.security.ClientRegistrationType;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -25,18 +28,19 @@ import org.springframework.stereotype.Component;
 
 
 /**
- * Sign-in to an application through one of the platform's social registrations
- * ({@link ApplicationSocialOidcConfiguration}). The registration is shared by every application that offers
- * it, and a provider returns the browser only to a redirect URI registered in advance, so the provider
- * returns to one host for all of them: the app server's own, {@code kinotic.domain.appApiBaseUrl}. The flow
+ * Sign-in to an application through one of its {@link ApplicationOidcConfiguration}s that uses Kinotic's
+ * registration with the provider ({@link ClientRegistrationType#MANAGED}), the platform's
+ * {@link ApplicationSocialOidcConfiguration} of the configuration's provider kind. The registration is shared by
+ * every application, and a provider returns the browser only to a redirect URI registered in advance, so the
+ * provider returns to one host for all of them: the app server's own, {@code kinotic.domain.appApiBaseUrl}. The flow
  * therefore runs across two hosts. The application's API host starts it ({@link ApplicationLoginHandler}'s
  * start answers with the authorize URL on the shared host), the shared host runs the provider round-trip on
- * its own session, and its callback
- * verifies the identity and hands it to the application's API host under a single-use code, where the
- * session is established, so the browser ends signed in at the host the application's UI connects to. The code
- * completes the sign-in only in the browser that started it: the application's host puts a value in that
- * browser's session at the start, the shared host carries it through its own session into the handoff, and the
- * completion requires the browser to present the same value again.
+ * its own session, and its callback verifies the identity, finds or creates the application's user it signs in as,
+ * and hands that user to the application's API host under a single-use code, where the session is established, so
+ * the browser ends signed in at the host the application's UI connects to. The code completes the sign-in only in
+ * the browser that started it: the application's host puts a value in that browser's session at the start, the
+ * shared host carries it through its own session into the handoff, and the completion requires the browser to
+ * present the same value again.
  */
 @Slf4j
 @Component
@@ -45,6 +49,10 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
     private static final String CALLBACK_PATH = "/api/auth/app/login/social/callback/";
     private static final String COMPLETE_PATH = "/api/auth/app/login/social/complete/";
+
+    // the application's configuration a flow at the shared host signs in through, held there for its callback, whose
+    // path names the platform registration the provider returns to
+    private static final String CONFIGURATION_SESSION_KEY = "socialLoginConfiguration";
 
     private final ParticipantIdentityService identityService;
     private final OidcConfigurationService oidcConfigurationService;
@@ -62,11 +70,13 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code GET /api/auth/app/login/social/authorize?organizationId&applicationId&configurationId&origin&binding[&tenantId]},
-     * at the shared host — begins the provider round-trip for a sign-in to the application, or to its tenant
-     * from one of the tenant's sites or when {@code tenantId} names one, from the page at {@code origin},
-     * redirecting the browser to the provider. {@code binding} is the value the application's host put in the
-     * browser's session, which the completion there requires again. {@code 400} for a configuration the login
-     * does not offer, a page that is not one of the application's UIs, or a start that carries no binding.
+     * at the shared host — begins the provider round-trip through Kinotic's registration for a sign-in to the
+     * application, or to its tenant from one of the tenant's sites or when {@code tenantId} names one, from the page at
+     * {@code origin}, through the application's configuration {@code configurationId}, redirecting the browser to the
+     * provider. {@code binding} is the value the application's host put in the browser's session, which the completion
+     * there requires again. {@code 400} for a page that is not one of the application's UIs or a start that carries no
+     * binding; a configuration the login does not offer through Kinotic's registration returns the browser to the
+     * page's login with {@code config_not_found}.
      */
     private void handleAuthorize(RoutingContext ctx) {
         ApplicationKey applicationKey = new ApplicationKey(ctx.request().getParam("organizationId"),
@@ -85,19 +95,13 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         }
         // held through the provider round-trip for the callback to hand on with the identity
         ctx.session().put(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY, binding);
+        ctx.session().put(CONFIGURATION_SESSION_KEY, configId);
 
         authEndpointSupport.loginScope(applicationKey, origin, ctx.request().getParam("tenantId"))
-              .compose(scope -> oidcConfigurationService.findOffered(configId, applicationKey.organizationId(),
-                                                                     applicationKey.applicationId(), scope.tenantId())
-                                                        .compose(config -> {
-                  Future<String> ret;
-                  if (config instanceof ApplicationSocialOidcConfiguration) {
-                      ret = oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(configId), applicationKey, scope.tenantId(), origin);
-                  } else {
-                      ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
-                  }
-                  return ret;
-              }))
+              .compose(scope -> findManaged(configId, applicationKey, scope.tenantId())
+                      .compose(configuration -> managedRegistration(configuration)
+                              .compose(registration -> oidcFlowOrchestrator.startFlow(ctx, registration, callbackUrl(registration.getId()),
+                                                                                      applicationKey, scope.tenantId(), origin))))
               .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
               .onFailure(err -> {
                   log.warn("Social login authorize failed for {}/{}: {}", HostLabelUtil.label(applicationKey), configId, err.getMessage());
@@ -107,23 +111,54 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
               });
     }
 
+    // the configuration the scope offers that signs in through Kinotic's registration, failing with CONFIG_NOT_FOUND otherwise
+    private Future<ApplicationOidcConfiguration> findManaged(String configId, ApplicationKey applicationKey, String tenantId) {
+        return oidcConfigurationService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId(), tenantId)
+                                       .map(offered -> {
+                                           if (!(offered instanceof ApplicationOidcConfiguration configuration)
+                                                   || configuration.getClientRegistrationType() != ClientRegistrationType.MANAGED) {
+                                               throw new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND);
+                                           }
+                                           return configuration;
+                                       });
+    }
+
+    // the platform's enabled registration the configuration signs in through, failing with CONFIG_NOT_FOUND when there is none
+    private Future<ApplicationSocialOidcConfiguration> managedRegistration(ApplicationOidcConfiguration configuration) {
+        return oidcConfigurationService.findEnabledAppSocialByProvider(configuration.getProvider())
+                                       .map(registration -> {
+                                           if (registration == null) {
+                                               throw new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND);
+                                           }
+                                           return registration;
+                                       });
+    }
+
     /**
      * {@code GET /api/auth/app/login/social/callback/:configId}, at the shared host — the provider returns
-     * here; validates the callback against the flow session and, for an identity that may sign in, sends
-     * the browser on to the application's API host with the single-use code its sign-in is staged under.
-     * A callback that fails returns the browser to the login page of the page that started the flow with the
-     * error; one no flow session answers for is refused with {@code 400}: the host serves every application,
+     * here; validates the callback against the flow session, finds or creates the application's user the identity
+     * signs in as through the application's configuration the flow started with, and sends the browser on to the
+     * application's API host with the single-use code its sign-in is staged under. A callback that fails, or whose
+     * identity signs in as no user, returns the browser to the login page of the page that started the flow with
+     * the error; one no flow session answers for is refused with {@code 400}: the host serves every application,
      * so without the session there is no page to send the browser back to.
      */
     private void handleCallback(RoutingContext ctx) {
         String pathConfigId = ctx.pathParam("configId");
         // read before the callback consumes the flow: a failed callback still returns to the page that started it
         PendingFlow flow = oidcFlowOrchestrator.pendingFlow(ctx);
+        String configId = ctx.session().remove(CONFIGURATION_SESSION_KEY);
 
-        oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
+        oidcFlowOrchestrator.<ApplicationSocialOidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
-                (orgId, applicationId, tenantId) -> oidcConfigurationService.findOffered(pathConfigId, orgId, applicationId, tenantId))
-                .onSuccess(result -> handOff(ctx, result))
+                (orgId, applicationId, tenantId) -> configId == null
+                        ? Future.succeededFuture()
+                        : findManaged(configId, new ApplicationKey(orgId, applicationId), tenantId)
+                                .compose(this::managedRegistration)
+                                // the provider returned to the registration the flow started with, or the flow is not this one
+                                .map(registration -> registration.getId().equals(pathConfigId) ? registration : null)
+                                .recover(err -> err instanceof OidcCallbackException ? Future.succeededFuture() : Future.failedFuture(err)))
+                .compose(result -> handOff(ctx, result, configId))
                 .onFailure(ex -> {
                     String code = authEndpointSupport.callbackErrorCode(ex);
                     log.warn("Social login callback failed for config {}: {}", pathConfigId, ex.getMessage());
@@ -135,28 +170,38 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
                 });
     }
 
-    private void handOff(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
-        String sub = authEndpointSupport.verifiedSubject(ctx, result);
-        if (sub != null) {
+    private Future<Void> handOff(RoutingContext ctx, CallbackResult<? extends OidcConfiguration> result, String configId) {
+        Future<Void> ret = Future.succeededFuture();
+        if (authEndpointSupport.verifiedSubject(ctx, result) != null) {
             ApplicationKey applicationKey = new ApplicationKey(result.orgId(), result.applicationId());
-            String code = handoffService.stage(new SocialLoginHandoff()
-                                                       .setOrganizationId(applicationKey.organizationId())
-                                                       .setApplicationId(applicationKey.applicationId())
-                                                       .setTenantId(result.tenantId())
-                                                       .setConfigurationId(result.config().getId())
-                                                       .setSubject(sub)
-                                                       .setOrigin(result.origin())
-                                                       .setBinding(ctx.session().remove(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY)));
-            ctx.response().setStatusCode(302)
-               .putHeader("Location", HostLabelUtil.apiUrl(applicationKey, domainProperties.getDomain().getAppApiBaseUrl()) + COMPLETE_PATH + code)
-               .end();
+            LoginScope scope = new LoginScope(applicationKey, result.tenantId());
+            ret = findManaged(configId, applicationKey, result.tenantId())
+                    .compose(configuration -> authEndpointSupport.findOrCreateUser(scope, configuration, result.claims()))
+                    .map(user -> {
+                        if (user == null) {
+                            authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.NO_USER);
+                        } else {
+                            String code = handoffService.stage(new SocialLoginHandoff()
+                                                                       .setOrganizationId(applicationKey.organizationId())
+                                                                       .setApplicationId(applicationKey.applicationId())
+                                                                       .setTenantId(result.tenantId())
+                                                                       .setIdentityId(user.getId())
+                                                                       .setOrigin(result.origin())
+                                                                       .setBinding(ctx.session().remove(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY)));
+                            ctx.response().setStatusCode(302)
+                               .putHeader("Location", HostLabelUtil.apiUrl(applicationKey, domainProperties.getDomain().getAppApiBaseUrl()) + COMPLETE_PATH + code)
+                               .end();
+                        }
+                        return null;
+                    });
         }
+        return ret;
     }
 
     /**
      * {@code GET /api/auth/app/login/social/complete/:code}, at the application's API host — consumes the
-     * staged sign-in and logs its identity into the application, or into the tenant the sign-in was to, bound
-     * to the page that started it, as {@link ApplicationLoginHandler}'s own callback does. A code that is unknown,
+     * staged sign-in and logs its user into the application, or into the tenant the sign-in was to, bound to the
+     * page that started it, as {@link ApplicationLoginHandler}'s own callback does. A code that is unknown,
      * spent, staged for another application, or presented by a browser other than the one that started the
      * sign-in sends the browser to the application's login page with {@code handoff_invalid}.
      */
@@ -173,9 +218,10 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         } else {
             LoginScope scope = new LoginScope(applicationKey, handoff.getTenantId());
             authEndpointSupport.completeLogin(ctx, handoff.getOrigin(),
-                    identityService.findApplicationUserByOidcIdentity(handoff.getConfigurationId(), handoff.getSubject(),
-                                                                      applicationKey.organizationId(), applicationKey.applicationId())
-                                   .map(scope::memberOf)
+                    identityService.findById(handoff.getIdentityId())
+                                   .map(identity -> identity instanceof ApplicationParticipantIdentity user
+                                                    && applicationKey.equals(new ApplicationKey(user.getOrganizationId(), user.getApplicationId()))
+                                           ? scope.memberOf(user) : null)
                                    .map(user -> user == null ? null : AuthEndpointSupport.participantOf(user)));
         }
     }

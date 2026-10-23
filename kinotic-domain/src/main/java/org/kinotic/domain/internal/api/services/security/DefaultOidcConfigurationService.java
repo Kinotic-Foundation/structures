@@ -10,6 +10,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
+import org.kinotic.domain.api.model.security.ClientRegistrationType;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderType;
@@ -30,7 +31,9 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class DefaultOidcConfigurationService extends AbstractCrudService<OidcConfiguration> implements OidcConfigurationService {
@@ -62,15 +65,25 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         Future<Void> ret = Future.succeededFuture();
         if (entity instanceof OwnedOidcConfiguration owned) {
             // the organization names its account at the provider, never a URL: the kind's template
-            // decides the issuer, so the server only ever connects to the provider's own hosts
-            owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
+            // decides the issuer, so the server only ever connects to the provider's own hosts. A configuration
+            // signing in through Kinotic's registration may still hold a client of its own for a switch back,
+            // which is derived and checked once one is given
+            if (!isManaged(owned) || owned.getClientId() != null || owned.getProviderAccount() != null) {
+                owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
+            } else {
+                owned.setAuthority(null);
+            }
             if (owned instanceof OrganizationOidcConfiguration) {
                 // an organization's members are added by its administrators, whom its provider then signs in
                 Validate.isTrue(!owned.isCreateUserOnSignIn(),
                                 "An organization's own login admits the members its administrators added; createUserOnSignIn"
                                         + " applies to an application's or a tenant's configuration");
             } else if (owned instanceof ApplicationOidcConfiguration forApplication) {
+                Validate.notNull(forApplication.getClientRegistrationType(), "ApplicationOidcConfiguration clientRegistrationType cannot be null");
                 ret = requireApplication(forApplication.getOrganizationId(), forApplication.getApplicationId()).mapEmpty();
+                if (isManaged(forApplication)) {
+                    ret = ret.compose(v -> requireManagedRegistration(forApplication.getProvider()));
+                }
             } else if (owned instanceof TenantOidcConfiguration forTenant) {
                 ret = requireTenant(forTenant.getOrganizationId(), forTenant.getApplicationId(), forTenant.getTenantId());
             }
@@ -146,6 +159,19 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         });
     }
 
+    // a configuration using Kinotic's registration signs in through the platform's registration of its provider kind
+    private Future<Void> requireManagedRegistration(OidcProviderType provider) {
+        return oidcRepository.findEnabledSocialByProvider(provider).map(registration -> {
+            Validate.isTrue(registration != null, "Kinotic manages no sign-in with %s; use the application's own credentials", provider.key());
+            return null;
+        });
+    }
+
+    private static boolean isManaged(OwnedOidcConfiguration configuration) {
+        return configuration instanceof ApplicationOidcConfiguration forApplication
+                && forApplication.getClientRegistrationType() == ClientRegistrationType.MANAGED;
+    }
+
     // the tenant whose login a TenantOidcConfiguration is offered at must be one of the organization's application's
     private Future<Void> requireTenant(String orgId, String applicationId, String tenantId) {
         Validate.isTrue(StringUtils.isNotBlank(applicationId), "Application id must be set on TenantOidcConfiguration");
@@ -174,6 +200,17 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
+    public Future<List<ApplicationSocialOidcConfiguration>> findEnabledAppSocialRegistrations() {
+        return oidcRepository.findEnabledSocial();
+    }
+
+    @Override
+    public Future<ApplicationSocialOidcConfiguration> findEnabledAppSocialByProvider(OidcProviderType provider) {
+        Validate.notNull(provider, "provider cannot be null");
+        return oidcRepository.findEnabledSocialByProvider(provider);
+    }
+
+    @Override
     public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId, String tenantId) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         if (tenantId != null) {
@@ -186,7 +223,16 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             // an organization's login offers the platform's org sign-up registrations before its own
             ret = concat(oidcRepository.findEnabledOrgSignup().map(signup -> signup), own);
         } else if (tenantId == null) {
-            ret = concat(own, findEnabledSocial(organizationId, applicationId).map(social -> social));
+            // a configuration using Kinotic's registration is offered while the platform holds an enabled one of its kind
+            ret = Future.all(own, oidcRepository.findEnabledSocial()).map(cf -> {
+                Set<OidcProviderType> managed = cf.<List<ApplicationSocialOidcConfiguration>>resultAt(1).stream()
+                                                  .map(OidcConfiguration::getProvider)
+                                                  .collect(Collectors.toSet());
+                return cf.<List<OidcConfiguration>>resultAt(0).stream()
+                         .filter(configuration -> !isManaged((OwnedOidcConfiguration) configuration)
+                                                  || managed.contains(configuration.getProvider()))
+                         .toList();
+            });
         } else {
             // a tenant's login offers the tenant's own providers before everything the application's offers
             ret = concat(own, findEnabledForScope(organizationId, applicationId, null).map(offered -> offered));
@@ -201,14 +247,6 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
             return offered;
         });
-    }
-
-    // the enabled platform social registrations the application names, in the application's order
-    private Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocial(String organizationId, String applicationId) {
-        return applicationRepository.findById(applicationId, organizationId)
-                                    .compose(application -> application == null || application.getSocialProviders().isEmpty()
-                                            ? Future.succeededFuture(List.of())
-                                            : oidcRepository.findEnabledSocialByProviders(application.getSocialProviders()));
     }
 
     @Override
@@ -231,10 +269,6 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                              Future.succeededFuture(organizationId.equals(owned.getOrganizationId())
                                                                     && owned.getApplicationId().equals(applicationId)
                                                                     && owned.getTenantId().equals(tenantId));
-                                     case ApplicationSocialOidcConfiguration social when applicationId != null ->
-                                             applicationRepository.findById(applicationId, organizationId)
-                                                                  .map(application -> application != null
-                                                                                      && application.getSocialProviders().contains(social.getProvider()));
                                      // every organization's own login offers the platform's org sign-up registrations
                                      case OrgSignupOidcConfiguration signup -> Future.succeededFuture(applicationId == null);
                                      case null, default -> Future.succeededFuture(false);
@@ -304,6 +338,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         return oidcRepository.findOwnedById(sourceId, orgId)
                              .compose(source -> {
                                  Validate.isTrue(source != null, "Organization %s has no OIDC configuration %s", orgId, sourceId);
+                                 Validate.isTrue(!isManaged(source), "Configuration %s signs in through Kinotic's registration and has no client of its own to copy", sourceId);
                                  OwnedOidcConfiguration target;
                                  if (applicationId == null) {
                                      target = new OrganizationOidcConfiguration();

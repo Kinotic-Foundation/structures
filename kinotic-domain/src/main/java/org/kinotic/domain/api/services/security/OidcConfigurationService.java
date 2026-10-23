@@ -6,6 +6,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
+import org.kinotic.domain.api.model.security.ClientRegistrationType;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderType;
@@ -25,7 +26,9 @@ import java.util.Collection;
  * {@link ApplicationOidcConfiguration} must name an application of that organization. An organization's
  * configuration must name a provider kind {@link OidcProviderType#offeredToOrganizations() offered to
  * organizations} and its account there in the form the kind expects; its authority is derived from the
- * two on every save. The finders that serve the sign-in flows, which run before a participant is bound,
+ * two on every save. An application's configuration that signs in through Kinotic's registration
+ * ({@link ClientRegistrationType#MANAGED}) must name a provider kind the platform holds an enabled
+ * {@link ApplicationSocialOidcConfiguration} for, and needs no account or client of its own. The finders that serve the sign-in flows, which run before a participant is bound,
  * check no participant and say so.
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
@@ -55,13 +58,27 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     Future<OrgSignupOidcConfiguration> findOrgSignupById(String id);
 
     /**
+     * Every enabled registration the platform holds for applications' sign-in, one per provider kind: the
+     * registrations an {@link ApplicationOidcConfiguration} using {@link ClientRegistrationType#MANAGED} signs in
+     * through. Checks no participant.
+     */
+    Future<List<ApplicationSocialOidcConfiguration>> findEnabledAppSocialRegistrations();
+
+    /**
+     * The enabled registration the platform holds for applications' sign-in with {@code provider}, through which
+     * an {@link ApplicationOidcConfiguration} of that kind using {@link ClientRegistrationType#MANAGED} signs in,
+     * or {@code null} when the platform holds none. Checks no participant.
+     */
+    Future<ApplicationSocialOidcConfiguration> findEnabledAppSocialByProvider(OidcProviderType provider);
+
+    /**
      * The enabled configurations a sign-in scope offers, in the order to present them. The organization's
      * own login ({@code applicationId} null) offers the org sign-up registrations followed by the
      * organization's {@link OrganizationOidcConfiguration}s; an application's login offers its
-     * {@link ApplicationOidcConfiguration}s followed by the platform's
-     * {@link ApplicationSocialOidcConfiguration}s whose provider kinds the application names; the login of
-     * one tenant of the application offers the tenant's {@link TenantOidcConfiguration}s followed by what
-     * the application's login offers. Empty when the scope offers none. Checks no participant.
+     * {@link ApplicationOidcConfiguration}s, one using {@link ClientRegistrationType#MANAGED} while the platform
+     * holds an enabled registration of its provider kind; the login of one tenant of the application offers
+     * the tenant's {@link TenantOidcConfiguration}s followed by what the application's login offers. Empty
+     * when the scope offers none. Checks no participant.
      *
      * @param organizationId the organization the scope belongs to
      * @param applicationId  the application within it, or {@code null} for the organization's own login
@@ -77,9 +94,8 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     /**
      * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
      * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
-     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, an
-     * {@link ApplicationSocialOidcConfiguration} the application names, or at an organization's own login
-     * any {@link OrgSignupOidcConfiguration}, which every organization's login offers. A tenant's login
+     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, or at an
+     * organization's own login any {@link OrgSignupOidcConfiguration}, which every organization's login offers. A tenant's login
      * offers what the application's offers as well as the tenant's own. Checks no participant.
      *
      * @param configurationId the configuration a sign-in names

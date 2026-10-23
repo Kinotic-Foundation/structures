@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
@@ -17,8 +18,14 @@ import org.kinotic.domain.api.repositories.TenantRepository;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
+import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
+import org.kinotic.domain.api.services.security.ApplicationSignUpService;
 import org.kinotic.domain.api.services.security.KinoticJwtIssuer;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -29,6 +36,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -36,12 +44,13 @@ import java.util.regex.Pattern;
  * application's API host, {@code <organizationId>--<applicationId>} under {@code kinotic.domain.appApiBaseUrl},
  * and {@link #applicationKey} names that application; the browser flows send the user to its primary UI.
  */
+@Slf4j
 @Component
 public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     /**
-     * Path on the shared host, {@code kinotic.domain.appApiBaseUrl}, that begins a sign-in through one of the
-     * platform's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
+     * Path on the shared host, {@code kinotic.domain.appApiBaseUrl}, that begins a sign-in through an application's
+     * configuration that uses one of the platform's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
      */
     public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
 
@@ -56,11 +65,13 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     private final KinoticDomainProperties domainProperties;
     private final ApplicationRepository applicationRepository;
     private final TenantRepository tenantRepository;
+    private final ApplicationSignUpService signUpService;
 
     public ApplicationAuthEndpointSupport(AppServerProperties properties,
                                           KinoticDomainProperties domainProperties,
                                           ApplicationRepository applicationRepository,
                                           TenantRepository tenantRepository,
+                                          ApplicationSignUpService signUpService,
                                           KinoticJwtIssuer jwtIssuer,
                                           OidcConfigurationService oidcConfigurationService,
                                           OidcFlowOrchestrator oidcFlowOrchestrator,
@@ -71,6 +82,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
         this.domainProperties = domainProperties;
         this.applicationRepository = applicationRepository;
         this.tenantRepository = tenantRepository;
+        this.signUpService = signUpService;
     }
 
     /**
@@ -176,8 +188,37 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     }
 
     /**
-     * The URL on the shared host that begins a sign-in to {@code scope} through the platform social
-     * registration {@code configId}, for the page at {@code origin}, in the browser whose session at this host
+     * The user of {@code scope} the identity {@code configuration}'s provider verified signs in as, created on its first
+     * sign-in where the configuration signs people up and the scope admits them (see
+     * {@link ApplicationSignUpService#findOrCreateOidcUser}), or {@code null} when there is none. A user that would be
+     * created under an email the application holds under another method fails with an {@link OidcCallbackException}
+     * carrying {@link OidcErrorCodes#USER_EXISTS}.
+     *
+     * @param claims the claims the provider verified, which {@link #verifiedSubject} has accepted
+     */
+    public Future<ApplicationParticipantIdentity> findOrCreateUser(LoginScope scope, OwnedOidcConfiguration configuration, Map<String, Object> claims) {
+        return signUpService.findOrCreateOidcUser(scope.application(), scope.tenantId(), configuration, claims)
+                            .recover(err -> Future.failedFuture(err instanceof ExistingUserException
+                                    ? new OidcCallbackException(OidcErrorCodes.USER_EXISTS) : err));
+    }
+
+    /**
+     * Answers a request whose handling failed: a failure naming a status, such as a scope refused with {@code 403}
+     * or {@code 404}, with that status through the router's failure handler, and any other with {@code 500} and
+     * {@code message}.
+     */
+    public void fail(RoutingContext ctx, Throwable err, String message) {
+        if (err instanceof HttpException || err instanceof AuthorizationException) {
+            ctx.fail(err);
+        } else {
+            log.warn("{} at {}: {}", message, ctx.request().authority(), err.getMessage());
+            respondError(ctx, 500, message);
+        }
+    }
+
+    /**
+     * The URL on the shared host that begins a sign-in to {@code scope} through the application's configuration
+     * {@code configId}, which signs in through Kinotic's registration with its provider, for the page at {@code origin}, in the browser whose session at this host
      * holds {@code binding} under {@link #SOCIAL_LOGIN_BINDING_SESSION_KEY}.
      */
     public String socialAuthorizeUrl(LoginScope scope, String configId, String origin, String binding) {
