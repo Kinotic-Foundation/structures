@@ -1,9 +1,16 @@
 package org.kinotic.queue.internal;
 
+import org.awaitility.Awaitility;
+import org.kinotic.queue.internal.log.QueueLog;
+
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The queue nodes a test runs, each keeping its data in a directory of its own under the test's directory. Closing
@@ -68,10 +75,36 @@ public final class QueueTestCluster implements AutoCloseable {
         return List.copyOf(nodes);
     }
 
+    /**
+     * Waits until every running node's copy of the queue's shard counts the copy on {@code voter} toward commits, with
+     * no change of the copies counting under way.
+     */
+    public void awaitVoting(String queue, int shard, QueueTestNode voter) {
+        String storageId = QueueLog.storageId(voter.dataDirectory());
+        Awaitility.await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> {
+            for (QueueTestNode node : nodes()) {
+                String latest = latestMembership(node.dataDirectory().resolve(queue).resolve("shards").resolve(String.valueOf(shard)));
+                assertTrue(latest.matches(".* \\S*" + storageId + "\\S* -"), "node " + node.name() + " counts " + latest);
+            }
+        });
+    }
+
     @Override
     public void close() throws Exception {
         for (QueueTestNode node : nodes) {
             node.close();
         }
+    }
+
+    // The last membership change the shard's manifest lists: offset, epoch, voting copies, joining copies
+    private static String latestMembership(Path shard) {
+        String ret;
+        try {
+            List<String> memberships = Files.readAllLines(shard.resolve("segments")).stream().filter(line -> line.startsWith("membership ")).toList();
+            ret = memberships.isEmpty() ? "" : memberships.getLast();
+        } catch (Exception e) {
+            ret = "";
+        }
+        return ret;
     }
 }

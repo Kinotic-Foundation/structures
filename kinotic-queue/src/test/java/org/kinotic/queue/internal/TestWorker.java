@@ -1,13 +1,13 @@
 package org.kinotic.queue.internal;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import org.kinotic.queue.api.model.WorkItem;
 import org.kinotic.queue.api.model.WorkerOptions;
-import org.kinotic.queue.api.services.QueueService;
 import org.kinotic.queue.api.services.QueueWorker;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
@@ -17,16 +17,11 @@ import java.util.function.BiFunction;
  */
 public final class TestWorker extends TestStream<QueueWorker, WorkItem> {
 
-    private TestWorker(Vertx vertx, QueueService service, String queue, String groupName, WorkerOptions options) throws Exception {
-        super(vertx, () -> service.work(queue, groupName, options));
-    }
-
-    public static TestWorker start(Vertx vertx,
-                                   QueueService service,
-                                   String queue,
-                                   String groupName,
-                                   WorkerOptions options) throws Exception {
-        return new TestWorker(vertx, service, queue, groupName, options);
+    /**
+     * Starts a worker of the group through the node, waiting until it opened.
+     */
+    public TestWorker(QueueTestNode node, String queue, String groupName, WorkerOptions options) throws Exception {
+        super(node.vertx(), () -> node.queueService().work(queue, groupName, options));
     }
 
     public static int value(WorkItem item) {
@@ -46,6 +41,18 @@ public final class TestWorker extends TestStream<QueueWorker, WorkItem> {
         return ret;
     }
 
+    /**
+     * @return the items leased until {@code count} different values arrived, by value
+     */
+    public Map<Integer, WorkItem> takeAll(int count) throws InterruptedException {
+        Map<Integer, WorkItem> ret = new HashMap<>();
+        while (ret.size() < count) {
+            WorkItem item = next();
+            ret.put(value(item), item);
+        }
+        return ret;
+    }
+
     public Future<Void> settle(BiFunction<QueueWorker, WorkItem, Future<Void>> settlement, WorkItem item) throws Exception {
         return call(worker -> settlement.apply(worker, item));
     }
@@ -55,7 +62,7 @@ public final class TestWorker extends TestStream<QueueWorker, WorkItem> {
      * is then leased again
      */
     public boolean tryAccept(WorkItem item) throws Exception {
-        return settle(QueueWorker::accept, item).toCompletionStage().toCompletableFuture().handle((v, e) -> e == null).get(30, TimeUnit.SECONDS);
+        return settle(QueueWorker::accept, item).map(true).otherwise(false).await(30, TimeUnit.SECONDS);
     }
 
     public Future<Void> close() throws Exception {

@@ -17,7 +17,6 @@ import org.kinotic.queue.internal.TestWorker;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -82,7 +81,7 @@ public class PositionExpiryTests {
     @Test
     public void aGroupsPositionLastsWhileItsWorkersAskAndExpiresOnceTheGroupIsGone() throws Exception {
         TestWorker worker = work();
-        for (WorkItem item : takeAll(worker, 10).values()) {
+        for (WorkItem item : worker.takeAll(10).values()) {
             if (value(item.record()) < 5) {
                 await(worker.settle(QueueWorker::accept, item));
             }
@@ -94,12 +93,12 @@ public class PositionExpiryTests {
         Thread.sleep(LONGER_THAN_GROUP_IDLE_MS);
 
         TestWorker resumed = work();
-        assertEquals(range(5, 10), takeAll(resumed, 5).keySet());
+        assertEquals(range(5, 10), resumed.takeAll(5).keySet());
         await(resumed.close());
 
         Thread.sleep(LONGER_THAN_RETENTION_MS);
         TestWorker restarted = work();
-        assertEquals(range(0, 10), takeAll(restarted, 10).keySet());
+        assertEquals(range(0, 10), restarted.takeAll(10).keySet());
         await(restarted.close());
     }
 
@@ -109,20 +108,10 @@ public class PositionExpiryTests {
     }
 
     private TestSubscriber subscribe() throws Exception {
-        return TestSubscriber.subscribe(node.vertx(), service, QUEUE, "billing", StartPosition.EARLIEST);
+        return new TestSubscriber(node, QUEUE, "billing", StartPosition.EARLIEST);
     }
 
     private TestWorker work() throws Exception {
-        return TestWorker.start(node.vertx(), service, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 10, Duration.ofMinutes(1)));
+        return new TestWorker(node, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 10, Duration.ofMinutes(1)));
     }
-
-    private static Map<Integer, WorkItem> takeAll(TestWorker worker, int count) throws Exception {
-        Map<Integer, WorkItem> ret = new HashMap<>();
-        while (ret.size() < count) {
-            WorkItem item = worker.next();
-            ret.put(value(item.record()), item);
-        }
-        return ret;
-    }
-
 }

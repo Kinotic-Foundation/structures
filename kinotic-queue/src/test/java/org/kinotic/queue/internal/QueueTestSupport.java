@@ -8,6 +8,7 @@ import org.kinotic.queue.internal.log.QueueLog;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -55,11 +56,14 @@ public final class QueueTestSupport {
         return IntStream.range(from, to).boxed().collect(Collectors.toSet());
     }
 
-    public static <T> T await(Future<T> future) throws Exception {
+    /**
+     * @return the future's result; throws the future's failure as it is
+     */
+    public static <T> T await(Future<T> future) throws TimeoutException {
         return awaitWithin(future, 60);
     }
 
-    public static <T> T awaitWithin(Future<T> future, long seconds) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(seconds, TimeUnit.SECONDS);
+    public static <T> T awaitWithin(Future<T> future, long seconds) throws TimeoutException {
+        return future.await(seconds, TimeUnit.SECONDS);
     }
 }

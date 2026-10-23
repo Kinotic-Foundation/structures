@@ -23,10 +23,8 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,8 +93,7 @@ public class QueueWorkerTests {
 
         assertEquals(taken.record().position(), retaken.record().position());
         assertEquals(2, retaken.deliveryCount());
-        ExecutionException e = assertThrows(ExecutionException.class, () -> await(slow.settle(QueueWorker::accept, taken)));
-        assertInstanceOf(ReplyException.class, e.getCause());
+        assertThrows(ReplyException.class, () -> await(slow.settle(QueueWorker::accept, taken)));
         await(other.settle(QueueWorker::accept, retaken));
     }
 
@@ -132,8 +129,7 @@ public class QueueWorkerTests {
             await(worker.settle(value(item) == 1 ? QueueWorker::reject : QueueWorker::accept, item));
         }
 
-        TestSubscriber deadLetters = TestSubscriber.subscribe(node.vertx(), service, QueueService.deadLetterQueue(QUEUE, "billing"),
-                                                              "inspector", StartPosition.EARLIEST);
+        TestSubscriber deadLetters = new TestSubscriber(node, QueueService.deadLetterQueue(QUEUE, "billing"), "inspector", StartPosition.EARLIEST);
         QueueRecord deadLetter = deadLetters.next();
         assertEquals(1, QueueTestSupport.value(deadLetter));
         assertEquals("key-1", deadLetter.key());
@@ -187,7 +183,7 @@ public class QueueWorkerTests {
     public void aConsumerAndAGroupWithTheSameNameKeepSeparatePositions() throws Exception {
         await(service.createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         appendValues(0, 5);
-        TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), service, QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(node, QUEUE, "billing", StartPosition.EARLIEST);
         QueueRecord last = null;
         for (int i = 0; i < 5; i++) {
             last = subscriber.next();
@@ -234,8 +230,8 @@ public class QueueWorkerTests {
     private TestSubscriber subscribeOnceCreated(String queue) {
         return Awaitility.await()
                          .atMost(Duration.ofSeconds(10))
-                         .ignoreExceptionsMatching(e -> e instanceof ExecutionException && e.getCause() instanceof IllegalArgumentException)
-                         .until(() -> TestSubscriber.subscribe(node.vertx(), service, queue, "inspector", StartPosition.EARLIEST), Objects::nonNull);
+                         .ignoreException(IllegalArgumentException.class)
+                         .until(() -> new TestSubscriber(node, queue, "inspector", StartPosition.EARLIEST), Objects::nonNull);
     }
 
     private void appendValues(int from, int to) throws Exception {
@@ -245,7 +241,6 @@ public class QueueWorkerTests {
     }
 
     private TestWorker work(String groupName, StartPosition startPosition, int prefetch, Duration leaseDuration) throws Exception {
-        return TestWorker.start(node.vertx(), service, QUEUE, groupName, new WorkerOptions(startPosition, prefetch, leaseDuration));
+        return new TestWorker(node, QUEUE, groupName, new WorkerOptions(startPosition, prefetch, leaseDuration));
     }
-
 }

@@ -2,10 +2,10 @@ package org.kinotic.queue.internal;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.streams.ReadStream;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -33,15 +33,14 @@ abstract class TestStream<S extends ReadStream<T>, T> {
      */
     TestStream(Vertx vertx, Supplier<Future<S>> open) throws Exception {
         context = vertx.getOrCreateContext();
-        CompletableFuture<S> opened = new CompletableFuture<>();
+        Promise<S> opened = Promise.promise();
         context.runOnContext(v -> open.get()
                                       .onSuccess(stream -> {
                                           stream.exceptionHandler(failures::add);
                                           stream.handler(received::add);
-                                          opened.complete(stream);
                                       })
-                                      .onFailure(opened::completeExceptionally));
-        stream = opened.get(30, TimeUnit.SECONDS);
+                                      .onComplete(opened));
+        stream = opened.future().await(30, TimeUnit.SECONDS);
     }
 
     /**
@@ -75,8 +74,8 @@ abstract class TestStream<S extends ReadStream<T>, T> {
      * @return what the call returns, called on the stream's context
      */
     <R> Future<R> call(Function<S, Future<R>> call) throws Exception {
-        CompletableFuture<Future<R>> ret = new CompletableFuture<>();
+        Promise<Future<R>> ret = Promise.promise();
         context.runOnContext(v -> ret.complete(call.apply(stream)));
-        return ret.get(30, TimeUnit.SECONDS);
+        return ret.future().await(30, TimeUnit.SECONDS);
     }
 }

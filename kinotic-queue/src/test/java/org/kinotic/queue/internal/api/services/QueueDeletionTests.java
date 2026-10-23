@@ -1,5 +1,6 @@
 package org.kinotic.queue.internal.api.services;
 
+import io.vertx.core.eventbus.ReplyException;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,9 +67,8 @@ public class QueueDeletionTests {
         QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 2)));
         appendAll(a.queueService(), QUEUE, 0, 10);
-        TestSubscriber subscriber = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
-        TestWorker worker = TestWorker.start(c.vertx(), c.queueService(), QUEUE, "thumbnails",
-                                             new WorkerOptions(StartPosition.EARLIEST, 1, Duration.ofMinutes(1)));
+        TestSubscriber subscriber = new TestSubscriber(b, QUEUE, "billing", StartPosition.EARLIEST);
+        TestWorker worker = new TestWorker(c, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 1, Duration.ofMinutes(1)));
         subscriber.next();
         WorkItem held = worker.next();
 
@@ -79,15 +78,15 @@ public class QueueDeletionTests {
         assertNotNull(subscriptionEnd, "the subscription of a deleted queue kept running");
         assertTrue(subscriptionEnd.getMessage().contains("deleted"), subscriptionEnd.getMessage());
         // A worker holding all it may learns of the deletion once it settles what it holds and asks for more
-        assertThrows(ExecutionException.class, () -> await(worker.settle(QueueWorker::accept, held)));
+        assertThrows(ReplyException.class, () -> await(worker.settle(QueueWorker::accept, held)));
         assertNotNull(worker.pollFailure(30_000), "the worker of a deleted queue kept running");
-        assertThrows(ExecutionException.class, () -> await(b.queueService().append(QUEUE, "key", payload(10))));
+        assertThrows(IllegalArgumentException.class, () -> await(b.queueService().append(QUEUE, "key", payload(10))));
         awaitNoCopy(a, b, c);
 
         // A queue created again with the same name holds none of the deleted queue's records or positions
         assertEquals(3, await(c.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 3))).shardCount());
         appendAll(c.queueService(), QUEUE, 100, 101);
-        TestSubscriber again = TestSubscriber.subscribe(a.vertx(), a.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber again = new TestSubscriber(a, QUEUE, "billing", StartPosition.EARLIEST);
         assertEquals(100, value(again.next()));
         await(again.close());
     }
@@ -99,12 +98,11 @@ public class QueueDeletionTests {
         QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 2)));
         appendAll(a.queueService(), QUEUE, 0, 20);
-        TestSubscriber old = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber old = new TestSubscriber(b, QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 20; i++) {
             await(old.commit(old.next()));
         }
-        TestWorker oldWorker = TestWorker.start(c.vertx(), c.queueService(), QUEUE, "thumbnails",
-                                                new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
+        TestWorker oldWorker = new TestWorker(c, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
         for (int i = 0; i < 20; i++) {
             await(oldWorker.settle(QueueWorker::accept, oldWorker.next()));
         }
@@ -115,19 +113,14 @@ public class QueueDeletionTests {
         appendAll(c.queueService(), QUEUE, 100, 105);
 
         // The consumer and the group start the new queue from scratch: positions of the deleted one would skip these
-        TestSubscriber subscriber = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(b, QUEUE, "billing", StartPosition.EARLIEST);
         Set<Integer> delivered = new HashSet<>();
         while (delivered.size() < 5) {
             delivered.add(value(subscriber.next()));
         }
         assertEquals(Set.of(100, 101, 102, 103, 104), delivered);
-        TestWorker worker = TestWorker.start(a.vertx(), a.queueService(), QUEUE, "thumbnails",
-                                             new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
-        Set<Integer> leased = new HashSet<>();
-        while (leased.size() < 5) {
-            leased.add(value(worker.next().record()));
-        }
-        assertEquals(Set.of(100, 101, 102, 103, 104), leased);
+        TestWorker worker = new TestWorker(a, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
+        assertEquals(Set.of(100, 101, 102, 103, 104), worker.takeAll(5).keySet());
 
         // The deleted queue's subscription ends without reading the new queue
         assertNotNull(old.pollFailure(30_000), "the subscription of the deleted queue kept running");
@@ -172,9 +165,8 @@ public class QueueDeletionTests {
         cluster.start("b");
 
         awaitNoCopy(first);
-        assertThrows(ExecutionException.class, () -> await(first.queueService().append(QUEUE, "key", payload(10))));
+        assertThrows(IllegalArgumentException.class, () -> await(first.queueService().append(QUEUE, "key", payload(10))));
     }
-
 
     private static void awaitNoCopy(QueueTestNode... holders) {
         for (QueueTestNode node : holders) {
@@ -183,6 +175,4 @@ public class QueueDeletionTests {
                       .untilAsserted(() -> assertFalse(Files.exists(copy), "node " + node.name() + " still holds a copy of the deleted queue"));
         }
     }
-
-
 }

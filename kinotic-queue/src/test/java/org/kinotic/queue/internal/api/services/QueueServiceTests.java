@@ -22,12 +22,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,9 +95,7 @@ public class QueueServiceTests {
         for (int i = 0; i < 200; i++) {
             appends.add(service.append("orders", "same-key", payload(i)));
         }
-        for (Future<QueuePosition> append : appends) {
-            await(append);
-        }
+        await(Future.all(appends));
 
         TestSubscriber subscriber = subscribe("billing", StartPosition.EARLIEST);
         for (int i = 0; i < 200; i++) {
@@ -179,29 +175,20 @@ public class QueueServiceTests {
         QueueRecord ahead = new QueueRecord(new QueuePosition("orders", 0, delivered.position().offset() + 1),
                                             "key", payload(1));
 
-        ExecutionException e = assertThrows(ExecutionException.class, () -> await(subscriber.commit(ahead)));
-        assertInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertThrows(IllegalArgumentException.class, () -> await(subscriber.commit(ahead)));
     }
 
     @Test
     public void appendOfARecordLargerThanTheMaximumEventPayloadFails() throws Exception {
         await(service.createQueueIfNotExist(new QueueDefinition("orders", 1)));
 
-        ExecutionException e = assertThrows(ExecutionException.class,
-                                             () -> await(service.append("orders", "key", new byte[2 * 1024 * 1024])));
-
-        assertInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertThrows(IllegalArgumentException.class, () -> await(service.append("orders", "key", new byte[2 * 1024 * 1024])));
     }
 
     @Test
     public void appendToAMissingOrInvalidQueueFails() {
-        ExecutionException missing = assertThrows(ExecutionException.class,
-                                                  () -> await(service.append("missing", "key", payload(0))));
-        assertInstanceOf(IllegalArgumentException.class, missing.getCause());
-
-        ExecutionException traversal = assertThrows(ExecutionException.class,
-                                                    () -> await(service.append("../outside", "key", payload(0))));
-        assertInstanceOf(IllegalArgumentException.class, traversal.getCause());
+        assertThrows(IllegalArgumentException.class, () -> await(service.append("missing", "key", payload(0))));
+        assertThrows(IllegalArgumentException.class, () -> await(service.append("../outside", "key", payload(0))));
     }
 
     @Test
@@ -212,9 +199,7 @@ public class QueueServiceTests {
         for (int i = 0; i < count; i++) {
             appends.add(service.append("orders", "key-" + i, new byte[0]));
         }
-        for (Future<QueuePosition> append : appends) {
-            await(append);
-        }
+        await(Future.all(appends));
 
         AtomicInteger received = new AtomicInteger();
         CompletableFuture<Throwable> stopped = new CompletableFuture<>();
@@ -242,6 +227,6 @@ public class QueueServiceTests {
     }
 
     private TestSubscriber subscribe(String consumerName, StartPosition startPosition) throws Exception {
-        return TestSubscriber.subscribe(node.vertx(), service, "orders", consumerName, startPosition);
+        return new TestSubscriber(node, "orders", consumerName, startPosition);
     }
 }

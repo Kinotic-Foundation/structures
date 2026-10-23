@@ -20,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -61,9 +60,9 @@ public class RetentionTests {
 
     @Test
     public void oldRecordsAreDeletedOnEveryCopyAndReadersContinueAtTheOldestKept() throws Exception {
-        QueueTestNode a = cluster.start("a", "a");
-        cluster.start("b", "b");
-        cluster.start("c", "c");
+        QueueTestNode a = cluster.start("a");
+        cluster.start("b");
+        cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         appendAndAge(a);
 
@@ -71,8 +70,7 @@ public class RetentionTests {
         awaitFirstSegmentDeletedOnEveryNode();
         assertDeliversInOrderFrom20Through(a, "billing", 44);
 
-        TestWorker worker = TestWorker.start(a.vertx(), a.queueService(), QUEUE, "thumbnails",
-                                             new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
+        TestWorker worker = new TestWorker(a, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 100, Duration.ofMinutes(1)));
         Set<Integer> leased = new HashSet<>();
         // The segment taking records is never deleted, so its records are always leased
         while (!leased.containsAll(Set.of(40, 41, 42, 43, 44))) {
@@ -86,9 +84,9 @@ public class RetentionTests {
 
     @Test
     public void aCopyThatLostItsDiskCatchesUpFromTheOwnersStart() throws Exception {
-        QueueTestNode a = cluster.start("a", "a");
-        QueueTestNode b = cluster.start("b", "b");
-        QueueTestNode c = cluster.start("c", "c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         appendAndAge(a);
         awaitFirstSegmentDeletedOnEveryNode();
@@ -97,7 +95,7 @@ public class RetentionTests {
         QueueTestNode emptyC = cluster.start("c", "c-empty");
         await(emptyC.queueService().append(QUEUE, "key", payload(45)));
         // The new copy of c replaces the old one among the copies counting toward commits once it caught up
-        awaitVotingEverywhere(Files.readString(emptyC.dataDirectory().resolve(".storage-id")).trim());
+        cluster.awaitVoting(QUEUE, 0, emptyC);
         cluster.stop(a);
 
         // With a gone, b and the new copy of c are the majority, which they only form when the new copy holds every
@@ -115,7 +113,6 @@ public class RetentionTests {
         Thread.sleep(2_200);
         appendAll(node.queueService(), QUEUE, 40, 45);
     }
-
 
     private void awaitFirstSegmentDeletedOnEveryNode() {
         Awaitility.await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
@@ -137,35 +134,10 @@ public class RetentionTests {
         return ret;
     }
 
-    // Waits until every node's copy counts the copy with the storage id toward commits, with no change under way
-    private void awaitVotingEverywhere(String storageId) {
-        Awaitility.await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> {
-            for (QueueTestNode node : cluster.nodes()) {
-                assertTrue(latestMembership(node).matches(".* \\S*" + storageId + "\\S* -"),
-                           "node " + node.name() + " counts " + latestMembership(node));
-            }
-        });
-    }
-
-    // The copy's last membership change as its manifest lists it: offset, epoch, voting copies, joining copies
-    private static String latestMembership(QueueTestNode node) {
-        String ret;
-        try {
-            List<String> memberships = Files.readAllLines(node.dataDirectory().resolve(QUEUE).resolve("shards").resolve("0").resolve("segments"))
-                                            .stream()
-                                            .filter(line -> line.startsWith("membership "))
-                                            .toList();
-            ret = memberships.isEmpty() ? "" : memberships.getLast();
-        } catch (Exception e) {
-            ret = "";
-        }
-        return ret;
-    }
-
     // Records with one key are delivered in order: none of the deleted first second's, then the rest up to the last
     // one, which the segment taking records holds; the retention may delete more of the older ones meanwhile
     private static void assertDeliversInOrderFrom20Through(QueueTestNode node, String consumerName, int last) throws Exception {
-        TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), node.queueService(), QUEUE, consumerName, StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(node, QUEUE, consumerName, StartPosition.EARLIEST);
         int previous = 19;
         while (previous < last) {
             int value = value(subscriber.next());
@@ -175,6 +147,4 @@ public class RetentionTests {
         assertEquals(last, previous);
         await(subscriber.close());
     }
-
-
 }

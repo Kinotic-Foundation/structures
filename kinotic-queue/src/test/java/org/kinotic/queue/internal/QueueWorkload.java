@@ -34,34 +34,36 @@ public final class QueueWorkload implements AutoCloseable {
     private static final long APPEND_WAIT_SECONDS = 45;
 
     private final String queue;
+    // The nodes appends go through, changed only between two appends, so no append is in flight through a node removed
     private final List<QueueTestNode> live;
     private final ReentrantLock appending = new ReentrantLock(true);
-    private final Set<Integer> attempted = ConcurrentHashMap.newKeySet();
     private final Set<Integer> acknowledged = ConcurrentHashMap.newKeySet();
     private final Thread producer;
     private volatile boolean running = true;
+    // The value of the append in flight, or of the next one; every value below it was attempted
     private volatile int nextValue;
 
     /**
-     * @param live the nodes appends go through; change it only through {@link #changeNodes}
+     * @param live the nodes appends go through at first
      */
-    public QueueWorkload(String queue, List<QueueTestNode> live, int firstValue) {
+    public QueueWorkload(String queue, List<QueueTestNode> live) {
         this.queue = queue;
-        this.live = live;
-        this.nextValue = firstValue;
+        this.live = new ArrayList<>(live);
         this.producer = Thread.ofPlatform().name("queue-workload").start(this::produce);
     }
 
     /**
-     * Changes the nodes appends go through between two appends, so no append is in flight through a node being removed.
+     * Has appends go through the node too.
      */
-    public void changeNodes(Runnable change) {
-        appending.lock();
-        try {
-            change.run();
-        } finally {
-            appending.unlock();
-        }
+    public void addNode(QueueTestNode node) {
+        changeNodes(() -> live.add(node));
+    }
+
+    /**
+     * Stops appends going through the node, once the append in flight ends.
+     */
+    public void removeNode(QueueTestNode node) {
+        changeNodes(() -> live.remove(node));
     }
 
     /**
@@ -86,10 +88,6 @@ public final class QueueWorkload implements AutoCloseable {
         return Set.copyOf(acknowledged);
     }
 
-    public int nextValue() {
-        return nextValue;
-    }
-
     /**
      * Reads the whole queue with a new consumer on the node and checks that every acknowledged record is delivered, that
      * every delivered record was appended and is in the queue once, and that each key's acknowledged records arrive in
@@ -97,23 +95,29 @@ public final class QueueWorkload implements AutoCloseable {
      * appended later, since the failure leaves it unknown when or whether it was written.
      */
     public void verifyDelivered(QueueTestNode node, String consumerName) throws Exception {
-        TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), node.queueService(), queue, consumerName, StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(node, queue, consumerName, StartPosition.EARLIEST);
         Set<Integer> delivered = new HashSet<>();
         Map<String, Integer> lastFirstDeliveryByKey = new HashMap<>();
-        List<Integer> missing = new ArrayList<>(acknowledged);
         while (!delivered.containsAll(acknowledged)) {
             QueueRecord record = subscriber.next();
             int value = value(record);
-            assertTrue(attempted.contains(value), "delivered " + value + ", which was never appended");
+            assertTrue(value <= nextValue, "delivered " + value + ", which was never appended");
             assertTrue(delivered.add(value), "the queue holds " + value + " twice");
             if (acknowledged.contains(value)) {
                 Integer last = lastFirstDeliveryByKey.put(record.key(), value);
                 assertTrue(last == null || last < value, "key " + record.key() + " delivered " + value + " after " + last);
             }
         }
-        missing.removeAll(delivered);
-        assertTrue(missing.isEmpty(), "acknowledged but never delivered: " + missing);
-        subscriber.close();
+        QueueTestSupport.await(subscriber.close());
+    }
+
+    private void changeNodes(Runnable change) {
+        appending.lock();
+        try {
+            change.run();
+        } finally {
+            appending.unlock();
+        }
     }
 
     private void produce() {
@@ -130,7 +134,6 @@ public final class QueueWorkload implements AutoCloseable {
     private void appendNext() {
         int value = nextValue;
         QueueTestNode node = live.get(ThreadLocalRandom.current().nextInt(live.size()));
-        attempted.add(value);
         try {
             QueueTestSupport.awaitWithin(node.queueService().append(queue, "key-" + (value % KEYS), payload(value)), APPEND_WAIT_SECONDS);
             acknowledged.add(value);

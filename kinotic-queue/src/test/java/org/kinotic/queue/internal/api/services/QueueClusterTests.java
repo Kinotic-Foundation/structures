@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.ReplyException;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -26,17 +27,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
 import static org.kinotic.queue.internal.QueueTestSupport.keyOf;
@@ -77,7 +75,7 @@ public class QueueClusterTests {
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         appendThrough(List.of(a, b, c), 0, 100);
 
-        TestSubscriber first = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber first = new TestSubscriber(b, QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 100; i++) {
             QueueRecord record = first.next();
             if (value(record) < 50) {
@@ -104,7 +102,7 @@ public class QueueClusterTests {
         }
 
         // Called on one context of a node that has not looked the queues up yet
-        CompletableFuture<List<Future<QueuePosition>>> called = new CompletableFuture<>();
+        Promise<List<Future<QueuePosition>>> called = Promise.promise();
         b.vertx().runOnContext(v -> {
             List<Future<QueuePosition>> appends = new ArrayList<>();
             for (String queue : queues) {
@@ -114,12 +112,10 @@ public class QueueClusterTests {
             }
             called.complete(appends);
         });
-        for (Future<QueuePosition> append : called.get(30, TimeUnit.SECONDS)) {
-            await(append);
-        }
+        await(Future.all(await(called.future())));
 
         for (String queue : queues) {
-            TestSubscriber subscriber = TestSubscriber.subscribe(a.vertx(), a.queueService(), queue, "billing", StartPosition.EARLIEST);
+            TestSubscriber subscriber = new TestSubscriber(a, queue, "billing", StartPosition.EARLIEST);
             for (int i = 0; i < 200; i++) {
                 assertEquals(i, value(subscriber.next()), "out of order in " + queue);
             }
@@ -134,9 +130,8 @@ public class QueueClusterTests {
         QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         appendThrough(List.of(a), 0, 10);
-        String ownerId = a.placement().replicas(QUEUE, 0).getFirst();
-        QueueTestNode owner = Stream.of(a, b, c).filter(node -> node.placement().localNodeId().equals(ownerId)).findFirst().orElseThrow();
-        TestSubscriber subscriber = TestSubscriber.subscribe(owner.vertx(), owner.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        QueueTestNode owner = nodeWithId(a.placement().replicas(QUEUE, 0).getFirst());
+        TestSubscriber subscriber = new TestSubscriber(owner, QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 10; i++) {
             subscriber.next();
         }
@@ -179,7 +174,7 @@ public class QueueClusterTests {
         QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         appendThrough(List.of(a, b, c), 0, 100);
-        TestSubscriber first = TestSubscriber.subscribe(a.vertx(), a.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber first = new TestSubscriber(a, QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 100; i++) {
             QueueRecord record = first.next();
             if (value(record) < 50) {
@@ -209,8 +204,7 @@ public class QueueClusterTests {
         QueueTestNode b = cluster.start("b");
         QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
-        TestWorker worker = TestWorker.start(b.vertx(), b.queueService(), QUEUE, "billing",
-                                             new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofSeconds(5)));
+        TestWorker worker = new TestWorker(b, QUEUE, "billing", new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofSeconds(5)));
         Set<Integer> accepted = new HashSet<>();
         appendThrough(List.of(a, b, c), 0, 40);
         acceptUntil(worker, accepted, 40);
@@ -229,10 +223,9 @@ public class QueueClusterTests {
         QueueTestNode alone = cluster.start("alone");
         await(alone.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
 
-        ExecutionException e = assertThrows(() -> await(alone.queueService().append(QUEUE, "key", payload(0))));
+        ReplyException e = assertThrows(ReplyException.class, () -> await(alone.queueService().append(QUEUE, "key", payload(0))));
 
-        assertInstanceOf(ReplyException.class, e.getCause());
-        assertTrue(e.getCause().getMessage().contains("copies"), e.getCause().getMessage());
+        assertTrue(e.getMessage().contains("copies"), e.getMessage());
     }
 
     @Test
@@ -240,7 +233,7 @@ public class QueueClusterTests {
         QueueTestNode alone = cluster.start("alone");
         await(alone.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         // With one of three copies, the shard never gets an owner
-        TestSubscriber subscriber = TestSubscriber.subscribe(alone.vertx(), alone.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(alone, QUEUE, "billing", StartPosition.EARLIEST);
 
         assertNull(subscriber.pollFailure(20_000));
         Throwable failure = subscriber.pollFailure(30_000);
@@ -295,7 +288,7 @@ public class QueueClusterTests {
         // window also spans the restarted node taking the shard over once caught up, which pauses appends briefly, and
         // longer when the machine is busy with other tests.
         assertTrue(slowest < 2_500, "an append took " + slowest + " ms while the restarted copy caught up");
-        TestSubscriber subscriber = TestSubscriber.subscribe(restarted.vertx(), restarted.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(restarted, QUEUE, "billing", StartPosition.EARLIEST);
         int delivered = 0;
         List<Integer> values = new ArrayList<>();
         while (values.size() < appended) {
@@ -329,7 +322,8 @@ public class QueueClusterTests {
         cluster.stop(stale);
         QueueTestNode owner = nodeWithId(replicas.getFirst());
         // The node that joined the copies in its place catches up and votes before more records are appended
-        Thread.sleep(3_000);
+        QueueTestNode joined = cluster.nodes().stream().filter(node -> !replicas.contains(node.placement().localNodeId())).findFirst().orElseThrow();
+        cluster.awaitVoting(QUEUE, 0, joined);
         for (int i = 5; i < 10; i++) {
             await(owner.queueService().append(QUEUE, "key", payload(i)));
         }
@@ -345,13 +339,12 @@ public class QueueClusterTests {
         cluster.start(staleName);
         cluster.start("e");
         QueueTestNode f = cluster.start("f");
-        ExecutionException e = assertThrows(() -> await(f.queueService().append(QUEUE, "key", payload(99))));
-        assertInstanceOf(ReplyException.class, e.getCause());
+        assertThrows(ReplyException.class, () -> await(f.queueService().append(QUEUE, "key", payload(99))));
 
         for (QueueTestNode node : voting) {
             cluster.start(node.name());
         }
-        TestSubscriber subscriber = TestSubscriber.subscribe(f.vertx(), f.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(f, QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 10; i++) {
             assertEquals(i, value(subscriber.next()));
         }
@@ -362,8 +355,6 @@ public class QueueClusterTests {
         return cluster.nodes().stream().filter(node -> node.placement().localNodeId().equals(nodeId)).findFirst().orElseThrow();
     }
 
-
-
     private static void appendThrough(List<QueueTestNode> through, int from, int to) throws Exception {
         for (int i = from; i < to; i++) {
             await(through.get(i % through.size()).queueService().append(QUEUE, "customer-" + (i % 10), payload(i)));
@@ -373,7 +364,7 @@ public class QueueClusterTests {
     // A retried append may be written twice, so delivery is checked for every expected value, in order per key,
     // with repeats allowed
     private static void assertRedelivers(QueueTestNode node, Set<Integer> expected) throws Exception {
-        TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), node.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(node, QUEUE, "billing", StartPosition.EARLIEST);
         Set<Integer> received = new HashSet<>();
         Map<String, Integer> lastByKey = new HashMap<>();
         while (!received.containsAll(expected)) {
@@ -395,9 +386,5 @@ public class QueueClusterTests {
                 accepted.add(TestWorker.value(item));
             }
         }
-    }
-
-    private static ExecutionException assertThrows(org.junit.jupiter.api.function.Executable executable) {
-        return org.junit.jupiter.api.Assertions.assertThrows(ExecutionException.class, executable);
     }
 }

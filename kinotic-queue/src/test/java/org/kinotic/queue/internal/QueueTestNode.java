@@ -6,6 +6,10 @@ import io.vertx.core.eventbus.EventBusOptions;
 import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import io.vertx.spi.cluster.ignite.impl.IgniteRegistrationInfo;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -37,25 +41,19 @@ import static org.kinotic.queue.internal.QueueTestSupport.awaitWithin;
  * server wires them. Nodes find each other on ports apart from the ones a Kinotic server uses, so they never join
  * a cluster another test starts.
  */
+@Accessors(fluent = true)
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class QueueTestNode implements AutoCloseable {
 
+    @Getter
     private final String name;
+    @Getter
     private final Path dataDirectory;
+    @Getter
     private final Vertx vertx;
     private final AnnotationConfigApplicationContext context;
+    @Getter
     private final NetworkFaults networkFaults;
-
-    private QueueTestNode(String name,
-                          Path dataDirectory,
-                          Vertx vertx,
-                          AnnotationConfigApplicationContext context,
-                          NetworkFaults networkFaults) {
-        this.name = name;
-        this.dataDirectory = dataDirectory;
-        this.vertx = vertx;
-        this.context = context;
-        this.networkFaults = networkFaults;
-    }
 
     public static QueueTestNode start(String name, Path dataDirectory, int replicationFactor) throws Exception {
         return start(name, dataDirectory, replicationFactor, Map.of());
@@ -128,22 +126,6 @@ public final class QueueTestNode implements AutoCloseable {
 
     public ShardPlacement placement() {
         return context.getBean(ShardPlacement.class);
-    }
-
-    public Vertx vertx() {
-        return vertx;
-    }
-
-    public String name() {
-        return name;
-    }
-
-    public Path dataDirectory() {
-        return dataDirectory;
-    }
-
-    public NetworkFaults networkFaults() {
-        return networkFaults;
     }
 
     /**

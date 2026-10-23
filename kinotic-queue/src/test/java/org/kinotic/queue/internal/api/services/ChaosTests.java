@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.function.FailableConsumer;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -59,7 +59,6 @@ public class ChaosTests {
     private Path directory;
 
     private QueueTestCluster cluster;
-    private final List<QueueTestNode> live = new CopyOnWriteArrayList<>();
     private QueueWorkload workload;
 
     @BeforeEach
@@ -78,45 +77,31 @@ public class ChaosTests {
     @Test
     public void rollingRestartsUnderLoadLoseNoAcknowledgedRecord() throws Exception {
         startCluster();
-        for (String name : List.of("a", "b", "c")) {
-            QueueTestNode node = node(name);
-            removeFromLoad(node);
-            cluster.stop(node);
-            workload.awaitAcknowledged(PROGRESS);
-            addToLoad(cluster.start(name));
-            workload.awaitAcknowledged(PROGRESS);
-        }
+        cycle(List.of("a", "b", "c"), cluster::stop);
         workload.close();
 
-        workload.verifyDelivered(live.getFirst(), "verifier");
+        workload.verifyDelivered(cluster.nodes().getFirst(), "verifier");
     }
 
     @Test
     public void rollingCrashesUnderLoadLoseNoAcknowledgedRecord() throws Exception {
         startCluster();
-        for (String name : List.of("a", "b", "c")) {
-            QueueTestNode node = node(name);
-            removeFromLoad(node);
-            cluster.crash(node);
-            workload.awaitAcknowledged(PROGRESS);
-            addToLoad(cluster.start(name));
-            workload.awaitAcknowledged(PROGRESS);
-        }
+        cycle(List.of("a", "b", "c"), cluster::crash);
         workload.close();
 
-        workload.verifyDelivered(live.getFirst(), "verifier");
+        workload.verifyDelivered(cluster.nodes().getFirst(), "verifier");
     }
 
     @Test
     public void aNodeCutOffFromTheNetworkHealsWithoutLosingAcknowledgedRecords() throws Exception {
         startCluster();
         QueueTestNode cutOff = node("b");
-        removeFromLoad(cutOff);
+        workload.removeNode(cutOff);
         // Ignite still counts the node as a member, so it keeps its shards while nobody can reach it
         cutOff.networkFaults().isolate();
         Thread.sleep(4_000);
         cutOff.networkFaults().heal();
-        addToLoad(cutOff);
+        workload.addNode(cutOff);
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -135,7 +120,7 @@ public class ChaosTests {
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
-        workload.verifyDelivered(live.getFirst(), "verifier");
+        workload.verifyDelivered(cluster.nodes().getFirst(), "verifier");
     }
 
     @Test
@@ -143,8 +128,8 @@ public class ChaosTests {
         startCluster();
         QueueTestNode b = node("b");
         QueueTestNode c = node("c");
-        removeFromLoad(b);
-        removeFromLoad(c);
+        workload.removeNode(b);
+        workload.removeNode(c);
         cluster.stop(b);
         cluster.stop(c);
         // An append that was already on its way when the majority went may still have been acknowledged
@@ -153,12 +138,12 @@ public class ChaosTests {
         Thread.sleep(3_000);
         assertEquals(acknowledgedWithoutMajority, workload.acknowledged().size(), "an append was acknowledged by one copy of three");
 
-        addToLoad(cluster.start("b"));
-        addToLoad(cluster.start("c"));
+        workload.addNode(cluster.start("b"));
+        workload.addNode(cluster.start("c"));
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
-        workload.verifyDelivered(live.getFirst(), "verifier");
+        workload.verifyDelivered(cluster.nodes().getFirst(), "verifier");
     }
 
     @Test
@@ -167,23 +152,23 @@ public class ChaosTests {
         assertEveryShardHasAWorkloadKey();
 
         QueueTestNode c = node("c");
-        removeFromLoad(c);
+        workload.removeNode(c);
         cluster.stop(c);
         FileUtils.deleteDirectory(c.dataDirectory().toFile());
-        addToLoad(cluster.start("c"));
+        workload.addNode(cluster.start("c"));
         QueueTestNode a = node("a");
-        removeFromLoad(a);
+        workload.removeNode(a);
         cluster.stop(a);
         // With only b and c running, an acknowledged append needs both, so c holds every shard up to it
         workload.awaitAcknowledged(PROGRESS);
 
         QueueTestNode b = node("b");
-        removeFromLoad(b);
+        workload.removeNode(b);
         cluster.stop(b);
         FileUtils.deleteDirectory(b.dataDirectory().toFile());
         // c alone holds the queue now, so the wiped b and the returning a must bring their copies level with it
-        addToLoad(cluster.start("b"));
-        addToLoad(cluster.start("a"));
+        workload.addNode(cluster.start("b"));
+        workload.addNode(cluster.start("a"));
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -196,7 +181,7 @@ public class ChaosTests {
         workload.close();
         Set<Integer> acknowledged = workload.acknowledged();
         // A consumer and a worker group each finish every acknowledged record
-        TestSubscriber consumer = TestSubscriber.subscribe(node("a").vertx(), node("a").queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber consumer = new TestSubscriber(node("a"), QUEUE, "billing", StartPosition.EARLIEST);
         Set<Integer> consumed = new HashSet<>();
         while (!consumed.containsAll(acknowledged)) {
             QueueRecord record = consumer.next();
@@ -204,8 +189,7 @@ public class ChaosTests {
             consumed.add(value(record));
         }
         await(consumer.close());
-        TestWorker worker = TestWorker.start(node("b").vertx(), node("b").queueService(), QUEUE, "jobs",
-                                             new WorkerOptions(StartPosition.EARLIEST, 50, Duration.ofMinutes(1)));
+        TestWorker worker = new TestWorker(node("b"), QUEUE, "jobs", new WorkerOptions(StartPosition.EARLIEST, 50, Duration.ofMinutes(1)));
         Set<Integer> worked = new HashSet<>();
         while (!worked.containsAll(acknowledged)) {
             WorkItem item = worker.next();
@@ -215,19 +199,16 @@ public class ChaosTests {
         await(worker.close());
 
         for (String name : List.of("a", "b", "c")) {
-            QueueTestNode node = node(name);
-            live.remove(node);
-            cluster.stop(node);
+            cluster.stop(node(name));
         }
         for (String name : List.of("c", "a", "b")) {
-            live.add(cluster.start(name));
+            cluster.start(name);
         }
 
         workload.verifyDelivered(node("c"), "verifier");
-        TestSubscriber resumedConsumer = TestSubscriber.subscribe(node("a").vertx(), node("a").queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber resumedConsumer = new TestSubscriber(node("a"), QUEUE, "billing", StartPosition.EARLIEST);
         assertNull(resumedConsumer.poll(3_000), "the consumer received a record it had committed");
-        TestWorker resumedWorker = TestWorker.start(node("b").vertx(), node("b").queueService(), QUEUE, "jobs",
-                                                    new WorkerOptions(StartPosition.EARLIEST, 50, Duration.ofMinutes(1)));
+        TestWorker resumedWorker = new TestWorker(node("b"), QUEUE, "jobs", new WorkerOptions(StartPosition.EARLIEST, 50, Duration.ofMinutes(1)));
         assertNull(resumedWorker.poll(3_000), "the group received a record it had accepted");
         await(resumedConsumer.close());
         await(resumedWorker.close());
@@ -236,21 +217,12 @@ public class ChaosTests {
     @Test
     public void aWorkerGroupFinishesEveryRecordWhileNodesCrash() throws Exception {
         startCluster();
-        QueueTestNode workerNode = node("c");
-        TestWorker worker = TestWorker.start(workerNode.vertx(), workerNode.queueService(), QUEUE, "jobs",
-                                             new WorkerOptions(StartPosition.EARLIEST, 20, LEASE));
+        TestWorker worker = new TestWorker(node("c"), QUEUE, "jobs", new WorkerOptions(StartPosition.EARLIEST, 20, LEASE));
         Set<Integer> received = ConcurrentHashMap.newKeySet();
         AtomicLong lastReceived = new AtomicLong(System.currentTimeMillis());
         Thread working = Thread.ofPlatform().start(() -> acceptWhileRunning(worker, received, lastReceived));
 
-        for (String name : List.of("a", "b")) {
-            QueueTestNode node = node(name);
-            removeFromLoad(node);
-            cluster.crash(node);
-            workload.awaitAcknowledged(PROGRESS);
-            addToLoad(cluster.start(name));
-            workload.awaitAcknowledged(PROGRESS);
-        }
+        cycle(List.of("a", "b"), cluster::crash);
         workload.close();
 
         Awaitility.await().atMost(Duration.ofSeconds(120)).untilAsserted(() -> {
@@ -264,8 +236,7 @@ public class ChaosTests {
         working.interrupt();
         working.join();
         await(worker.close());
-        TestWorker checker = TestWorker.start(node("a").vertx(), node("a").queueService(), QUEUE, "jobs",
-                                              new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofMinutes(1)));
+        TestWorker checker = new TestWorker(node("a"), QUEUE, "jobs", new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofMinutes(1)));
         assertNull(checker.poll(3_000), "the group still had records to work after its worker finished");
         await(checker.close());
     }
@@ -274,8 +245,8 @@ public class ChaosTests {
     public void aConsumerResumesAfterItsLastCommitWhenItsNodeCrashes() throws Exception {
         startCluster();
         QueueTestNode consumerNode = node("a");
-        removeFromLoad(consumerNode);
-        TestSubscriber consumer = TestSubscriber.subscribe(consumerNode.vertx(), consumerNode.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        workload.removeNode(consumerNode);
+        TestSubscriber consumer = new TestSubscriber(consumerNode, QUEUE, "billing", StartPosition.EARLIEST);
         Set<Integer> committed = new HashSet<>();
         for (int i = 0; i < 2 * PROGRESS; i++) {
             QueueRecord record = consumer.next();
@@ -288,8 +259,7 @@ public class ChaosTests {
         workload.close();
 
         // A commit covers the records before it on its shard, and the committed ones are never delivered again
-        QueueTestNode resumeNode = node("b");
-        TestSubscriber resumed = TestSubscriber.subscribe(resumeNode.vertx(), resumeNode.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber resumed = new TestSubscriber(node("b"), QUEUE, "billing", StartPosition.EARLIEST);
         Set<Integer> expected = new HashSet<>(workload.acknowledged());
         expected.removeAll(committed);
         Set<Integer> delivered = new HashSet<>();
@@ -303,26 +273,27 @@ public class ChaosTests {
 
     private void startCluster() throws Exception {
         for (String name : List.of("a", "b", "c")) {
-            live.add(cluster.start(name));
+            cluster.start(name);
         }
-        await(live.getFirst().queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
-        workload = new QueueWorkload(QUEUE, live, 0);
+        await(cluster.nodes().getFirst().queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
+        workload = new QueueWorkload(QUEUE, cluster.nodes());
         workload.awaitAcknowledged(PROGRESS);
     }
 
-
-
+    // Takes each node down in turn under load and starts it again, letting appends progress after each step
+    private void cycle(List<String> names, FailableConsumer<QueueTestNode, Exception> takeDown) throws Exception {
+        for (String name : names) {
+            QueueTestNode node = node(name);
+            workload.removeNode(node);
+            takeDown.accept(node);
+            workload.awaitAcknowledged(PROGRESS);
+            workload.addNode(cluster.start(name));
+            workload.awaitAcknowledged(PROGRESS);
+        }
+    }
 
     private QueueTestNode node(String name) {
         return cluster.nodes().stream().filter(node -> node.name().equals(name)).findFirst().orElseThrow();
-    }
-
-    private void removeFromLoad(QueueTestNode node) {
-        workload.changeNodes(() -> live.remove(node));
-    }
-
-    private void addToLoad(QueueTestNode node) {
-        workload.changeNodes(() -> live.add(node));
     }
 
     private static void acceptWhileRunning(TestWorker worker, Set<Integer> received, AtomicLong lastReceived) {

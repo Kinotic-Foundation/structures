@@ -1,8 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.search.MeterNotFoundException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
@@ -22,9 +21,7 @@ import org.kinotic.queue.internal.TestWorker;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -68,7 +65,7 @@ public class QueueMetricsTests {
         appendAll(service, QUEUE, 0, 10);
 
         // The consumer commits the fourth record, so six committed records follow its position
-        TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), service, QUEUE, "billing", StartPosition.EARLIEST);
+        TestSubscriber subscriber = new TestSubscriber(node, QUEUE, "billing", StartPosition.EARLIEST);
         QueueRecord fourth = null;
         for (int i = 0; i < 4; i++) {
             fourth = subscriber.next();
@@ -77,13 +74,8 @@ public class QueueMetricsTests {
         await(subscriber.close());
 
         // The group rejects record 0, releases record 1 and accepts it once leased again, and holds record 9
-        TestWorker worker = TestWorker.start(node.vertx(), service, QUEUE, "thumbnails",
-                                             new WorkerOptions(StartPosition.EARLIEST, 10, Duration.ofMinutes(1)));
-        Map<Integer, WorkItem> leased = new HashMap<>();
-        while (leased.size() < 10) {
-            WorkItem item = worker.next();
-            leased.put(value(item.record()), item);
-        }
+        TestWorker worker = new TestWorker(node, QUEUE, "thumbnails", new WorkerOptions(StartPosition.EARLIEST, 10, Duration.ofMinutes(1)));
+        Map<Integer, WorkItem> leased = worker.takeAll(10);
         await(worker.settle(QueueWorker::reject, leased.get(0)));
         await(worker.settle(QueueWorker::release, leased.get(1)));
         WorkItem again = worker.next();
@@ -93,16 +85,18 @@ public class QueueMetricsTests {
             await(worker.settle(QueueWorker::accept, leased.get(i)));
         }
 
-        assertEquals(10, counter("kinotic.queue.appends", "queue", QUEUE).count());
-        assertTrue(registry.find("kinotic.queue.append.duration").tag("queue", QUEUE).timer().count() >= 1);
-        assertEquals(1, counter("kinotic.queue.dead.letters", "queue", QUEUE, "group", "thumbnails").count());
-        assertEquals(1, counter("kinotic.queue.redeliveries", "queue", QUEUE, "group", "thumbnails").count());
-        assertEquals(1, counter("kinotic.queue.takeovers", "queue", QUEUE).count());
+        assertEquals(10, registry.get("kinotic.queue.appends").tags("queue", QUEUE).counter().count());
+        assertTrue(registry.get("kinotic.queue.append.duration").tags("queue", QUEUE).timer().count() >= 1);
+        assertEquals(1, registry.get("kinotic.queue.dead.letters").tags("queue", QUEUE, "group", "thumbnails").counter().count());
+        assertEquals(1, registry.get("kinotic.queue.redeliveries").tags("queue", QUEUE, "group", "thumbnails").counter().count());
+        assertEquals(1, registry.get("kinotic.queue.takeovers").tags("queue", QUEUE).counter().count());
         // Gauges are refreshed every five seconds
-        awaitGauge(6, () -> gauge("kinotic.queue.consumer.lag", "queue", QUEUE, "consumer", "billing"));
-        awaitGauge(1, () -> gauge("kinotic.queue.group.lag", "queue", QUEUE, "group", "thumbnails"));
-        awaitGauge(1, () -> gauge("kinotic.queue.shards.owned", "queue", QUEUE));
-        assertTrue(gauge("kinotic.queue.size", "queue", QUEUE).value() >= 10 * payload(0).length);
+        Awaitility.await().atMost(Duration.ofSeconds(15)).ignoreException(MeterNotFoundException.class).untilAsserted(() -> {
+            assertEquals(6, registry.get("kinotic.queue.consumer.lag").tags("queue", QUEUE, "consumer", "billing").gauge().value());
+            assertEquals(1, registry.get("kinotic.queue.group.lag").tags("queue", QUEUE, "group", "thumbnails").gauge().value());
+            assertEquals(1, registry.get("kinotic.queue.shards.owned").tags("queue", QUEUE).gauge().value());
+        });
+        assertTrue(registry.get("kinotic.queue.size").tags("queue", QUEUE).gauge().value() >= 10 * payload(0).length);
         await(worker.close());
 
         await(service.deleteQueue(QUEUE));
@@ -111,20 +105,5 @@ public class QueueMetricsTests {
             assertNull(registry.find("kinotic.queue.appends").tag("queue", QUEUE).counter(), "the deleted queue's counters stayed");
             assertNull(registry.find("kinotic.queue.consumer.lag").tag("queue", QUEUE).gauge(), "the deleted queue's gauges stayed");
         });
-    }
-
-    private Counter counter(String name, String... tags) {
-        Counter ret = registry.find(name).tags(tags).counter();
-        assertTrue(ret != null, "no counter " + name);
-        return ret;
-    }
-
-    private Gauge gauge(String name, String... tags) {
-        return registry.find(name).tags(tags).gauge();
-    }
-
-    private static void awaitGauge(double expected, Supplier<Gauge> gauge) {
-        Awaitility.await().atMost(Duration.ofSeconds(15))
-                  .untilAsserted(() -> assertEquals(expected, gauge.get() != null ? gauge.get().value() : Double.NaN));
     }
 }

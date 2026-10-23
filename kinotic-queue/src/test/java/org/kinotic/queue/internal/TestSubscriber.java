@@ -1,10 +1,8 @@
 package org.kinotic.queue.internal;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import org.kinotic.queue.api.model.QueueRecord;
 import org.kinotic.queue.api.model.StartPosition;
-import org.kinotic.queue.api.services.QueueService;
 import org.kinotic.queue.api.services.QueueSubscription;
 
 /**
@@ -12,16 +10,11 @@ import org.kinotic.queue.api.services.QueueSubscription;
  */
 public final class TestSubscriber extends TestStream<QueueSubscription, QueueRecord> {
 
-    private TestSubscriber(Vertx vertx, QueueService service, String queue, String consumerName, StartPosition startPosition) throws Exception {
-        super(vertx, () -> service.subscribe(queue, consumerName, startPosition));
-    }
-
-    public static TestSubscriber subscribe(Vertx vertx,
-                                           QueueService service,
-                                           String queue,
-                                           String consumerName,
-                                           StartPosition startPosition) throws Exception {
-        return new TestSubscriber(vertx, service, queue, consumerName, startPosition);
+    /**
+     * Subscribes through the node, waiting until the subscription opened.
+     */
+    public TestSubscriber(QueueTestNode node, String queue, String consumerName, StartPosition startPosition) throws Exception {
+        super(node.vertx(), () -> node.queueService().subscribe(queue, consumerName, startPosition));
     }
 
     public Future<Void> commit(QueueRecord record) throws Exception {
