@@ -1,5 +1,6 @@
 package org.kinotic.domain.internal.api.services;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ignite.Ignite;
@@ -19,10 +20,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
- * Records the node's {@link ServerSbom} when it starts, and deletes those of nodes that have left
- * the cluster.
+ * Records the node's {@link ServerSbom} when it starts, and deletes it when the node shuts down.
  */
 @Slf4j
 @Component
@@ -31,6 +34,8 @@ public class ServerSbomRecorder {
 
     // Written into each server jar by the serverComponents task of the server convention, one package URL per line
     private static final String COMPONENTS_RESOURCE = "META-INF/kinotic/components.txt";
+
+    private static final long DELETE_TIMEOUT_SECONDS = 10;
 
     private final Ignite ignite;
     private final ServerSbomRepository repository;
@@ -51,12 +56,25 @@ public class ServerSbomRecorder {
                                           .setVersion(node.attribute(KinoticNodeAttributes.VERSION))
                                           .setPackages(packages)
                                           .setStarted(started);
-        // a node missing from members joined after started was taken, so it records its SBOM later than
-        // started and the deletion leaves it
-        List<String> members = ignite.cluster().forServers().nodes().stream().map(member -> member.id().toString()).toList();
         repository.save(sbom)
-                  .compose(saved -> repository.deleteAllOfOtherNodes(members, started))
                   .onFailure(error -> log.error("Could not record the node's SBOM", error));
+    }
+
+    @PreDestroy
+    void deleteSbom() {
+        // only the node itself deletes its row, so no node can delete the row of one that is still running;
+        // a node that crashes leaves its row behind, which readers skip since they look up running nodes only
+        try {
+            repository.deleteById(ignite.cluster().localNode().id().toString())
+                      .toCompletionStage()
+                      .toCompletableFuture()
+                      .get(DELETE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (ExecutionException | TimeoutException e) {
+            log.warn("Could not delete the node's SBOM; its row stays behind", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while deleting the node's SBOM; its row stays behind");
+        }
     }
 
     // The package URLs the classpath's COMPONENTS_RESOURCE lists, empty when it holds none

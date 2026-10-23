@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS kinotic_project_dependencies (
     edges JSON NOT INDEXED
 );
 
--- The libraries each Kinotic server node runs, recorded when the node starts, one row per node; id
+-- The libraries each Kinotic server node runs, recorded when the node starts and deleted when it shuts down; id
 -- is the node's Ignite id. packages, the package URL of each library, is read whole and never searched.
 CREATE TABLE IF NOT EXISTS kinotic_server_sbom (
     id KEYWORD,
