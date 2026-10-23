@@ -13,8 +13,8 @@ public enum SiteStorageType {
 
     /**
      * The Azurite emulator a machine's local edge serves every site from: a site is ready once its upload
-     * finished. Workloads reach the emulator through the local edge's storage gateway, which admits each
-     * workload's URL to one site's directory; the URL is signed with Azurite's well-known development key.
+     * finished. Each workload's URL names its site's directory and carries a SAS for the whole sites container,
+     * signed with Azurite's well-known development key.
      */
     AZURITE,
 

@@ -22,9 +22,9 @@ class UiDeploymentPropertiesTest {
     @Test
     void anEndpointWithAnAccountPathAndATrailingSlashKeepsThePath() {
         UiDeploymentProperties properties = new UiDeploymentProperties()
-                .setSitesStorageEndpoint("http://192.168.127.254:8089/devstoreaccount1/");
+                .setSitesStorageEndpoint("http://192.168.127.254:10000/devstoreaccount1/");
 
-        assertEquals("http://192.168.127.254:8089/devstoreaccount1/sites/app--ui.org.sites.localhost",
+        assertEquals("http://192.168.127.254:10000/devstoreaccount1/sites/app--ui.org.sites.localhost",
                      properties.resolveSiteDirectoryUrl("app--ui.org.sites.localhost"));
     }
 }

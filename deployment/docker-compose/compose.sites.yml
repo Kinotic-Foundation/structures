@@ -1,6 +1,6 @@
 # Where published UIs are stored and served on this machine, in place of the Azure sites storage account
-# and the Cloudflare Worker: the Azurite emulator holds every site's files, and the local edge runs the
-# Worker itself in front of it and is the storage gateway the workloads upload through. The system
+# and the Cloudflare Worker: the Azurite emulator holds every site's files, which the publish and removal
+# workloads upload and delete, and the local edge runs the Worker itself in front of it. The system
 # server's `development` and `demonstration` profiles upload to it
 # (kinotic.systemApi.uiDeployment.siteStorage: AZURITE), and a published UI opens at
 # http://<app>--<ui>.<org>.sites.localhost:8088.
@@ -11,8 +11,10 @@ services:
     container_name: kinotic-azurite
     # The Azure SDK the system server signs with names a newer service version than the emulator knows
     command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--location", "/data", "--skipApiVersionCheck"]
-    # No published port: Azurite accepts anything signed with its well-known key, so the workloads reach it only
-    # through the edge's storage gateway, which admits each one to its own site's directory
+    ports:
+      # Where the publish and removal workloads upload: a BOXLITE guest's host alias, 192.168.127.254, is
+      # completed over this machine's loopback
+      - "127.0.0.1:10000:10000"
     volumes:
       - kinotic-azurite-data:/data
 
@@ -32,9 +34,6 @@ services:
     ports:
       # The sites, as a browser opens them
       - "127.0.0.1:8088:8088"
-      # The storage gateway the publish and removal workloads upload through: a BOXLITE guest's host alias,
-      # 192.168.127.254, is completed over this machine's loopback
-      - "127.0.0.1:8089:8089"
 
 volumes:
   kinotic-azurite-data:

@@ -13,14 +13,11 @@ import org.kinotic.management.api.services.github.ProjectRepoCredentialService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.HexFormat;
 
 /**
@@ -37,6 +34,8 @@ public class GiteaProjectRepoService implements ProjectRepoTokenProvider, Projec
     private static final Duration TOKEN_LIFETIME = Duration.ofHours(1);
     // Gitea as a deployment's sync workload reaches it from its micro VM, through the host alias of a BOXLITE guest
     private static final String WORKLOAD_BASE_URL = "http://192.168.127.254:3001";
+    // The repository accounts sign in only to have their tokens issued, by this server
+    private static final String ACCOUNT_PASSWORD = "kinotic-gitea-repository";
 
     private final GiteaClient giteaClient;
     private final ProjectRepository projectRepository;
@@ -63,10 +62,9 @@ public class GiteaProjectRepoService implements ProjectRepoTokenProvider, Projec
                                                 + " has no repository provisioned");
             }
             String username = accountName(project, access);
-            String password = accountPassword(username);
             Instant issuedAt = Instant.now();
-            return giteaClient.ensureCollaborator(project.getRepoFullName(), username, password, access.getPermission())
-                              .compose(v -> giteaClient.createToken(username, password, access.getScope(), TOKEN_LIFETIME))
+            return giteaClient.ensureCollaborator(project.getRepoFullName(), username, ACCOUNT_PASSWORD, access.getPermission())
+                              .compose(v -> giteaClient.createToken(username, ACCOUNT_PASSWORD, access.getScope(), TOKEN_LIFETIME))
                               .map(token -> new ProjectRepoToken(token,
                                                                  issuedAt.plus(TOKEN_LIFETIME),
                                                                  cloneBaseUrl + "/" + project.getRepoFullName() + ".git",
@@ -82,18 +80,6 @@ public class GiteaProjectRepoService implements ProjectRepoTokenProvider, Projec
             return access.getAccountPrefix() + HexFormat.of().formatHex(digest, 0, 8);
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("SHA-256 is unavailable", e);
-        }
-    }
-
-    // Derived from the administrator's password, so the server can sign in as the account whenever it issues a token
-    // without storing anything
-    private static String accountPassword(String username) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(GiteaClient.ADMIN_PASSWORD.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(username.getBytes(StandardCharsets.UTF_8)));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("HmacSHA256 is unavailable", e);
         }
     }
 

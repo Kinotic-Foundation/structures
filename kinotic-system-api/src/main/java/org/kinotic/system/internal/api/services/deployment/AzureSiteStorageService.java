@@ -2,12 +2,15 @@ package org.kinotic.system.internal.api.services.deployment;
 
 import com.azure.core.credential.TokenCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.storage.file.datalake.DataLakeDirectoryAsyncClient;
 import com.azure.storage.file.datalake.DataLakeServiceAsyncClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
 import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
+import com.azure.storage.file.datalake.sas.PathSasPermission;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
 import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.system.api.services.deployment.SiteStorageService;
@@ -26,7 +29,7 @@ import java.time.ZoneOffset;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(value = "kinotic.systemApi.uiDeployment.siteStorage", havingValue = "AZURE", matchIfMissing = true)
-public class AzureSiteStorageService extends DirectorySasSiteStorageService {
+public class AzureSiteStorageService implements SiteStorageService {
 
     /** How far in the past a delegation key starts, so clock skew between server and storage never rejects a fresh SAS. */
     private static final Duration KEY_START_SKEW = Duration.ofMinutes(5);
@@ -38,18 +41,32 @@ public class AzureSiteStorageService extends DirectorySasSiteStorageService {
     private volatile DataLakeServiceAsyncClient directories;
 
     @Override
-    protected Future<String> signDirectorySas(String hostname, DataLakeServiceSasSignatureValues values) {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return Future.fromCompletionStage(directories().getUserDelegationKey(now.minus(KEY_START_SKEW), values.getExpiryTime())
-                                                       .map(key -> directories().getFileSystemAsyncClient(UiDeploymentProperties.SITES_CONTAINER)
-                                                                                .getDirectoryAsyncClient(hostname)
-                                                                                .generateUserDelegationSas(values, key))
-                                                       .toFuture(), vertx.getOrCreateContext());
+    public Future<String> issueUploadUrl(String hostname, Duration ttl) {
+        // list and delete within the directory let the workload clear the files of other commits
+        return issue(hostname, ttl, new PathSasPermission().setCreatePermission(true)
+                                                           .setWritePermission(true)
+                                                           .setListPermission(true)
+                                                           .setDeletePermission(true));
     }
 
     @Override
-    protected UiDeploymentProperties uiDeploymentProperties() {
-        return kinoticProperties.getSystemApi().getUiDeployment();
+    public Future<String> issueRemovalUrl(String hostname, Duration ttl) {
+        return issue(hostname, ttl, new PathSasPermission().setListPermission(true).setDeletePermission(true));
+    }
+
+    private Future<String> issue(String hostname, Duration ttl, PathSasPermission permission) {
+        Validate.notBlank(hostname, "hostname cannot be blank");
+        Validate.notNull(ttl, "ttl is required");
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime expiry = now.plus(ttl);
+        DataLakeDirectoryAsyncClient site = directories().getFileSystemAsyncClient(UiDeploymentProperties.SITES_CONTAINER)
+                                                         .getDirectoryAsyncClient(hostname);
+        DataLakeServiceSasSignatureValues values = new DataLakeServiceSasSignatureValues(expiry, permission);
+        return Future.fromCompletionStage(directories().getUserDelegationKey(now.minus(KEY_START_SKEW), expiry)
+                                                       .map(key -> site.generateUserDelegationSas(values, key))
+                                                       .toFuture(), vertx.getOrCreateContext())
+                     // the workloads act through the blob endpoint, which honors the directory SAS
+                     .map(token -> properties().resolveSiteDirectoryUrl(hostname) + "?" + token);
     }
 
     // The Data Lake client signs the directory SAS; it takes the blob endpoint and derives the
@@ -57,12 +74,16 @@ public class AzureSiteStorageService extends DirectorySasSiteStorageService {
     private DataLakeServiceAsyncClient directories() {
         DataLakeServiceAsyncClient ret = directories;
         if (ret == null) {
-            ret = new DataLakeServiceClientBuilder().endpoint(uiDeploymentProperties().getSitesStorageEndpoint())
+            ret = new DataLakeServiceClientBuilder().endpoint(properties().getSitesStorageEndpoint())
                                                     .credential(credential)
                                                     .buildAsyncClient();
             directories = ret;
         }
         return ret;
+    }
+
+    private UiDeploymentProperties properties() {
+        return kinoticProperties.getSystemApi().getUiDeployment();
     }
 
 }

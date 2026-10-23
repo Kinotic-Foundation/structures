@@ -12,25 +12,20 @@ import io.vertx.ext.web.client.WebClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.kinotic.management.internal.api.services.github.client.CreatedRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * The calls the platform makes to the Gitea server projects' repositories are hosted on, the {@code kinotic-gitea} of
  * {@code deployment/docker-compose/compose.gitea.yml}, through its {@code /api/v1} API as the administrator that
- * compose file creates, or as one of the accounts a repository is read and written through. Each
- * call that creates something succeeds when the thing already exists, so a repeated or retried call is harmless.
+ * compose file creates, or as one of the accounts a repository is read and written through. Each {@code ensure}
+ * call succeeds when the thing already exists, so a repeated or retried call is harmless.
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(value = "kinotic.managementApi.repoHost", havingValue = "GITEA")
@@ -41,17 +36,12 @@ public class GiteaClient {
      * and of the portal's repository links.
      */
     static final String WEB_BASE_URL = "http://localhost:3001";
-    /**
-     * The password of the administrator {@code compose.gitea.yml} creates, which is also the key the passwords of the
-     * accounts each repository is read and written through are derived from.
-     */
-    static final String ADMIN_PASSWORD = "kinotic-gitea-admin";
 
-    // Gitea as the servers reach it on the compose network
+    // Gitea as the servers reach it on the compose network, and the administrator compose.gitea.yml creates
     private static final String API_URL = "http://kinotic-gitea:3000";
     private static final String ADMIN_USERNAME = "kinotic_admin";
-    /** Gitea's limit on the entries one page of a repository tree lists. */
-    private static final int TREE_PAGE_SIZE = 1000;
+    private static final String ADMIN_PASSWORD = "kinotic-gitea-admin";
+    private static final String DEFAULT_BRANCH = "main";
     private static final String TOKEN_NAME_PREFIX = "kinotic-";
 
     private final Vertx vertx;
@@ -75,57 +65,16 @@ public class GiteaClient {
                 .compose(response -> expect(response, "create the organization " + name, 201, 422));
     }
 
-    /**
-     * Makes {@code adminUsername/name} a template repository holding a copy of the Git repository at
-     * {@code cloneUrl}, importing it when it doesn't exist or an earlier import left it empty.
-     *
-     * @return a future emitting the template's full name
-     */
-    public Future<String> ensureTemplate(String name, String cloneUrl) {
-        String fullName = ADMIN_USERNAME + "/" + name;
-        return send(asAdmin(HttpMethod.GET, "/repos/" + fullName), null).compose(found -> {
-            Future<Void> imported;
-            if (found.statusCode() == 404) {
-                imported = importRepository(name, cloneUrl);
-            } else if (found.statusCode() == 200 && found.bodyAsJsonObject().getBoolean("empty", false)) {
-                // a failed import leaves the repository behind with nothing in it
-                imported = send(asAdmin(HttpMethod.DELETE, "/repos/" + fullName), null)
-                        .compose(deleted -> expect(deleted, "delete the empty template " + fullName, 204))
-                        .compose(v -> importRepository(name, cloneUrl));
-            } else {
-                imported = expect(found, "find the template " + fullName, 200);
-            }
-            return imported;
-        }).compose(v -> send(asAdmin(HttpMethod.PATCH, "/repos/" + fullName), new JsonObject().put("template", true)))
-          .compose(response -> expect(response, "mark " + fullName + " a template", 200))
-          .map(fullName);
-    }
-
-    private Future<Void> importRepository(String name, String cloneUrl) {
-        log.info("Importing the project template {} into Gitea as {}/{}", cloneUrl, ADMIN_USERNAME, name);
-        JsonObject body = new JsonObject().put("clone_addr", cloneUrl)
-                                          .put("repo_name", name)
-                                          .put("repo_owner", ADMIN_USERNAME)
-                                          .put("private", true)
-                                          .put("service", "git");
-        return send(asAdmin(HttpMethod.POST, "/repos/migrate"), body)
-                .compose(response -> expect(response, "import " + cloneUrl, 201));
-    }
-
-    /** Creates the repository {@code owner/name} with the contents of the template {@code templateFullName}. */
-    public Future<CreatedRepository> generateRepository(String templateFullName,
-                                                        String owner,
-                                                        String name,
-                                                        String description,
-                                                        boolean isPrivate) {
-        JsonObject body = new JsonObject().put("owner", owner)
-                                          .put("name", name)
+    /** Creates the empty repository {@code owner/name}, whose default branch is created by its first commit. */
+    public Future<CreatedRepository> createRepository(String owner, String name, String description, boolean isPrivate) {
+        JsonObject body = new JsonObject().put("name", name)
                                           .put("private", isPrivate)
-                                          .put("git_content", true);
+                                          .put("auto_init", false)
+                                          .put("default_branch", DEFAULT_BRANCH);
         if (description != null && !description.isBlank()) {
             body.put("description", description);
         }
-        return send(asAdmin(HttpMethod.POST, "/repos/" + templateFullName + "/generate"), body)
+        return send(asAdmin(HttpMethod.POST, "/orgs/" + owner + "/repos"), body)
                 .compose(response -> expect(response, "create the repository " + owner + "/" + name, 201)
                         .map(v -> {
                             JsonObject repo = response.bodyAsJsonObject();
@@ -134,44 +83,18 @@ public class GiteaClient {
                         }));
     }
 
-    /** The gzipped tarball of {@code branch} of the repository, every file under one root folder. */
-    public Future<byte[]> downloadArchive(String fullName, String branch) {
-        return send(asAdmin(HttpMethod.GET, "/repos/" + fullName + "/archive/" + branch + ".tar.gz"), null)
-                .compose(response -> expect(response, "download " + fullName, 200)
-                        .map(v -> response.body().getBytes()));
+    /** Whether the repository has no commit yet. */
+    public Future<Boolean> isRepositoryEmpty(String fullName) {
+        return send(asAdmin(HttpMethod.GET, "/repos/" + fullName), null)
+                .compose(response -> expect(response, "find the repository " + fullName, 200)
+                        .map(v -> response.bodyAsJsonObject().getBoolean("empty", false)));
     }
 
-    /** The blob SHA of every file on {@code branch} of the repository, by its path. */
-    public Future<Map<String, String>> fileShas(String fullName, String branch) {
-        return fileShas(fullName, branch, 1, new HashMap<>());
-    }
-
-    private Future<Map<String, String>> fileShas(String fullName, String branch, int page, Map<String, String> found) {
-        String uri = "/repos/" + fullName + "/git/trees/" + branch + "?recursive=true&per_page=" + TREE_PAGE_SIZE + "&page=" + page;
-        return send(asAdmin(HttpMethod.GET, uri), null).compose(response -> {
-            Future<Map<String, String>> ret = expect(response, "list the files of " + fullName, 200).map(found);
-            JsonObject tree = response.bodyAsJsonObject();
-            tree.getJsonArray("tree", new JsonArray()).stream()
-                .map(JsonObject.class::cast)
-                .filter(entry -> "blob".equals(entry.getString("type")))
-                .forEach(entry -> found.put(entry.getString("path"), entry.getString("sha")));
-            if (page * TREE_PAGE_SIZE < tree.getInteger("total_count", 0)) {
-                ret = fileShas(fullName, branch, page + 1, found);
-            }
-            return ret;
-        });
-    }
-
-    /**
-     * Commits {@code files}, Gitea's file operations, to {@code branch} of the repository in one commit.
-     *
-     * @return a future emitting the commit's SHA
-     */
-    public Future<String> changeFiles(String fullName, String branch, String message, JsonArray files) {
+    /** Commits {@code files}, Gitea's file operations, to {@code branch} of the repository in one commit. */
+    public Future<Void> changeFiles(String fullName, String branch, String message, JsonArray files) {
         JsonObject body = new JsonObject().put("branch", branch).put("message", message).put("files", files);
         return send(asAdmin(HttpMethod.POST, "/repos/" + fullName + "/contents"), body)
-                .compose(response -> expect(response, "commit to " + fullName, 201)
-                        .map(v -> response.bodyAsJsonObject().getJsonObject("commit").getString("sha")));
+                .compose(response -> expect(response, "commit to " + fullName, 201));
     }
 
     /** Gives the repository a push webhook delivering to {@code url}, signed with {@code secret}, when it has none. */
@@ -199,7 +122,7 @@ public class GiteaClient {
 
     /**
      * Makes {@code username} a collaborator of the repository with {@code permission} ({@code read} or
-     * {@code write}), creating the account with {@code password}, or setting its password, first.
+     * {@code write}), creating the account with {@code password} first when it doesn't exist.
      */
     public Future<Void> ensureCollaborator(String fullName, String username, String password, String permission) {
         JsonObject account = new JsonObject().put("username", username)
@@ -207,18 +130,10 @@ public class GiteaClient {
                                               .put("password", password)
                                               .put("must_change_password", false)
                                               .put("visibility", "private");
-        return send(asAdmin(HttpMethod.POST, "/admin/users"), account).compose(created -> {
-            Future<Void> ret;
-            if (created.statusCode() == 409 || created.statusCode() == 422) {
-                // the account exists; its password is set again in case the administrator's, which it derives from, changed
-                JsonObject update = new JsonObject().put("login_name", username).put("source_id", 0).put("password", password);
-                ret = send(asAdmin(HttpMethod.PATCH, "/admin/users/" + username), update)
-                        .compose(response -> expect(response, "update the account " + username, 200));
-            } else {
-                ret = expect(created, "create the account " + username, 201);
-            }
-            return ret;
-        }).compose(v -> send(asAdmin(HttpMethod.PUT, "/repos/" + fullName + "/collaborators/" + username),
+        // 409: the account exists from an earlier credential of the same repository
+        return send(asAdmin(HttpMethod.POST, "/admin/users"), account)
+                .compose(created -> expect(created, "create the account " + username, 201, 409))
+                .compose(v -> send(asAdmin(HttpMethod.PUT, "/repos/" + fullName + "/collaborators/" + username),
                              new JsonObject().put("permission", permission)))
           .compose(response -> expect(response, "add " + username + " to " + fullName, 204));
     }

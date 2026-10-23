@@ -3,13 +3,13 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { directorySas, ENDPOINT, gatewayUp, putBlob, readBlob, siteUrl } from './sites-gateway.ts'
+import { azuriteUp, putBlob, readBlob, siteUrl } from './azurite.ts'
 
 const PUBLISH = join(import.meta.dir, '..', 'src', 'publish-ui.ts')
 
-const gateway = await gatewayUp()
+const azurite = await azuriteUp()
 
-describe.skipIf(!gateway)('publish-ui entrypoint (against Azurite through the local edge\'s storage gateway)', () => {
+describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
 
     let workspaceDir: string
 
@@ -83,23 +83,5 @@ describe.skipIf(!gateway)('publish-ui entrypoint (against Azurite through the lo
 
         expect(result.status).not.toBe(0)
         expect(result.stderr).toContain('packages/ui/admin')
-    }, 60_000)
-
-    it('writes into no directory but the one its upload URL was signed for', async () => {
-        const own = `own-${crypto.randomUUID()}.apps.kinotic.test`
-        const other = `other-${crypto.randomUUID()}.apps.kinotic.test`
-        expect((await putBlob(`${other}/index.html`, '<html>other</html>')).status).toBe(201)
-
-        // the URL names the other site's directory, but its SAS is signed for its own
-        const result = spawnSync('bun', [PUBLISH], {
-            env: { ...process.env, KINOTIC_UI_UPLOAD_URLS: JSON.stringify({ admin: `${ENDPOINT}/sites/${other}?${directorySas(own, 'cwdl')}` }),
-                   KINOTIC_UI_COMMIT: 'c'.repeat(40), KINOTIC_WORKSPACE_DIR: workspaceDir },
-            encoding: 'utf-8',
-        })
-
-        expect(result.status).not.toBe(0)
-        expect(result.stderr).toContain('403')
-        expect(await (await readBlob(`${other}/index.html`)).text()).toBe('<html>other</html>')
-        expect((await readBlob(`${other}/assets/app.js`)).status).toBe(404)
     }, 60_000)
 })

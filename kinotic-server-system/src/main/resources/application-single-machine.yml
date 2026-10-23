@@ -19,10 +19,9 @@ kinotic:
       # them at http://<app>--<ui>.<org>.sites.localhost:8088, as the Cloudflare Worker serves the
       # sites account at https://<app>--<ui>.<org>.<sites domain>
       siteStorage: AZURITE
-      # Where the publish and removal workloads reach Azurite: the local edge's storage gateway, which admits
-      # each to its own site's directory, at the host alias of a BOXLITE guest, completed over this machine's
-      # loopback, where compose publishes the gateway's port
-      sitesStorageEndpoint: http://192.168.127.254:8089/devstoreaccount1
+      # Where the publish and removal workloads reach Azurite: the host alias of a BOXLITE guest, completed over
+      # this machine's loopback, where compose publishes Azurite's port
+      sitesStorageEndpoint: http://192.168.127.254:10000/devstoreaccount1
     deployment:
       # A workload runs inside a micro VM, so "localhost" there is the guest, not this machine.
       # The BOXLITE provider's guests reach the host on the gvisor-tap-vsock host alias; boxlite's

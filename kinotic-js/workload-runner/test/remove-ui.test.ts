@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
-import { directorySas, ENDPOINT, gatewayUp, putBlob, readBlob, siteUrl } from './sites-gateway.ts'
+import { azuriteUp, putBlob, readBlob, siteUrl } from './azurite.ts'
 
 const REMOVE = join(import.meta.dir, '..', 'src', 'remove-ui.ts')
 
-const gateway = await gatewayUp()
+const azurite = await azuriteUp()
 
 async function seed(path: string, body: string): Promise<void> {
     expect((await putBlob(path, body)).status).toBe(201)
@@ -15,7 +15,7 @@ function remove(removalUrl: string) {
     return spawnSync('bun', [REMOVE], { env: { ...process.env, KINOTIC_UI_REMOVAL_URL: removalUrl }, encoding: 'utf-8' })
 }
 
-describe.skipIf(!gateway)('remove-ui entrypoint (against Azurite through the local edge\'s storage gateway)', () => {
+describe.skipIf(!azurite)('remove-ui entrypoint (against Azurite)', () => {
 
     it('deletes every file of the site\'s directory and leaves other sites alone', async () => {
         const site = `removed-${crypto.randomUUID()}.apps.kinotic.test`
@@ -40,20 +40,14 @@ describe.skipIf(!gateway)('remove-ui entrypoint (against Azurite through the loc
         expect(result.status).toBe(0)
     }, 60_000)
 
-    it('deletes nothing through a URL signed for another directory, or one that has expired', async () => {
-        const own = `own-${crypto.randomUUID()}.apps.kinotic.test`
-        const other = `other-${crypto.randomUUID()}.apps.kinotic.test`
-        await seed(`${other}/index.html`, '<html>other</html>')
-        await seed(`${own}/index.html`, '<html>own</html>')
+    it('deletes nothing through a URL that has expired', async () => {
+        const site = `expired-${crypto.randomUUID()}.apps.kinotic.test`
+        await seed(`${site}/index.html`, '<html>kept</html>')
 
-        const crossed = remove(`${ENDPOINT}/sites/${other}?${directorySas(own, 'dl')}`)
-        const expired = remove(`${ENDPOINT}/sites/${own}?${directorySas(own, 'dl', new Date(Date.now() - 60_000))}`)
+        const result = remove(siteUrl(site, 'dl', new Date(Date.now() - 60_000)))
 
-        expect(crossed.status).not.toBe(0)
-        expect(crossed.stderr).toContain('403')
-        expect(expired.status).not.toBe(0)
-        expect(expired.stderr).toContain('403')
-        expect(await (await readBlob(`${other}/index.html`)).text()).toBe('<html>other</html>')
-        expect(await (await readBlob(`${own}/index.html`)).text()).toBe('<html>own</html>')
+        expect(result.status).not.toBe(0)
+        expect(result.stderr).toContain('403')
+        expect(await (await readBlob(`${site}/index.html`)).text()).toBe('<html>kept</html>')
     }, 60_000)
 })

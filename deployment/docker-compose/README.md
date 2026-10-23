@@ -33,7 +33,7 @@ the commit under test rather than whatever the published tag currently holds.
 | `compose.kinotic-servers.yml` | The three Kinotic servers, one Ignite cluster | `kinotic-server-management:9090/58503` (portal, REST and STOMP), `kinotic-server-system:58504`, `kinotic-server-app:58505` |
 | `compose-otel.yml` | OpenTelemetry collector + Grafana + Tempo + Loki + Mimir | `grafana:3000`, `loki:3100`, `tempo:3200`, `mimir:9009` |
 | `compose.gen-schemas.yml` | Load-generator container that pre-populates schemas | One-shot when `compose.yml` brings up the full stack |
-| `compose.sites.yml` | Where published UIs are stored and served: the Azurite emulator, and the local edge, the `kinotic-sites-edge` image built from `sites-edge.Dockerfile`, which runs the Cloudflare sites Worker (`../cloudflare/sites-worker/worker.js`) over it through `sites-edge.ts` and is the storage gateway workloads upload through. `docker compose up --build` builds it from the working tree | `kinotic-sites-edge:8088`, `kinotic-sites-edge:8089` |
+| `compose.sites.yml` | Where published UIs are stored and served: the Azurite emulator, and the local edge, the `kinotic-sites-edge` image built from `sites-edge.Dockerfile`, which runs the Cloudflare sites Worker (`../cloudflare/sites-worker/worker.js`) over it through `sites-edge.ts`. `docker compose up --build` builds it from the working tree | `kinotic-azurite:10000`, `kinotic-sites-edge:8088` |
 | `compose.gitea.yml` | The Gitea server the demonstration server hosts projects' repositories on, in place of GitHub: it creates the `kinotic_admin` administrator the servers act as on first start | `kinotic-gitea:3000` |
 | `compose.keycloak.yml` | Local Keycloak as a social sign-in OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |
 | `compose.kinotic-test.yml` | Minimal: ES + migration only, no server | Backing services for the `kinotic-test` suite, which runs the server in-process |
@@ -75,7 +75,7 @@ docker compose down -v && docker compose up -d
 | Elasticsearch | <http://localhost:9200> | `xpack.security.enabled=false` — local only |
 | Kibana | <http://localhost:5601> | |
 | A published UI | `http://<app>--<ui>.<org>.sites.localhost:8088` | Served by `kinotic-sites-edge` from Azurite; the project's deployment page links it. Chrome, Edge and Firefox resolve `*.localhost` to this machine |
-| Storage gateway | <http://localhost:8089/devstoreaccount1> | Azurite's `devstoreaccount1` development account as the publish and removal workloads reach it; admits a request only to the site directory its SAS was signed for. Azurite itself publishes no port |
+| Azurite | <http://localhost:10000/devstoreaccount1> | Azurite's `devstoreaccount1` development account, which the publish and removal workloads upload to and delete from |
 | Gitea | <http://localhost:3001> | Every project's repository, in the Gitea organization named by its Kinotic organization's id. Sign in as `kinotic_admin` / `kinotic-gitea-admin` to browse them |
 | Grafana | <http://localhost:3000> | When `compose-otel.yml` is included. Anonymous auth with the Admin role — no login |
 | Keycloak | <http://keycloak:8888> | When `compose.keycloak.yml` is included; requires `127.0.0.1 keycloak` in `/etc/hosts` per `KEYCLOAK_HOSTS_SETUP.md` |
@@ -104,8 +104,8 @@ open http://localhost:9090
 3. On **Members**, add someone with an invitation: a dialog shows the invitation's link to send them,
    or to open yourself.
 4. Create an application and a project in it, or have a coding agent do both: the project's repository
-   is created on the stack's Gitea from the project template, which Gitea imports from GitHub the first
-   time, so that first project needs an internet connection. A push to its default branch deploys it,
+   is created on the stack's Gitea from the project template, which the management server downloads
+   from GitHub, so creating a project needs an internet connection. A push to its default branch deploys it,
    on a vm-manager node running beside the stack.
 
 To connect a coding agent, install the Kinotic plugin from `kinotic-ai/agent-plugin` (see the
@@ -303,15 +303,12 @@ environment" in the contributing guide (`website/content/02.platform/09.contribu
 A deployment of a project with UIs uploads each built UI to Azurite, as it uploads to the sites
 storage account in Azure: the system server's `development` and `demonstration` profiles set
 `kinotic.systemApi.uiDeployment.siteStorage: AZURITE` and point the publish workload at
-`http://192.168.127.254:8089/devstoreaccount1`, `kinotic-sites-edge`'s storage gateway where a BOXLITE
-workload reaches this machine's loopback. `kinotic-sites-edge` serves each UI at `http://<app>--<ui>.<org>.sites.localhost:8088`
+`http://192.168.127.254:10000/devstoreaccount1`, Azurite where a BOXLITE workload reaches this machine's
+loopback. `kinotic-sites-edge` serves each UI at `http://<app>--<ui>.<org>.sites.localhost:8088`
 by running the same `worker.js` the Cloudflare edge runs, over Azurite. On start it creates the
 private `sites` container and signs the Worker's read SAS with Azurite's well-known development key,
 which terraform does for the real account.
 
-Each upload and removal URL carries a SAS for its site's directory alone, as in Azure, signed with
-Azurite's well-known development key. Azurite honors no directory SAS, so the gateway checks it,
-the signature, the expiry, the permission the operation needs and that the request stays in the
-directory, and passes what it admits on to Azurite with a container SAS only it holds. Azurite
-publishes no port of its own: the key is public, so anything that reached it could sign for every
-site.
+Each upload and removal URL names its site's directory and carries a SAS for the whole `sites`
+container, signed with Azurite's well-known development key: Azurite honors no directory SAS, and the
+key is public, so a workload on this machine is not confined to its own site as it is in Azure.

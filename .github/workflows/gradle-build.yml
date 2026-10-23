@@ -153,8 +153,7 @@ jobs:
       - name: Build server images
         run: ./gradlew :kinotic-server-management:bootBuildImage :kinotic-server-system:bootBuildImage :kinotic-server-app:bootBuildImage :kinotic-server-test:bootBuildImage
 
-      # The local edge's storage gateway checks the upload URLs the system server signs, so it is versioned and
-      # promoted with the servers
+      # The local edge of the compose stack, versioned and promoted with the servers
       - name: Build the sites edge image
         run: |
           version=$(grep -E '^kinoticVersion=' gradle.properties | cut -d= -f2)
