@@ -132,7 +132,7 @@ final class ShardMembership {
     // A placed copy whose node left before its storage id was read can never answer a later owner, so a set holding one
     // never counts; the next placement leaves that node out
     private static boolean storable(List<String> storageIds) {
-        return !storageIds.isEmpty() && storageIds.stream().noneMatch(storageId -> storageId.startsWith("?"));
+        return !storageIds.isEmpty() && storageIds.stream().noneMatch(ShardPlacement::isUnreachable);
     }
 
     private static boolean sameCopies(List<String> a, List<String> b) {

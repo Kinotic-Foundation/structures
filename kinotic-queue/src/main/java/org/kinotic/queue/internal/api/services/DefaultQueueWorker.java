@@ -13,8 +13,8 @@ import org.kinotic.queue.internal.cluster.StoredQueue;
 import org.kinotic.queue.internal.cluster.message.LeaseRequest;
 import org.kinotic.queue.internal.cluster.message.LeaseResponse;
 import org.kinotic.queue.internal.cluster.message.LeasedEntry;
-import org.kinotic.queue.internal.cluster.message.Settlement;
 import org.kinotic.queue.internal.cluster.message.SettleRequest;
+import org.kinotic.queue.internal.cluster.message.Settlement;
 
 import java.util.HashSet;
 import java.util.List;
@@ -32,20 +32,18 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
     private final StoredQueue queue;
     private final String groupName;
     private final WorkerOptions options;
-    private final int shardCount;
     private final String workerId = UUID.randomUUID().toString();
     // Records leased to this worker and not yet settled, whether or not they reached the handler
     private final Set<QueuePosition> held = new HashSet<>();
     // Records asked for by lease requests still on their way
     private int requested;
 
-    private DefaultQueueWorker(Context context, QueueClusterClient client, StoredQueue queue, int shardCount, String groupName, WorkerOptions options) {
-        super(context, shardCount, "worker of group " + groupName + " of queue " + queue.name());
+    private DefaultQueueWorker(Context context, QueueClusterClient client, StoredQueue queue, String groupName, WorkerOptions options) {
+        super(context, queue.definition().shardCount(), "worker of group " + groupName + " of queue " + queue.name());
         this.client = client;
         this.queue = queue;
         this.groupName = groupName;
         this.options = options;
-        this.shardCount = shardCount;
         context.runOnContext(v -> pullAll());
     }
 
@@ -58,11 +56,11 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
         Future<Void> joined = Future.succeededFuture();
         if (options.startPosition() == StartPosition.LATEST) {
             joined = Future.all(IntStream.range(0, queue.definition().shardCount())
-                                         .mapToObj(shard -> client.joinGroup(queue, shard, groupName, StartPosition.LATEST))
+                                         .mapToObj(shard -> client.joinGroup(queue.shardId(shard), groupName))
                                          .toList())
                            .mapEmpty();
         }
-        return joined.map(v -> new DefaultQueueWorker(context, client, queue, queue.definition().shardCount(), groupName, options));
+        return joined.map(v -> new DefaultQueueWorker(context, client, queue, groupName, options));
     }
 
     @Override
@@ -100,17 +98,18 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
     // Every shard is asked whenever the worker has room, since a shard with nothing to lease holds its request open and
     // reserving room for it would starve the shards that have records
     @Override
-    protected boolean canPull(int shard) {
+    protected boolean canPull() {
         return held.size() < options.prefetch();
     }
 
     @Override
     protected Future<LeaseResponse> pull(int shard) {
+        int shardCount = queue.definition().shardCount();
         int room = Math.max(0, options.prefetch() - held.size() - requested);
         int wanted = Math.max(1, (room + shardCount - 1) / shardCount);
         requested += wanted;
-        LeaseRequest request = new LeaseRequest(queue.name(), queue.incarnation(), shard, groupName, workerId, wanted,
-                                                options.leaseDuration().toMillis(), options.startPosition());
+        LeaseRequest request = new LeaseRequest(queue.shardId(shard), groupName, workerId, wanted, options.leaseDuration().toMillis(),
+                                                options.startPosition());
         return client.lease(request).onComplete(ar -> requested -= wanted);
     }
 
@@ -128,11 +127,6 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
         }
     }
 
-    @Override
-    protected void onDelivered(WorkItem item) {
-        // The item stays held until it is settled
-    }
-
     private Future<Void> settle(WorkItem item, Settlement settlement) {
         QueuePosition position = item.record().position();
         if (!held.contains(position)) {
@@ -142,7 +136,7 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
     }
 
     private Future<Void> settle(QueuePosition position, Settlement settlement) {
-        return client.settle(new SettleRequest(queue.name(), queue.incarnation(), position.shard(), groupName, workerId, settlement, position.offset()))
+        return client.settle(new SettleRequest(queue.shardId(position.shard()), groupName, workerId, settlement, position.offset()))
                      .onComplete(ar -> {
                          // A renewed item stays held; any other settlement, or a failure, means it is no longer leased here
                          if (settlement != Settlement.RENEW || ar.failed()) {

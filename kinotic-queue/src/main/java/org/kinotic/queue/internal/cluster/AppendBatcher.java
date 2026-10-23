@@ -8,6 +8,7 @@ import io.vertx.core.Vertx;
 import org.kinotic.queue.api.model.QueuePosition;
 import org.kinotic.queue.internal.cluster.message.AppendRecord;
 import org.kinotic.queue.internal.cluster.message.AppendRequest;
+import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.QueueLog;
 import org.kinotic.queue.internal.log.ShardEntry;
 
@@ -36,7 +37,7 @@ final class AppendBatcher {
     private final Function<AppendRequest, Future<List<Long>>> send;
     // Random, so clients that run at the same time, or one after another, never share an id
     private final long producerId = new SecureRandom().nextLong();
-    private final Map<String, ShardAppendQueue> queues = new HashMap<>();
+    private final Map<ShardId, ShardAppendQueue> queues = new HashMap<>();
     // Each queue's appends not yet given to a shard, in the order they were made, while the first one's definition is
     // still being looked up
     private final Map<String, ArrayDeque<QueuedAppend>> resolving = new HashMap<>();
@@ -77,8 +78,7 @@ final class AppendBatcher {
             if (append.queue().succeeded()) {
                 StoredQueue stored = append.queue().result();
                 int shard = QueueLog.shardOf(append.key(), stored.definition().shardCount());
-                ShardAppendQueue shardQueue = queues.computeIfAbsent(stored.incarnation() + "/" + shard,
-                                                                     name -> new ShardAppendQueue(queue, stored.incarnation(), shard));
+                ShardAppendQueue shardQueue = queues.computeIfAbsent(stored.shardId(shard), ShardAppendQueue::new);
                 shardQueue.getWaiting().add(append);
                 sendNext(shardQueue);
             } else {
@@ -108,13 +108,13 @@ final class AppendBatcher {
             shardQueue.setNextSequence(sequence + 1);
             shardQueue.setInFlight(true);
             List<AppendRecord> records = batch.stream().map(append -> new AppendRecord(append.key(), append.payload())).toList();
-            send.apply(new AppendRequest(shardQueue.getQueue(), shardQueue.getIncarnation(), shardQueue.getShard(), producerId, sequence, records))
+            ShardId shardId = shardQueue.getShardId();
+            send.apply(new AppendRequest(shardId, producerId, sequence, records))
                 .onComplete(ar -> {
                     shardQueue.setInFlight(false);
                     for (int i = 0; i < batch.size(); i++) {
                         int index = i;
-                        complete(batch.get(i), ar.map(offsets -> new QueuePosition(shardQueue.getQueue(), shardQueue.getShard(),
-                                                                                   offsets.get(index))));
+                        complete(batch.get(i), ar.map(offsets -> new QueuePosition(shardId.queue(), shardId.shard(), offsets.get(index))));
                     }
                     sendNext(shardQueue);
                 });

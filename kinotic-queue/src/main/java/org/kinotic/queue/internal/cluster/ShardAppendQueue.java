@@ -3,6 +3,7 @@ package org.kinotic.queue.internal.cluster;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.kinotic.queue.internal.cluster.message.ShardId;
 
 import java.util.ArrayDeque;
 
@@ -15,9 +16,7 @@ import java.util.ArrayDeque;
 @RequiredArgsConstructor
 final class ShardAppendQueue {
 
-    private final String queue;
-    private final String incarnation;
-    private final int shard;
+    private final ShardId shardId;
     private final ArrayDeque<QueuedAppend> waiting = new ArrayDeque<>();
     private boolean inFlight;
     private long nextSequence;

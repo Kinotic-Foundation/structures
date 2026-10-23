@@ -7,6 +7,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.util.AttributeNodeFilter;
+import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.springframework.stereotype.Component;
 
 import javax.cache.Cache;
@@ -38,16 +39,16 @@ public class ShardStateRepository {
     /**
      * @return the highest offset known to be committed on the shard; zero when none is known
      */
-    public long findCommittedOffset(String incarnation, int shard) {
-        Long ret = cache.get(key(incarnation, shard));
+    public long findCommittedOffset(ShardId shardId) {
+        Long ret = cache.get(key(shardId));
         return ret != null ? ret : 0;
     }
 
     /**
      * Stores the shard's committed offset unless a higher one is already stored.
      */
-    public void saveCommittedOffset(String incarnation, int shard, long committedOffset) {
-        String key = key(incarnation, shard);
+    public void saveCommittedOffset(ShardId shardId, long committedOffset) {
+        String key = key(shardId);
         Long stored = cache.getAndPutIfAbsent(key, committedOffset);
         while (stored != null && stored < committedOffset && !cache.replace(key, stored, committedOffset)) {
             stored = cache.get(key);
@@ -67,7 +68,7 @@ public class ShardStateRepository {
         cache.removeAll(new HashSet<>(keys));
     }
 
-    private static String key(String incarnation, int shard) {
-        return incarnation + "/" + shard;
+    private static String key(ShardId shardId) {
+        return shardId.incarnation() + "/" + shardId.shard();
     }
 }

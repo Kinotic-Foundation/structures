@@ -276,7 +276,7 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     private FileChannel channel(String consumerName) throws IOException {
         FileChannel ret = channels.get(consumerName);
         if (ret == null) {
-            ShardLog.createDirectories(directory);
+            DurableFiles.createDirectories(directory);
             Path file = directory.resolve(consumerName);
             boolean created = !Files.exists(file);
             ret = FileChannel.open(file,
@@ -285,7 +285,7 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
                                    StandardOpenOption.WRITE);
             channels.put(consumerName, ret);
             if (created && syncWrites) {
-                ShardLog.force(directory);
+                DurableFiles.force(directory);
             }
         }
         return ret;

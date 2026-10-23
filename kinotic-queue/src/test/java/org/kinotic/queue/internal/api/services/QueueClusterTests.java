@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.eventbus.ReplyException;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.kinotic.queue.api.model.QueueDefinition;
@@ -12,12 +13,10 @@ import org.kinotic.queue.api.model.QueueRecord;
 import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.api.model.WorkItem;
 import org.kinotic.queue.api.model.WorkerOptions;
-import org.kinotic.queue.api.services.QueueWorker;
+import org.kinotic.queue.internal.QueueTestCluster;
 import org.kinotic.queue.internal.QueueTestNode;
-import org.kinotic.queue.internal.QueueTestSupport;
 import org.kinotic.queue.internal.TestSubscriber;
 import org.kinotic.queue.internal.TestWorker;
-import org.kinotic.queue.internal.log.QueueLog;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -40,7 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
+import static org.kinotic.queue.internal.QueueTestSupport.keyOf;
 import static org.kinotic.queue.internal.QueueTestSupport.payload;
+import static org.kinotic.queue.internal.QueueTestSupport.range;
 import static org.kinotic.queue.internal.QueueTestSupport.value;
 
 /**
@@ -56,20 +57,23 @@ public class QueueClusterTests {
     @TempDir
     private Path directory;
 
-    private final List<QueueTestNode> nodes = new ArrayList<>();
+    private QueueTestCluster cluster;
+
+    @BeforeEach
+    public void setUp() {
+        cluster = new QueueTestCluster(directory, REPLICATION_FACTOR);
+    }
 
     @AfterEach
     public void tearDown() throws Exception {
-        for (QueueTestNode node : nodes) {
-            node.close();
-        }
+        cluster.close();
     }
 
     @Test
     public void consumerResumesOnAnotherNodeAfterANodeLeaves() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         appendThrough(List.of(a, b, c), 0, 100);
 
@@ -82,18 +86,18 @@ public class QueueClusterTests {
         }
         await(first.close());
 
-        stop(a);
+        cluster.stop(a);
         appendThrough(List.of(b, c), 100, 150);
 
         // Every shard committed exactly its records below 50, so delivery resumes at 50 on each
-        assertRedelivers(c, IntStream.range(50, 150).boxed().collect(Collectors.toSet()));
+        assertRedelivers(c, range(50, 150));
     }
 
     @Test
     public void appendsMadeWithoutWaitingOnANodeNewToTheQueueAreWrittenInTheOrderTheyWereCalled() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        cluster.start("c");
         List<String> queues = IntStream.range(0, 6).mapToObj(i -> QUEUE + "-" + i).toList();
         for (String queue : queues) {
             await(a.queueService().createQueueIfNotExist(new QueueDefinition(queue, 1)));
@@ -125,9 +129,9 @@ public class QueueClusterTests {
 
     @Test
     public void anOwnerCutOffFromItsCopiesStepsDownAndServesAgainOnceReachable() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         appendThrough(List.of(a), 0, 10);
         String ownerId = a.placement().replicas(QUEUE, 0).getFirst();
@@ -151,28 +155,28 @@ public class QueueClusterTests {
 
     @Test
     public void aRestartedNodeCatchesUpBeforeItServes() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         appendThrough(List.of(a, b, c), 0, 50);
 
-        stop(c);
+        cluster.stop(c);
         appendThrough(List.of(a, b), 50, 100);
-        QueueTestNode restarted = start("c");
+        QueueTestNode restarted = cluster.start("c");
         // Wait until the restarted node holds its copies, which an append through it confirms for one shard
         appendThrough(List.of(restarted), 100, 101);
-        stop(a);
+        cluster.stop(a);
 
         // Every shard now has its copies on b and the restarted node only, so anything it missed would be lost
-        assertRedelivers(b, IntStream.range(0, 101).boxed().collect(Collectors.toSet()));
+        assertRedelivers(b, range(0, 101));
     }
 
     @Test
     public void recordsAndCommittedPositionsSurviveReplacingEveryNode() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         appendThrough(List.of(a, b, c), 0, 100);
         TestSubscriber first = TestSubscriber.subscribe(a.vertx(), a.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
@@ -187,23 +191,23 @@ public class QueueClusterTests {
         List<QueueTestNode> running = new ArrayList<>(List.of(a, b, c));
         int nextValue = 100;
         for (String name : List.of("d", "e", "f")) {
-            running.add(start(name));
-            stop(running.removeFirst());
+            running.add(cluster.start(name));
+            cluster.stop(running.removeFirst());
             // A record committed on every shard after each replacement has a majority that includes a node that joined
             // since the previous replacement, so that node holds the shard, and its consumer positions, up to the record
             for (int shard = 0; shard < SHARDS; shard++) {
-                await(running.getLast().queueService().append(QUEUE, keyOf(shard), payload(nextValue++)));
+                await(running.getLast().queueService().append(QUEUE, keyOf(shard, SHARDS), payload(nextValue++)));
             }
         }
 
-        assertRedelivers(running.getLast(), IntStream.range(50, nextValue).boxed().collect(Collectors.toSet()));
+        assertRedelivers(running.getLast(), range(50, nextValue));
     }
 
     @Test
     public void aWorkerGroupKeepsWorkingWhenAShardsOwnerLeaves() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         TestWorker worker = TestWorker.start(b.vertx(), b.queueService(), QUEUE, "billing",
                                              new WorkerOptions(StartPosition.EARLIEST, 20, Duration.ofSeconds(5)));
@@ -211,18 +215,18 @@ public class QueueClusterTests {
         appendThrough(List.of(a, b, c), 0, 40);
         acceptUntil(worker, accepted, 40);
 
-        stop(a);
+        cluster.stop(a);
         appendThrough(List.of(b, c), 40, 80);
 
         // Records in flight when their shard's owner left are leased again, so every record is accepted at least once
         acceptUntil(worker, accepted, 80);
-        assertEquals(IntStream.range(0, 80).boxed().collect(Collectors.toSet()), accepted);
+        assertEquals(range(0, 80), accepted);
         await(worker.close());
     }
 
     @Test
     public void appendFailsWithoutAMajorityOfCopies() throws Exception {
-        QueueTestNode alone = start("alone");
+        QueueTestNode alone = cluster.start("alone");
         await(alone.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
 
         ExecutionException e = assertThrows(() -> await(alone.queueService().append(QUEUE, "key", payload(0))));
@@ -233,7 +237,7 @@ public class QueueClusterTests {
 
     @Test
     public void aSubscriptionReportsAShardItCannotReadForThirtySecondsAndKeepsRetrying() throws Exception {
-        QueueTestNode alone = start("alone");
+        QueueTestNode alone = cluster.start("alone");
         await(alone.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         // With one of three copies, the shard never gets an owner
         TestSubscriber subscriber = TestSubscriber.subscribe(alone.vertx(), alone.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
@@ -246,8 +250,8 @@ public class QueueClusterTests {
         // Reported once per run of failures
         assertNull(subscriber.pollFailure(2_000));
 
-        QueueTestNode second = start("second");
-        start("third");
+        QueueTestNode second = cluster.start("second");
+        cluster.start("third");
         await(second.queueService().append(QUEUE, "key", payload(7)));
         assertEquals(7, value(subscriber.next()));
         await(subscriber.close());
@@ -255,9 +259,9 @@ public class QueueClusterTests {
 
     @Test
     public void anOwnerRestartedWithAnEmptyCopyLeavesTheShardServedWhileItCatchesUp() throws Exception {
-        QueueTestNode a = start("a");
-        start("b");
-        start("c");
+        QueueTestNode a = cluster.start("a");
+        cluster.start("b");
+        cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         int fillers = 100_000;
         byte[] filler = new byte[1024];
@@ -270,10 +274,10 @@ public class QueueClusterTests {
         }
         QueueTestNode owner = nodeWithId(a.placement().replicas(QUEUE, 0).getFirst());
         String ownerName = owner.name();
-        stop(owner);
+        cluster.stop(owner);
         FileUtils.deleteDirectory(directory.resolve(ownerName).toFile());
 
-        QueueTestNode restarted = start(ownerName);
+        QueueTestNode restarted = cluster.start(ownerName);
         assertEquals(restarted.placement().localNodeId(), restarted.placement().replicas(QUEUE, 0).getFirst(),
                      "the restarted node is placed as the shard's owner again");
         // Past the change of topology the restart caused, while the restarted copy is still far from caught up
@@ -309,9 +313,9 @@ public class QueueClusterTests {
     @Test
     public void aStaleCopyDoesNotTakeAShardWhoseVotingCopiesAreAllGone() throws Exception {
         for (String name : List.of("a", "b", "c", "d")) {
-            start(name);
+            cluster.start(name);
         }
-        QueueTestNode first = nodes.getFirst();
+        QueueTestNode first = cluster.nodes().getFirst();
         await(first.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
         for (int i = 0; i < 5; i++) {
             await(first.queueService().append(QUEUE, "key", payload(i)));
@@ -322,7 +326,7 @@ public class QueueClusterTests {
         // A follower that leaves cleanly keeps a copy current up to here
         QueueTestNode stale = nodeWithId(replicas.get(1));
         String staleName = stale.name();
-        stop(stale);
+        cluster.stop(stale);
         QueueTestNode owner = nodeWithId(replicas.getFirst());
         // The node that joined the copies in its place catches up and votes before more records are appended
         Thread.sleep(3_000);
@@ -331,22 +335,21 @@ public class QueueClusterTests {
         }
         // Gone before the owner records the new committed offset, so only the stored voting copies tell a later owner
         // that the stale copy lacks records
-        List<QueueTestNode> voting = new ArrayList<>(nodes);
+        List<QueueTestNode> voting = new ArrayList<>(cluster.nodes());
         voting.remove(owner);
         voting.addFirst(owner);
         for (QueueTestNode node : voting) {
-            nodes.remove(node);
-            node.crash();
+            cluster.crash(node);
         }
 
-        start(staleName);
-        start("e");
-        QueueTestNode f = start("f");
+        cluster.start(staleName);
+        cluster.start("e");
+        QueueTestNode f = cluster.start("f");
         ExecutionException e = assertThrows(() -> await(f.queueService().append(QUEUE, "key", payload(99))));
         assertInstanceOf(ReplyException.class, e.getCause());
 
         for (QueueTestNode node : voting) {
-            start(node.name());
+            cluster.start(node.name());
         }
         TestSubscriber subscriber = TestSubscriber.subscribe(f.vertx(), f.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 10; i++) {
@@ -356,19 +359,10 @@ public class QueueClusterTests {
     }
 
     private QueueTestNode nodeWithId(String nodeId) {
-        return nodes.stream().filter(node -> node.placement().localNodeId().equals(nodeId)).findFirst().orElseThrow();
+        return cluster.nodes().stream().filter(node -> node.placement().localNodeId().equals(nodeId)).findFirst().orElseThrow();
     }
 
-    private QueueTestNode start(String name) throws Exception {
-        QueueTestNode ret = QueueTestNode.start(name, directory.resolve(name), REPLICATION_FACTOR);
-        nodes.add(ret);
-        return ret;
-    }
 
-    private void stop(QueueTestNode node) throws Exception {
-        nodes.remove(node);
-        node.close();
-    }
 
     private static void appendThrough(List<QueueTestNode> through, int from, int to) throws Exception {
         for (int i = from; i < to; i++) {
@@ -397,20 +391,10 @@ public class QueueClusterTests {
     private static void acceptUntil(TestWorker worker, Set<Integer> accepted, int count) throws Exception {
         while (accepted.size() < count) {
             WorkItem item = worker.next();
-            // An accept fails when the item's lease ended with its shard's owner; the item is then leased again
-            if (worker.settle(QueueWorker::accept, item).toCompletionStage().toCompletableFuture()
-                      .handle((v, e) -> e == null).get(30, TimeUnit.SECONDS)) {
+            if (worker.tryAccept(item)) {
                 accepted.add(TestWorker.value(item));
             }
         }
-    }
-
-    private static String keyOf(int shard) {
-        int i = 0;
-        while (QueueLog.shardOf("shard-key-" + i, SHARDS) != shard) {
-            i++;
-        }
-        return "shard-key-" + i;
     }
 
     private static ExecutionException assertThrows(org.junit.jupiter.api.function.Executable executable) {

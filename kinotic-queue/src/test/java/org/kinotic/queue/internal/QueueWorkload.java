@@ -1,9 +1,11 @@
 package org.kinotic.queue.internal;
 
 import lombok.extern.slf4j.Slf4j;
+import org.awaitility.Awaitility;
 import org.kinotic.queue.api.model.QueueRecord;
 import org.kinotic.queue.api.model.StartPosition;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -65,13 +67,10 @@ public final class QueueWorkload implements AutoCloseable {
     /**
      * Waits until at least {@code count} more appends were acknowledged.
      */
-    public void awaitAcknowledged(int count) throws InterruptedException {
+    public void awaitAcknowledged(int count) {
         int target = acknowledged.size() + count;
-        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(120);
-        while (acknowledged.size() < target) {
-            assertTrue(System.currentTimeMillis() < deadline, "only " + acknowledged.size() + " of " + target + " appends acknowledged");
-            Thread.sleep(20);
-        }
+        Awaitility.await().atMost(Duration.ofSeconds(120)).pollInterval(Duration.ofMillis(20))
+                  .untilAsserted(() -> assertTrue(acknowledged.size() >= target, "only " + acknowledged.size() + " of " + target + " appends acknowledged"));
     }
 
     /**

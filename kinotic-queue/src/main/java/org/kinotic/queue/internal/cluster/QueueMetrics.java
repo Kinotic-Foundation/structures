@@ -48,17 +48,12 @@ public class QueueMetrics {
      * Counts records whose append this node acknowledged as their shard's owner, and how long the batch took.
      */
     public void recordAppend(String queue, int records, Duration duration) {
-        Counter appends = Counter.builder("kinotic.queue.appends")
-                                 .description("Records whose append this node acknowledged as their shard's owner")
-                                 .tag("queue", queue)
-                                 .register(registry);
+        count("kinotic.queue.appends", "Records whose append this node acknowledged as their shard's owner", Tags.of("queue", queue), records);
         Timer batches = Timer.builder("kinotic.queue.append.duration")
                              .description("How long this node took to commit a batch of appends as its shard's owner")
                              .tag("queue", queue)
                              .register(registry);
-        eventMeters.add(appends);
         eventMeters.add(batches);
-        appends.increment(records);
         batches.record(duration);
     }
 

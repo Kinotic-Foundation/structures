@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
 import io.vertx.core.eventbus.ReplyException;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,10 +21,9 @@ import org.kinotic.queue.internal.TestWorker;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
 import static org.kinotic.queue.internal.QueueTestSupport.payload;
+import static org.kinotic.queue.internal.QueueTestSupport.range;
 import static org.kinotic.queue.internal.TestWorker.value;
 
 /**
@@ -230,20 +231,11 @@ public class QueueWorkerTests {
     }
 
     // The record leaving for a dead-letter queue does not wait for the queue's creation before the next record is leased
-    private TestSubscriber subscribeOnceCreated(String queue) throws Exception {
-        long deadline = System.currentTimeMillis() + 10_000;
-        TestSubscriber ret = null;
-        while (ret == null) {
-            try {
-                ret = TestSubscriber.subscribe(node.vertx(), service, queue, "inspector", StartPosition.EARLIEST);
-            } catch (ExecutionException e) {
-                if (!(e.getCause() instanceof IllegalArgumentException) || System.currentTimeMillis() > deadline) {
-                    throw e;
-                }
-                Thread.sleep(100);
-            }
-        }
-        return ret;
+    private TestSubscriber subscribeOnceCreated(String queue) {
+        return Awaitility.await()
+                         .atMost(Duration.ofSeconds(10))
+                         .ignoreExceptionsMatching(e -> e instanceof ExecutionException && e.getCause() instanceof IllegalArgumentException)
+                         .until(() -> TestSubscriber.subscribe(node.vertx(), service, queue, "inspector", StartPosition.EARLIEST), Objects::nonNull);
     }
 
     private void appendValues(int from, int to) throws Exception {
@@ -256,7 +248,4 @@ public class QueueWorkerTests {
         return TestWorker.start(node.vertx(), service, QUEUE, groupName, new WorkerOptions(startPosition, prefetch, leaseDuration));
     }
 
-    private static Set<Integer> range(int from, int to) {
-        return IntStream.range(from, to).boxed().collect(Collectors.toSet());
-    }
 }

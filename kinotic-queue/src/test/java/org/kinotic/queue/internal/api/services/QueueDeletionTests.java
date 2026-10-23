@@ -1,6 +1,8 @@
 package org.kinotic.queue.internal.api.services;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,6 +11,7 @@ import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.api.model.WorkItem;
 import org.kinotic.queue.api.model.WorkerOptions;
 import org.kinotic.queue.api.services.QueueWorker;
+import org.kinotic.queue.internal.QueueTestCluster;
 import org.kinotic.queue.internal.QueueTestNode;
 import org.kinotic.queue.internal.TestSubscriber;
 import org.kinotic.queue.internal.TestWorker;
@@ -16,9 +19,7 @@ import org.kinotic.queue.internal.TestWorker;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.kinotic.queue.internal.QueueTestSupport.appendAll;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
 import static org.kinotic.queue.internal.QueueTestSupport.payload;
 import static org.kinotic.queue.internal.QueueTestSupport.value;
@@ -46,22 +48,25 @@ public class QueueDeletionTests {
     @TempDir
     private Path directory;
 
-    private final List<QueueTestNode> nodes = new ArrayList<>();
+    private QueueTestCluster cluster;
+
+    @BeforeEach
+    public void setUp() {
+        cluster = new QueueTestCluster(directory, 3);
+    }
 
     @AfterEach
     public void tearDown() throws Exception {
-        for (QueueTestNode node : nodes) {
-            node.close();
-        }
+        cluster.close();
     }
 
     @Test
     public void aDeletedQueueEndsItsReadersFailsAppendsLosesEveryCopyAndStartsEmptyWhenCreatedAgain() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 2)));
-        append(a, 0, 10);
+        appendAll(a.queueService(), QUEUE, 0, 10);
         TestSubscriber subscriber = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
         TestWorker worker = TestWorker.start(c.vertx(), c.queueService(), QUEUE, "thumbnails",
                                              new WorkerOptions(StartPosition.EARLIEST, 1, Duration.ofMinutes(1)));
@@ -81,7 +86,7 @@ public class QueueDeletionTests {
 
         // A queue created again with the same name holds none of the deleted queue's records or positions
         assertEquals(3, await(c.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 3))).shardCount());
-        append(c, 100, 101);
+        appendAll(c.queueService(), QUEUE, 100, 101);
         TestSubscriber again = TestSubscriber.subscribe(a.vertx(), a.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
         assertEquals(100, value(again.next()));
         await(again.close());
@@ -89,11 +94,11 @@ public class QueueDeletionTests {
 
     @Test
     public void aQueueCreatedRightAfterItsNamesakeWasDeletedHoldsNoneOfItsRecordsOrPositions() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 2)));
-        append(a, 0, 20);
+        appendAll(a.queueService(), QUEUE, 0, 20);
         TestSubscriber old = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
         for (int i = 0; i < 20; i++) {
             await(old.commit(old.next()));
@@ -107,7 +112,7 @@ public class QueueDeletionTests {
         // Created again before any node had a chance to delete its copy
         await(a.queueService().deleteQueue(QUEUE));
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 2)));
-        append(c, 100, 105);
+        appendAll(c.queueService(), QUEUE, 100, 105);
 
         // The consumer and the group start the new queue from scratch: positions of the deleted one would skip these
         TestSubscriber subscriber = TestSubscriber.subscribe(b.vertx(), b.queueService(), QUEUE, "billing", StartPosition.EARLIEST);
@@ -133,15 +138,15 @@ public class QueueDeletionTests {
 
     @Test
     public void aNodeAwayDuringTheDeletionDeletesItsCopyWhenItReturns() throws Exception {
-        QueueTestNode a = start("a");
-        start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
-        append(a, 0, 10);
-        stop(c);
+        appendAll(a.queueService(), QUEUE, 0, 10);
+        cluster.stop(c);
 
         await(a.queueService().deleteQueue(QUEUE));
-        QueueTestNode returned = start("c");
+        QueueTestNode returned = cluster.start("c");
 
         awaitNoCopy(returned);
         // The returned copy did not make the deleted queue known again
@@ -150,51 +155,34 @@ public class QueueDeletionTests {
 
     @Test
     public void aDeletedQueueStaysDeletedWhenEveryNodeRestartsAndTheNodeThatMissedTheDeletionStartsFirst() throws Exception {
-        QueueTestNode a = start("a");
-        QueueTestNode b = start("b");
-        QueueTestNode c = start("c");
+        QueueTestNode a = cluster.start("a");
+        QueueTestNode b = cluster.start("b");
+        QueueTestNode c = cluster.start("c");
         await(a.queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
-        append(a, 0, 10);
-        stop(c);
+        appendAll(a.queueService(), QUEUE, 0, 10);
+        cluster.stop(c);
         await(a.queueService().deleteQueue(QUEUE));
         awaitNoCopy(a, b);
-        stop(a);
-        stop(b);
+        cluster.stop(a);
+        cluster.stop(b);
 
         // Alone, the node holding the only copy makes the queue known again, until the others say it was deleted
-        QueueTestNode first = start("c");
-        start("a");
-        start("b");
+        QueueTestNode first = cluster.start("c");
+        cluster.start("a");
+        cluster.start("b");
 
         awaitNoCopy(first);
         assertThrows(ExecutionException.class, () -> await(first.queueService().append(QUEUE, "key", payload(10))));
     }
 
-    private static void append(QueueTestNode node, int from, int to) throws Exception {
-        for (int i = from; i < to; i++) {
-            await(node.queueService().append(QUEUE, "key", payload(i)));
-        }
-    }
 
-    private static void awaitNoCopy(QueueTestNode... holders) throws Exception {
-        long deadline = System.currentTimeMillis() + 30_000;
+    private static void awaitNoCopy(QueueTestNode... holders) {
         for (QueueTestNode node : holders) {
             Path copy = node.dataDirectory().resolve(QUEUE);
-            while (Files.exists(copy) && System.currentTimeMillis() < deadline) {
-                Thread.sleep(100);
-            }
-            assertFalse(Files.exists(copy), "node " + node.name() + " still holds a copy of the deleted queue");
+            Awaitility.await().atMost(Duration.ofSeconds(30))
+                      .untilAsserted(() -> assertFalse(Files.exists(copy), "node " + node.name() + " still holds a copy of the deleted queue"));
         }
     }
 
-    private QueueTestNode start(String name) throws Exception {
-        QueueTestNode ret = QueueTestNode.start(name, directory.resolve(name), 3);
-        nodes.add(ret);
-        return ret;
-    }
 
-    private void stop(QueueTestNode node) throws Exception {
-        nodes.remove(node);
-        node.close();
-    }
 }

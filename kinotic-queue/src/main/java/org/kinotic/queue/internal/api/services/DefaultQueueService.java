@@ -15,7 +15,7 @@ import org.kinotic.queue.api.services.QueueSubscription;
 import org.kinotic.queue.api.services.QueueWorker;
 import org.kinotic.queue.internal.cluster.QueueClusterClient;
 import org.kinotic.queue.internal.cluster.QueueDefinitionRepository;
-import org.kinotic.queue.internal.cluster.QueueNode;
+import org.kinotic.queue.internal.cluster.LocalQueueRepository;
 import org.kinotic.queue.internal.cluster.ShardStateRepository;
 import org.kinotic.queue.internal.cluster.StoredQueue;
 import org.kinotic.queue.internal.log.ConsumerOffsetRepository;
@@ -35,7 +35,7 @@ public class DefaultQueueService implements QueueService {
     private final Vertx vertx;
     private final KinoticQueueProperties properties;
     private final QueueDefinitionRepository definitions;
-    private final QueueNode queueNode;
+    private final LocalQueueRepository localQueues;
     private final QueueClusterClient client;
     private final ShardStateRepository shardStates;
 
@@ -45,10 +45,7 @@ public class DefaultQueueService implements QueueService {
             QueueLog.requireValidName(definition.name());
             Validate.isTrue(definition.shardCount() > 0 && definition.shardCount() <= MAX_SHARD_COUNT,
                             "shardCount must be between 1 and %d", MAX_SHARD_COUNT);
-            StoredQueue stored = definitions.saveIfAbsent(definition);
-            // Keeps a copy on disk, so the queue is known again after every queue node restarts
-            queueNode.localLog(stored);
-            return stored.definition();
+            return localQueues.saveIfAbsent(definition).definition();
         }, false);
     }
 

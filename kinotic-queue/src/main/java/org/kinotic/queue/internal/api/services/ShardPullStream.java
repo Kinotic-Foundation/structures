@@ -32,7 +32,7 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     /**
      * How long a shard keeps failing before the failure is reported.
      */
-    static final long FAILURE_REPORT_MS = 30_000;
+    private static final long FAILURE_REPORT_MS = 30_000;
 
     /**
      * The context the stream runs on.
@@ -65,9 +65,9 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     }
 
     /**
-     * @return whether the shard may be pulled now
+     * @return whether a shard may be pulled now
      */
-    protected abstract boolean canPull(int shard);
+    protected abstract boolean canPull();
 
     protected abstract Future<R> pull(int shard);
 
@@ -78,9 +78,10 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     protected abstract void onPulled(int shard, R result);
 
     /**
-     * Called just before an item is handed to the handler.
+     * Called just before an item is handed to the handler; does nothing unless overridden.
      */
-    protected abstract void onDelivered(T item);
+    protected void onDelivered(T item) {
+    }
 
     /**
      * Stops the stream, also when its handler throws.
@@ -153,7 +154,7 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     /**
      * Hands pending items to the handler as demand allows, then pulls more.
      */
-    protected final void deliver() {
+    private void deliver() {
         // A handler calling fetch() or resume() lands here again; the loop below picks up the demand it added
         if (delivering) {
             return;
@@ -199,7 +200,7 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     }
 
     private void pullShard(int shard) {
-        if (!closed && !pulling[shard] && canPull(shard)) {
+        if (!closed && !pulling[shard] && canPull()) {
             pulling[shard] = true;
             pull(shard).onComplete(ar -> {
                 if (ar.succeeded()) {

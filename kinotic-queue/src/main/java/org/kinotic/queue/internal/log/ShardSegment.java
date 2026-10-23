@@ -1,5 +1,7 @@
 package org.kinotic.queue.internal.log;
 
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -30,14 +32,17 @@ import java.util.stream.Stream;
  * entries written past that offset are never read. Writes are serialized by the {@link ShardLog}; reads may run
  * concurrently with writes.
  */
+@Accessors(fluent = true)
 final class ShardSegment implements AutoCloseable {
 
-    private static final byte RECORD = 0;
-    private static final byte MARKER = 1;
-    private static final byte MEMBERSHIP = 2;
 
     private final Path directory;
+    @Getter
     private final long startOffset;
+    /**
+     * When the segment was created, in epoch milliseconds; every entry of the segment before it was written after this.
+     */
+    @Getter
     private final long createdMillis;
     // Chronicle sequence numbers are dense within a roll cycle and so are offsets, so an offset's queue index is
     // its cycle plus its distance from the first offset written in that cycle. Keyed by that first offset.
@@ -53,6 +58,11 @@ final class ShardSegment implements AutoCloseable {
     private boolean newCycleWritten;
     private volatile long nextOffset;
     private volatile long sealedEnd = -1;
+    /**
+     * About how many bytes the segment's entries take: the {@link ShardEntry#size sizes} of the entries written to it,
+     * counting ones past its sealed end.
+     */
+    @Getter
     private volatile long bytes;
 
     private ShardSegment(Path directory, long startOffset, long createdMillis, long bytes) {
@@ -95,10 +105,6 @@ final class ShardSegment implements AutoCloseable {
         return directory.getFileName().toString();
     }
 
-    long startOffset() {
-        return startOffset;
-    }
-
     /**
      * @return the offset after the last entry that may be read: the sealed end, or the offset the next write receives
      */
@@ -109,22 +115,6 @@ final class ShardSegment implements AutoCloseable {
 
     boolean isSealed() {
         return sealedEnd >= 0;
-    }
-
-    /**
-     * @return when the segment was created, in epoch milliseconds; every entry of the segment before it was written
-     * after this
-     */
-    long createdMillis() {
-        return createdMillis;
-    }
-
-    /**
-     * @return about how many bytes the segment's entries take: the {@link ShardEntry#size sizes} of the entries written
-     * to it, counting ones past its sealed end
-     */
-    long bytes() {
-        return bytes;
     }
 
     /**
@@ -145,18 +135,21 @@ final class ShardSegment implements AutoCloseable {
                 Bytes<?> bytes = dc.wire().bytes();
                 bytes.writeLong(entry.offset())
                      .writeLong(entry.epoch())
-                     .writeByte(typeOf(entry));
-                if (entry.isRecord()) {
-                    bytes.writeUtf8(entry.key())
-                         .writeInt(entry.payload().length)
-                         .write(entry.payload())
-                         .writeLong(entry.slot().producerId())
-                         .writeLong(entry.slot().sequence())
-                         .writeInt(entry.slot().index())
-                         .writeInt(entry.slot().size());
-                } else if (entry.isMembership()) {
-                    writeStorageIds(bytes, entry.membership().voting());
-                    writeStorageIds(bytes, entry.membership().joining());
+                     .writeByte(entry.kind().code());
+                switch (entry.kind()) {
+                    case RECORD -> bytes.writeUtf8(entry.key())
+                                        .writeInt(entry.payload().length)
+                                        .write(entry.payload())
+                                        .writeLong(entry.slot().producerId())
+                                        .writeLong(entry.slot().sequence())
+                                        .writeInt(entry.slot().index())
+                                        .writeInt(entry.slot().size());
+                    case MEMBERSHIP -> {
+                        writeStorageIds(bytes, entry.membership().voting());
+                        writeStorageIds(bytes, entry.membership().joining());
+                    }
+                    case MARKER -> {
+                    }
                 }
             } catch (RuntimeException e) {
                 // A partly written excerpt would take a sequence number without an offset, breaking indexOf
@@ -180,19 +173,19 @@ final class ShardSegment implements AutoCloseable {
     void sync() {
         // The entries written since the last sync span two files when the cycle rolled between them
         for (File file : unsyncedFiles) {
-            ShardLog.force(file.toPath());
+            DurableFiles.force(file.toPath());
         }
         unsyncedFiles.clear();
         if (newCycleWritten) {
             // A new cycle adds a file to the directory and updates the queue's metadata files; the first one also
             // follows the creation of the directory itself
             try (Stream<Path> files = Files.list(directory)) {
-                files.filter(file -> file.getFileName().toString().endsWith(".cq4t")).forEach(ShardLog::force);
+                files.filter(file -> file.getFileName().toString().endsWith(".cq4t")).forEach(DurableFiles::force);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-            ShardLog.force(directory);
-            ShardLog.force(directory.getParent());
+            DurableFiles.force(directory);
+            DurableFiles.force(directory.getParent());
             newCycleWritten = false;
         }
     }
@@ -256,31 +249,18 @@ final class ShardSegment implements AutoCloseable {
                 throw new IllegalStateException("Expected offset " + expected + " in " + directory + " but read " + offset);
             }
             long epoch = bytes.readLong();
-            byte type = bytes.readByte();
-            ShardEntry ret;
-            if (type == RECORD) {
-                String key = bytes.readUtf8();
-                byte[] payload = new byte[bytes.readInt()];
-                bytes.read(payload);
-                BatchSlot slot = new BatchSlot(bytes.readLong(), bytes.readLong(), bytes.readInt(), bytes.readInt());
-                ret = ShardEntry.record(offset, epoch, key, payload, slot);
-            } else if (type == MEMBERSHIP) {
-                ret = ShardEntry.membership(offset, epoch, new Membership(readStorageIds(bytes), readStorageIds(bytes)));
-            } else {
-                ret = ShardEntry.marker(offset, epoch);
-            }
-            return ret;
+            return switch (EntryKind.fromCode(bytes.readByte())) {
+                case RECORD -> {
+                    String key = bytes.readUtf8();
+                    byte[] payload = new byte[bytes.readInt()];
+                    bytes.read(payload);
+                    BatchSlot slot = new BatchSlot(bytes.readLong(), bytes.readLong(), bytes.readInt(), bytes.readInt());
+                    yield ShardEntry.record(offset, epoch, key, payload, slot);
+                }
+                case MEMBERSHIP -> ShardEntry.membership(offset, epoch, new Membership(readStorageIds(bytes), readStorageIds(bytes)));
+                case MARKER -> ShardEntry.marker(offset, epoch);
+            };
         }
-    }
-
-    private static byte typeOf(ShardEntry entry) {
-        byte ret = MARKER;
-        if (entry.isRecord()) {
-            ret = RECORD;
-        } else if (entry.isMembership()) {
-            ret = MEMBERSHIP;
-        }
-        return ret;
     }
 
     private static void writeStorageIds(Bytes<?> bytes, List<String> storageIds) {

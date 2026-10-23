@@ -1,38 +1,28 @@
 package org.kinotic.queue.internal.cluster.message;
 
 import io.vertx.core.buffer.Buffer;
-import org.kinotic.queue.internal.log.ConsumerPosition;
 import org.kinotic.queue.internal.log.ReplicationBatch;
 import org.kinotic.queue.internal.log.ReplicationResult;
 import org.kinotic.queue.internal.log.ReplicationStatus;
-
-import java.util.Map;
+import org.kinotic.queue.internal.log.ShardPositions;
 
 /**
- * Carries a batch of entries from a shard's owner to a follower, and the consumer and group offsets the owner stores
- * for the shard when they changed since the follower last received them. The reply is a {@link ReplicationResult}.
- * The {@code incarnation} names the queue the request is about, so a request about a deleted queue is never applied to a
- * queue created later with the same name.
+ * Carries a batch of entries from a shard's owner to a follower. The reply is a {@link ReplicationResult}.
+ *
+ * @param positions the positions the owner stores for the shard when they changed since the follower last received
+ *                  them, otherwise none
  */
-public record ReplicateRequest(String queue,
-                               String incarnation,
-                               int shard,
-                               ReplicationBatch batch,
-                               Map<String, ConsumerPosition> consumerOffsets,
-                               Map<String, ConsumerPosition> groupOffsets) {
+public record ReplicateRequest(ShardId shardId, ReplicationBatch batch, ShardPositions positions) {
 
     public static ReplicateRequest fromBuffer(Buffer buffer) {
         Wire wire = new Wire(buffer);
-        return new ReplicateRequest(wire.readString(),
-                                    wire.readString(),
-                                    wire.readInt(),
+        return new ReplicateRequest(wire.readShardId(),
                                     new ReplicationBatch(wire.readLong(),
                                                          wire.readLong(),
                                                          wire.readLong(),
                                                          wire.readLong(),
                                                          wire.readLong(),
                                                          wire.readEntries()),
-                                    wire.readPositions(),
                                     wire.readPositions());
     }
 
@@ -46,14 +36,12 @@ public record ReplicateRequest(String queue,
     }
 
     public Buffer toBuffer() {
-        Buffer ret = Wire.buffer();
-        Wire.appendString(Wire.appendString(ret, queue), incarnation)
-            .appendInt(shard)
-            .appendLong(batch.epoch())
-            .appendLong(batch.prevOffset())
-            .appendLong(batch.prevEpoch())
-            .appendLong(batch.ownerStartOffset())
-            .appendLong(batch.ownerNextOffset());
-        return Wire.appendPositions(Wire.appendPositions(Wire.appendEntries(ret, batch.entries()), consumerOffsets), groupOffsets);
+        Buffer ret = Wire.appendShardId(Wire.buffer(), shardId)
+                         .appendLong(batch.epoch())
+                         .appendLong(batch.prevOffset())
+                         .appendLong(batch.prevEpoch())
+                         .appendLong(batch.ownerStartOffset())
+                         .appendLong(batch.ownerNextOffset());
+        return Wire.appendPositions(Wire.appendEntries(ret, batch.entries()), positions);
     }
 }

@@ -4,6 +4,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -16,6 +17,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -139,12 +141,8 @@ public class ClusterTlsTests {
         return ret;
     }
 
-    private static void awaitServers(AtomicInteger servers, int expected) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2);
-        while (servers.get() != expected && System.currentTimeMillis() < deadline) {
-            Thread.sleep(200);
-        }
-        assertEquals(expected, servers.get(), "the cluster did not form");
+    private static void awaitServers(AtomicInteger servers, int expected) {
+        Awaitility.await().atMost(Duration.ofMinutes(2)).untilAsserted(() -> assertEquals(expected, servers.get(), "the cluster did not form"));
     }
 
     private static void keytool(Path keytool, String... args) throws IOException, InterruptedException {

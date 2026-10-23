@@ -9,7 +9,10 @@ import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.api.services.QueueSubscription;
 import org.kinotic.queue.internal.cluster.QueueClusterClient;
 import org.kinotic.queue.internal.cluster.StoredQueue;
+import org.kinotic.queue.internal.cluster.message.FetchRequest;
 import org.kinotic.queue.internal.cluster.message.FetchResponse;
+import org.kinotic.queue.internal.cluster.message.OffsetCommit;
+import org.kinotic.queue.internal.cluster.message.OffsetQuery;
 import org.kinotic.queue.internal.log.ShardEntry;
 
 import java.time.Duration;
@@ -70,7 +73,8 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
                                           Duration refreshInterval) {
         int shardCount = queue.definition().shardCount();
         List<Future<Long>> committed = IntStream.range(0, shardCount)
-                                                .mapToObj(shard -> client.findNextOffset(queue, consumerName, shard, startPosition))
+                                                .mapToObj(shard -> client.findNextOffset(new OffsetQuery(queue.shardId(shard), consumerName),
+                                                                                         startPosition))
                                                 .toList();
         List<Future<Long>> starts = IntStream.range(0, shardCount)
                                              .mapToObj(shard -> committed.get(shard).compose(next -> startOffset(client, queue, shard,
@@ -99,7 +103,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
         if (committedNextOffset > 0 || startPosition == StartPosition.EARLIEST) {
             ret = Future.succeededFuture(committedNextOffset);
         } else {
-            ret = client.findCommittedOffset(queue, shard);
+            ret = client.findCommittedOffset(queue.shardId(shard));
         }
         return ret;
     }
@@ -118,7 +122,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
         long nextOffset = position.offset() + 1;
         if (nextOffset > committedNextOffsets[shard]) {
             // Raised only once stored, so a commit retried after a failure is sent again
-            ret = client.commitOffset(queue, consumerName, shard, nextOffset)
+            ret = client.commitOffset(new OffsetCommit(queue.shardId(shard), consumerName, nextOffset))
                         .onSuccess(v -> committedNextOffsets[shard] = Math.max(committedNextOffsets[shard], nextOffset));
         } else {
             ret = Future.succeededFuture();
@@ -141,7 +145,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
         for (int shard = 0; shard < committedNextOffsets.length; shard++) {
             if (committedNextOffsets[shard] > 0) {
                 int refreshed = shard;
-                client.commitOffset(queue, consumerName, shard, committedNextOffsets[shard])
+                client.commitOffset(new OffsetCommit(queue.shardId(shard), consumerName, committedNextOffsets[shard]))
                       .onFailure(e -> log.debug("Refreshing the position of consumer {} on shard {} of queue {} failed",
                                                 consumerName, refreshed, queue.name(), e));
             }
@@ -149,7 +153,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
     }
 
     @Override
-    protected boolean canPull(int shard) {
+    protected boolean canPull() {
         return pendingCount() < MAX_PENDING && pendingBytes + reservedBytes < MAX_PENDING_BYTES;
     }
 
@@ -157,7 +161,8 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
     protected Future<FetchResponse> pull(int shard) {
         long budget = Math.max(MIN_FETCH_BYTES, (MAX_PENDING_BYTES - pendingBytes - reservedBytes) / fetchOffsets.length);
         reservedBytes += budget;
-        return client.fetch(queue, shard, fetchOffsets[shard], FETCH_SIZE, budget).onComplete(ar -> reservedBytes -= budget);
+        return client.fetch(new FetchRequest(queue.shardId(shard), fetchOffsets[shard], FETCH_SIZE, budget))
+                     .onComplete(ar -> reservedBytes -= budget);
     }
 
     @Override

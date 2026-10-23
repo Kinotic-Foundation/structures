@@ -3,8 +3,10 @@ package org.kinotic.queue.internal.cluster.message;
 import io.vertx.core.buffer.Buffer;
 import org.kinotic.queue.internal.log.BatchSlot;
 import org.kinotic.queue.internal.log.ConsumerPosition;
+import org.kinotic.queue.internal.log.EntryKind;
 import org.kinotic.queue.internal.log.Membership;
 import org.kinotic.queue.internal.log.ShardEntry;
+import org.kinotic.queue.internal.log.ShardPositions;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -20,10 +22,7 @@ public final class Wire {
 
     // Raised whenever the layout of any message changes, so nodes running different layouts refuse each other's
     // messages instead of misreading them
-    private static final byte VERSION = 7;
-    private static final byte RECORD = 0;
-    private static final byte MARKER = 1;
-    private static final byte MEMBERSHIP = 2;
+    private static final byte VERSION = 8;
 
     private final Buffer buffer;
     private int position;
@@ -58,37 +57,39 @@ public final class Wire {
         return buffer.appendInt(value.length).appendBytes(value);
     }
 
+    public static Buffer appendShardId(Buffer buffer, ShardId shardId) {
+        return appendString(appendString(buffer, shardId.queue()), shardId.incarnation()).appendInt(shardId.shard());
+    }
+
     public static Buffer appendEntries(Buffer buffer, List<ShardEntry> entries) {
         buffer.appendInt(entries.size());
         for (ShardEntry entry : entries) {
-            buffer.appendLong(entry.offset()).appendLong(entry.epoch());
-            if (entry.isRecord()) {
-                buffer.appendByte(RECORD);
-                appendString(buffer, entry.key());
-                appendBytes(buffer, entry.payload());
-                appendSlot(buffer, entry.slot());
-            } else if (entry.isMembership()) {
-                buffer.appendByte(MEMBERSHIP);
-                appendStrings(buffer, entry.membership().voting());
-                appendStrings(buffer, entry.membership().joining());
-            } else {
-                buffer.appendByte(MARKER);
+            buffer.appendLong(entry.offset()).appendLong(entry.epoch()).appendByte(entry.kind().code());
+            switch (entry.kind()) {
+                case RECORD -> appendSlot(appendBytes(appendString(buffer, entry.key()), entry.payload()), entry.slot());
+                case MEMBERSHIP -> appendStrings(appendStrings(buffer, entry.membership().voting()), entry.membership().joining());
+                case MARKER -> {
+                }
             }
         }
         return buffer;
     }
 
-    public static Buffer appendStrings(Buffer buffer, List<String> values) {
+    public static Buffer appendPositions(Buffer buffer, ShardPositions positions) {
+        return appendPositionMap(appendPositionMap(buffer, positions.consumers()), positions.groups());
+    }
+
+    private static Buffer appendStrings(Buffer buffer, List<String> values) {
         buffer.appendInt(values.size());
         values.forEach(value -> appendString(buffer, value));
         return buffer;
     }
 
-    public static Buffer appendSlot(Buffer buffer, BatchSlot slot) {
+    private static Buffer appendSlot(Buffer buffer, BatchSlot slot) {
         return buffer.appendLong(slot.producerId()).appendLong(slot.sequence()).appendInt(slot.index()).appendInt(slot.size());
     }
 
-    public static Buffer appendPositions(Buffer buffer, Map<String, ConsumerPosition> positions) {
+    private static Buffer appendPositionMap(Buffer buffer, Map<String, ConsumerPosition> positions) {
         buffer.appendInt(positions.size());
         positions.forEach((name, position) -> appendString(buffer, name).appendLong(position.nextOffset()).appendLong(position.lastUsedMillis()));
         return buffer;
@@ -123,25 +124,30 @@ public final class Wire {
         return ret;
     }
 
+    public ShardId readShardId() {
+        return new ShardId(readString(), readString(), readInt());
+    }
+
     public List<ShardEntry> readEntries() {
         int count = readInt();
         List<ShardEntry> ret = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             long offset = readLong();
             long epoch = readLong();
-            byte type = readByte();
-            if (type == RECORD) {
-                ret.add(ShardEntry.record(offset, epoch, readString(), readBytes(), readSlot()));
-            } else if (type == MEMBERSHIP) {
-                ret.add(ShardEntry.membership(offset, epoch, new Membership(readStrings(), readStrings())));
-            } else {
-                ret.add(ShardEntry.marker(offset, epoch));
-            }
+            ret.add(switch (EntryKind.fromCode(readByte())) {
+                case RECORD -> ShardEntry.record(offset, epoch, readString(), readBytes(), readSlot());
+                case MEMBERSHIP -> ShardEntry.membership(offset, epoch, new Membership(readStrings(), readStrings()));
+                case MARKER -> ShardEntry.marker(offset, epoch);
+            });
         }
         return ret;
     }
 
-    public List<String> readStrings() {
+    public ShardPositions readPositions() {
+        return new ShardPositions(readPositionMap(), readPositionMap());
+    }
+
+    private List<String> readStrings() {
         int count = readInt();
         List<String> ret = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -150,11 +156,11 @@ public final class Wire {
         return List.copyOf(ret);
     }
 
-    public BatchSlot readSlot() {
+    private BatchSlot readSlot() {
         return new BatchSlot(readLong(), readLong(), readInt(), readInt());
     }
 
-    public Map<String, ConsumerPosition> readPositions() {
+    private Map<String, ConsumerPosition> readPositionMap() {
         int count = readInt();
         Map<String, ConsumerPosition> ret = new HashMap<>(count);
         for (int i = 0; i < count; i++) {

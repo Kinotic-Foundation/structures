@@ -1,5 +1,7 @@
 package org.kinotic.queue.internal.cluster;
 
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -8,7 +10,9 @@ import org.apache.ignite.util.AttributeNodeFilter;
 import org.kinotic.queue.api.config.KinoticQueueProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -32,8 +36,12 @@ public class ShardPlacement {
 
     // Holds no data; its affinity function assigns shard keys to queue nodes
     private static final String PLACEMENT_CACHE = "kinotic_queue_placement";
+    // Prefixes the node id standing in for the storage id of a placed node that left
+    private static final String UNREACHABLE_PREFIX = "?";
 
     private final Ignite ignite;
+    @Getter
+    @Accessors(fluent = true)
     private final int replicationFactor;
 
     public ShardPlacement(Ignite ignite, KinoticQueueProperties properties) {
@@ -86,6 +94,30 @@ public class ShardPlacement {
     }
 
     /**
+     * @param replicas the ids of the nodes holding a shard's copies, as {@link #replicas} returns them
+     * @return the storage id of each of those nodes other than this one, by node id, in placement order; a node that
+     * left keeps its place under a storage id no copy has, which {@link #isUnreachable} recognizes
+     */
+    public Map<String, String> followers(List<String> replicas) {
+        String self = localNodeId();
+        Map<String, String> ret = new LinkedHashMap<>();
+        for (String node : replicas) {
+            if (!node.equals(self)) {
+                String storageId = storageId(node);
+                ret.put(node, storageId != null ? storageId : UNREACHABLE_PREFIX + node);
+            }
+        }
+        return ret;
+    }
+
+    /**
+     * @return whether the storage id stands in for a placed node that left, whose copy can never answer
+     */
+    public static boolean isUnreachable(String storageId) {
+        return storageId.startsWith(UNREACHABLE_PREFIX);
+    }
+
+    /**
      * @return the id of the queue node whose data has the storage id, or null when no such node is in the cluster
      */
     public String nodeWithStorageId(String storageId) {
@@ -114,10 +146,6 @@ public class ShardPlacement {
      */
     public long topologyVersion() {
         return ignite.cluster().topologyVersion();
-    }
-
-    public int replicationFactor() {
-        return replicationFactor;
     }
 
     /**

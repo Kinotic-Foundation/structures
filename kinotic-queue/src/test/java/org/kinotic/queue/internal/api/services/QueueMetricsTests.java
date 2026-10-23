@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.kinotic.queue.internal.QueueTestSupport.appendAll;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
 import static org.kinotic.queue.internal.QueueTestSupport.payload;
 import static org.kinotic.queue.internal.QueueTestSupport.value;
@@ -63,9 +65,7 @@ public class QueueMetricsTests {
     public void appendsLagDeadLettersRedeliveriesAndOwnershipAreMeasuredAndADeletedQueuesMetersGo() throws Exception {
         QueueService service = node.queueService();
         await(service.createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
-        for (int i = 0; i < 10; i++) {
-            await(service.append(QUEUE, "key", payload(i)));
-        }
+        appendAll(service, QUEUE, 0, 10);
 
         // The consumer commits the fourth record, so six committed records follow its position
         TestSubscriber subscriber = TestSubscriber.subscribe(node.vertx(), service, QUEUE, "billing", StartPosition.EARLIEST);
@@ -107,14 +107,10 @@ public class QueueMetricsTests {
 
         await(service.deleteQueue(QUEUE));
 
-        long deadline = System.currentTimeMillis() + 15_000;
-        while ((registry.find("kinotic.queue.appends").tag("queue", QUEUE).counter() != null
-                || registry.find("kinotic.queue.consumer.lag").tag("queue", QUEUE).gauge() != null)
-                && System.currentTimeMillis() < deadline) {
-            Thread.sleep(200);
-        }
-        assertNull(registry.find("kinotic.queue.appends").tag("queue", QUEUE).counter(), "the deleted queue's counters stayed");
-        assertNull(registry.find("kinotic.queue.consumer.lag").tag("queue", QUEUE).gauge(), "the deleted queue's gauges stayed");
+        Awaitility.await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
+            assertNull(registry.find("kinotic.queue.appends").tag("queue", QUEUE).counter(), "the deleted queue's counters stayed");
+            assertNull(registry.find("kinotic.queue.consumer.lag").tag("queue", QUEUE).gauge(), "the deleted queue's gauges stayed");
+        });
     }
 
     private Counter counter(String name, String... tags) {
@@ -127,11 +123,8 @@ public class QueueMetricsTests {
         return registry.find(name).tags(tags).gauge();
     }
 
-    private static void awaitGauge(double expected, Supplier<Gauge> gauge) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + 15_000;
-        while ((gauge.get() == null || gauge.get().value() != expected) && System.currentTimeMillis() < deadline) {
-            Thread.sleep(200);
-        }
-        assertEquals(expected, gauge.get() != null ? gauge.get().value() : Double.NaN);
+    private static void awaitGauge(double expected, Supplier<Gauge> gauge) {
+        Awaitility.await().atMost(Duration.ofSeconds(15))
+                  .untilAsserted(() -> assertEquals(expected, gauge.get() != null ? gauge.get().value() : Double.NaN));
     }
 }

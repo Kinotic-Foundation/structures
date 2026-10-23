@@ -35,10 +35,10 @@ public class ClusterTlsProperties {
     private String trustStorePassword;
 
     /**
-     * @throws IllegalStateException when TLS is enabled but a store is not configured
+     * @throws IllegalStateException when the key store or the trust store is not configured
      */
     public void requireStores() {
-        if (enabled && (keyStorePath == null || keyStorePath.isBlank() || trustStorePath == null || trustStorePath.isBlank())) {
+        if (keyStorePath == null || keyStorePath.isBlank() || trustStorePath == null || trustStorePath.isBlank()) {
             throw new IllegalStateException("kinotic.clusterTls is enabled, so kinotic.clusterTls.keyStorePath and"
                                                     + " kinotic.clusterTls.trustStorePath must be set");
         }

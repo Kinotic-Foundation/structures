@@ -2,33 +2,36 @@ package org.kinotic.queue.internal.cluster;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.internal.cluster.message.ReplicateRequest;
-import org.kinotic.queue.internal.log.ConsumerOffsetRepository;
-import org.kinotic.queue.internal.log.ConsumerPosition;
+import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.LogStart;
+import org.kinotic.queue.internal.log.QueueLog;
 import org.kinotic.queue.internal.log.ReplicationBatch;
 import org.kinotic.queue.internal.log.ReplicationResult;
 import org.kinotic.queue.internal.log.ShardEntry;
 import org.kinotic.queue.internal.log.ShardLog;
+import org.kinotic.queue.internal.log.ShardPositions;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Copies an owned shard to one follower, one batch at a time, reading the batches from the owner's copy. A follower
  * that is behind, or holds entries the owner does not, is sent everything from the last entry the two agree on. The
- * shard's consumer and group offsets travel with a batch whenever they changed since the follower last received them.
+ * shard's consumer and group positions travel with a batch whenever they changed since the follower last received them.
  * A follower sent nothing for {@link #HEARTBEAT_INTERVAL_MS} is sent an empty batch, so the owner learns it still
  * answers. Runs on the owner's context.
  */
 @Slf4j
+@Accessors(fluent = true)
 final class ShardReplicator {
 
     /**
      * How long a follower goes without a batch before it is sent an empty one.
      */
-    static final long HEARTBEAT_INTERVAL_MS = 1_000;
+    private static final long HEARTBEAT_INTERVAL_MS = 1_000;
 
     private static final int BATCH_SIZE = 256;
     private static final long RETRY_DELAY_MS = 500;
@@ -36,12 +39,9 @@ final class ShardReplicator {
     private final Vertx vertx;
     private final QueueClusterClient client;
     private final String follower;
-    private final String queue;
-    private final String incarnation;
-    private final int shard;
+    private final ShardId shardId;
+    private final QueueLog queueLog;
     private final ShardLog shardLog;
-    private final ConsumerOffsetRepository consumerOffsets;
-    private final ConsumerOffsetRepository groupOffsets;
     private final long epoch;
     private final Runnable onProgress;
     private final Runnable onStaleEpoch;
@@ -49,40 +49,49 @@ final class ShardReplicator {
     private long nextToSend;
     // The epoch of the follower's entry that differed from this copy's, reported with the last mismatch; -1 when none
     private long conflictEpoch = -1;
+    /**
+     * The offset up to which the follower holds the same entries as the owner.
+     */
+    @Getter
     private long matchedOffset;
-    private long replicatedOffsetsVersion = -1;
+    /**
+     * The {@link QueueLog#positionsVersion} of the owner's positions the follower holds.
+     */
+    @Getter
+    private long replicatedPositionsVersion = -1;
     private boolean inFlight;
     private boolean changedWhileInFlight;
     private boolean stopped;
     private long retryTimer = -1;
     private long lastSentMillis;
+    /**
+     * When the last batch the follower answered was sent, in epoch milliseconds; when the replicator was created until
+     * the follower first answers.
+     */
+    @Getter
     private long lastAnsweredMillis = System.currentTimeMillis();
 
     /**
-     * @param onProgress   called when the follower holds more of the shard, or newer offsets, than before
+     * @param queueLog     the owner's copy of the shard's queue, whose positions are replicated
+     * @param shardLog     the owner's copy of the shard
+     * @param onProgress   called when the follower holds more of the shard, or newer positions, than before
      * @param onStaleEpoch called when the follower has promised a newer owner
      */
     ShardReplicator(Vertx vertx,
                     QueueClusterClient client,
                     String follower,
-                    String queue,
-                    String incarnation,
-                    int shard,
+                    ShardId shardId,
+                    QueueLog queueLog,
                     ShardLog shardLog,
-                    ConsumerOffsetRepository consumerOffsets,
-                    ConsumerOffsetRepository groupOffsets,
                     long epoch,
                     Runnable onProgress,
                     Runnable onStaleEpoch) {
         this.vertx = vertx;
         this.client = client;
         this.follower = follower;
-        this.queue = queue;
-        this.incarnation = incarnation;
-        this.shard = shard;
+        this.shardId = shardId;
+        this.queueLog = queueLog;
         this.shardLog = shardLog;
-        this.consumerOffsets = consumerOffsets;
-        this.groupOffsets = groupOffsets;
         this.epoch = epoch;
         this.onProgress = onProgress;
         this.onStaleEpoch = onStaleEpoch;
@@ -94,15 +103,7 @@ final class ShardReplicator {
     }
 
     /**
-     * The version of the owner's consumer and group offsets for the shard, which grows whenever either changes.
-     */
-    static long offsetsVersion(ConsumerOffsetRepository consumerOffsets, ConsumerOffsetRepository groupOffsets, int shard) {
-        // Both versions only grow, so their sum grows whenever either repository changes
-        return consumerOffsets.version(shard) + groupOffsets.version(shard);
-    }
-
-    /**
-     * Sends the owner's new entries and offsets, once the batch on its way is answered or right away when none is,
+     * Sends the owner's new entries and positions, once the batch on its way is answered or right away when none is,
      * unless a batch is waiting to be retried.
      */
     void notifyChanged() {
@@ -122,28 +123,6 @@ final class ShardReplicator {
         }
     }
 
-    /**
-     * @return when the last batch the follower answered was sent, in epoch milliseconds; when the replicator was
-     * created until the follower first answers
-     */
-    long lastAnsweredMillis() {
-        return lastAnsweredMillis;
-    }
-
-    /**
-     * @return the offset up to which the follower holds the same entries as the owner
-     */
-    long matchedOffset() {
-        return matchedOffset;
-    }
-
-    /**
-     * @return the {@link #offsetsVersion} of the owner's offsets the follower holds
-     */
-    long replicatedOffsetsVersion() {
-        return replicatedOffsetsVersion;
-    }
-
     void stop() {
         stopped = true;
         if (retryTimer >= 0) {
@@ -160,17 +139,15 @@ final class ShardReplicator {
             long hint = Math.min(nextToSend, shardLog.nextOffset());
             long conflict = conflictEpoch;
             conflictEpoch = -1;
-            long knownVersion = replicatedOffsetsVersion;
-            long[] offsetsVersion = new long[1];
+            long knownVersion = replicatedPositionsVersion;
+            long[] positionsVersion = new long[1];
             vertx.executeBlocking(() -> {
-                     offsetsVersion[0] = offsetsVersion(consumerOffsets, groupOffsets, shard);
-                     boolean changed = offsetsVersion[0] > knownVersion;
-                     return batch(resumeAfterConflict(hint, conflict),
-                                  changed ? consumerOffsets.findAll(shard) : Map.of(),
-                                  changed ? groupOffsets.findAll(shard) : Map.of());
+                     positionsVersion[0] = queueLog.positionsVersion(shardId.shard());
+                     boolean changed = positionsVersion[0] > knownVersion;
+                     return batch(resumeAfterConflict(hint, conflict), changed ? queueLog.positions(shardId.shard()) : ShardPositions.NONE);
                  }, false)
                  .compose(request -> client.replicate(follower, request))
-                 .onComplete(reply -> onReply(reply, offsetsVersion[0], sentMillis));
+                 .onComplete(reply -> onReply(reply, positionsVersion[0], sentMillis));
         }
     }
 
@@ -188,7 +165,7 @@ final class ShardReplicator {
         return ret;
     }
 
-    private ReplicateRequest batch(long from, Map<String, ConsumerPosition> consumers, Map<String, ConsumerPosition> groups) {
+    private ReplicateRequest batch(long from, ShardPositions positions) {
         // A follower that ends before this copy's start receives the entries from the start, and drops its own
         LogStart start = shardLog.start();
         long first = Math.max(from, start.offset());
@@ -197,11 +174,11 @@ final class ShardReplicator {
         List<ShardEntry> entries = shardLog.read(first, BATCH_SIZE, ShardOwner.MAX_BATCH_BYTES);
         // Read after the entries, so the owner's end covers every entry in the batch
         long ownerNextOffset = shardLog.nextOffset();
-        return new ReplicateRequest(queue, incarnation, shard, new ReplicationBatch(epoch, first - 1, prevEpoch, start.offset(), ownerNextOffset, entries),
-                                    consumers, groups);
+        return new ReplicateRequest(shardId, new ReplicationBatch(epoch, first - 1, prevEpoch, start.offset(), ownerNextOffset, entries),
+                                    positions);
     }
 
-    private void onReply(AsyncResult<ReplicationResult> reply, long offsetsVersion, long sentMillis) {
+    private void onReply(AsyncResult<ReplicationResult> reply, long positionsVersion, long sentMillis) {
         inFlight = false;
         boolean changed = changedWhileInFlight;
         changedWhileInFlight = false;
@@ -209,7 +186,7 @@ final class ShardReplicator {
             return;
         }
         if (reply.failed()) {
-            log.debug("Replicating shard {} of queue {} to {} failed, retrying", shard, queue, follower, reply.cause());
+            log.debug("Replicating {} to {} failed, retrying", shardId, follower, reply.cause());
             retryTimer = vertx.setTimer(RETRY_DELAY_MS, t -> {
                 retryTimer = -1;
                 send();
@@ -219,8 +196,8 @@ final class ShardReplicator {
             lastAnsweredMillis = Math.max(lastAnsweredMillis, sentMillis);
             switch (result.status()) {
                 case ACCEPTED -> {
-                    boolean progressed = offsetsVersion > replicatedOffsetsVersion || result.nextOffset() > matchedOffset;
-                    replicatedOffsetsVersion = offsetsVersion;
+                    boolean progressed = positionsVersion > replicatedPositionsVersion || result.nextOffset() > matchedOffset;
+                    replicatedPositionsVersion = positionsVersion;
                     nextToSend = result.nextOffset();
                     matchedOffset = Math.max(matchedOffset, result.nextOffset());
                     if (progressed) {
@@ -231,8 +208,8 @@ final class ShardReplicator {
                     }
                 }
                 case MISMATCH -> {
-                    boolean progressed = offsetsVersion > replicatedOffsetsVersion;
-                    replicatedOffsetsVersion = offsetsVersion;
+                    boolean progressed = positionsVersion > replicatedPositionsVersion;
+                    replicatedPositionsVersion = positionsVersion;
                     nextToSend = result.nextOffset();
                     conflictEpoch = result.conflictEpoch();
                     matchedOffset = Math.min(matchedOffset, result.nextOffset());

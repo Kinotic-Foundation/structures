@@ -2,6 +2,7 @@ package org.kinotic.queue.internal.api.services;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,6 +12,7 @@ import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.api.model.WorkItem;
 import org.kinotic.queue.api.model.WorkerOptions;
 import org.kinotic.queue.api.services.QueueWorker;
+import org.kinotic.queue.internal.QueueTestCluster;
 import org.kinotic.queue.internal.QueueTestNode;
 import org.kinotic.queue.internal.QueueWorkload;
 import org.kinotic.queue.internal.TestSubscriber;
@@ -19,7 +21,6 @@ import org.kinotic.queue.internal.log.QueueLog;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,18 +57,21 @@ public class ChaosTests {
     @TempDir
     private Path directory;
 
-    private final List<QueueTestNode> nodes = new ArrayList<>();
+    private QueueTestCluster cluster;
     private final List<QueueTestNode> live = new CopyOnWriteArrayList<>();
     private QueueWorkload workload;
+
+    @BeforeEach
+    public void setUp() {
+        cluster = new QueueTestCluster(directory, 3);
+    }
 
     @AfterEach
     public void tearDown() throws Exception {
         if (workload != null) {
             workload.close();
         }
-        for (QueueTestNode node : nodes) {
-            node.close();
-        }
+        cluster.close();
     }
 
     @Test
@@ -76,9 +80,9 @@ public class ChaosTests {
         for (String name : List.of("a", "b", "c")) {
             QueueTestNode node = node(name);
             removeFromLoad(node);
-            stop(node);
+            cluster.stop(node);
             workload.awaitAcknowledged(PROGRESS);
-            addToLoad(start(name));
+            addToLoad(cluster.start(name));
             workload.awaitAcknowledged(PROGRESS);
         }
         workload.close();
@@ -92,9 +96,9 @@ public class ChaosTests {
         for (String name : List.of("a", "b", "c")) {
             QueueTestNode node = node(name);
             removeFromLoad(node);
-            crash(node);
+            cluster.crash(node);
             workload.awaitAcknowledged(PROGRESS);
-            addToLoad(start(name));
+            addToLoad(cluster.start(name));
             workload.awaitAcknowledged(PROGRESS);
         }
         workload.close();
@@ -121,12 +125,12 @@ public class ChaosTests {
     @Test
     public void aLossySlowNetworkLosesNoAcknowledgedRecord() throws Exception {
         startCluster();
-        nodes.forEach(node -> node.networkFaults().degrade(0.1, 30));
+        cluster.nodes().forEach(node -> node.networkFaults().degrade(0.1, 30));
         int acknowledgedBefore = workload.acknowledged().size();
         // A lost request holds the workload's one append until the client's timeout, so the lossy phase lasts a fixed time
         Thread.sleep(LOSSY_PHASE_MILLIS);
         assertTrue(workload.acknowledged().size() > acknowledgedBefore, "no append was acknowledged on the lossy network");
-        nodes.forEach(node -> node.networkFaults().heal());
+        cluster.nodes().forEach(node -> node.networkFaults().heal());
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -140,16 +144,16 @@ public class ChaosTests {
         QueueTestNode c = node("c");
         removeFromLoad(b);
         removeFromLoad(c);
-        stop(b);
-        stop(c);
+        cluster.stop(b);
+        cluster.stop(c);
         // An append that was already on its way when the majority went may still have been acknowledged
         Thread.sleep(2_000);
         int acknowledgedWithoutMajority = workload.acknowledged().size();
         Thread.sleep(3_000);
         assertEquals(acknowledgedWithoutMajority, workload.acknowledged().size(), "an append was acknowledged by one copy of three");
 
-        addToLoad(start("b"));
-        addToLoad(start("c"));
+        addToLoad(cluster.start("b"));
+        addToLoad(cluster.start("c"));
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -163,22 +167,22 @@ public class ChaosTests {
 
         QueueTestNode c = node("c");
         removeFromLoad(c);
-        stop(c);
+        cluster.stop(c);
         FileUtils.deleteDirectory(c.dataDirectory().toFile());
-        addToLoad(start("c"));
+        addToLoad(cluster.start("c"));
         QueueTestNode a = node("a");
         removeFromLoad(a);
-        stop(a);
+        cluster.stop(a);
         // With only b and c running, an acknowledged append needs both, so c holds every shard up to it
         workload.awaitAcknowledged(PROGRESS);
 
         QueueTestNode b = node("b");
         removeFromLoad(b);
-        stop(b);
+        cluster.stop(b);
         FileUtils.deleteDirectory(b.dataDirectory().toFile());
         // c alone holds the queue now, so the wiped b and the returning a must bring their copies level with it
-        addToLoad(start("b"));
-        addToLoad(start("a"));
+        addToLoad(cluster.start("b"));
+        addToLoad(cluster.start("a"));
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -212,10 +216,10 @@ public class ChaosTests {
         for (String name : List.of("a", "b", "c")) {
             QueueTestNode node = node(name);
             live.remove(node);
-            stop(node);
+            cluster.stop(node);
         }
         for (String name : List.of("c", "a", "b")) {
-            live.add(start(name));
+            live.add(cluster.start(name));
         }
 
         workload.verifyDelivered(node("c"), "verifier");
@@ -241,9 +245,9 @@ public class ChaosTests {
         for (String name : List.of("a", "b")) {
             QueueTestNode node = node(name);
             removeFromLoad(node);
-            crash(node);
+            cluster.crash(node);
             workload.awaitAcknowledged(PROGRESS);
-            addToLoad(start(name));
+            addToLoad(cluster.start(name));
             workload.awaitAcknowledged(PROGRESS);
         }
         workload.close();
@@ -282,7 +286,7 @@ public class ChaosTests {
             committed.add(value(record));
         }
 
-        crash(consumerNode);
+        cluster.crash(consumerNode);
         workload.awaitAcknowledged(PROGRESS);
         workload.close();
 
@@ -302,31 +306,18 @@ public class ChaosTests {
 
     private void startCluster() throws Exception {
         for (String name : List.of("a", "b", "c")) {
-            live.add(start(name));
+            live.add(cluster.start(name));
         }
         await(live.getFirst().queueService().createQueueIfNotExist(new QueueDefinition(QUEUE, SHARDS)));
         workload = new QueueWorkload(QUEUE, live, 0);
         workload.awaitAcknowledged(PROGRESS);
     }
 
-    private QueueTestNode start(String name) throws Exception {
-        QueueTestNode ret = QueueTestNode.start(name, directory.resolve(name), 3);
-        nodes.add(ret);
-        return ret;
-    }
 
-    private void stop(QueueTestNode node) throws Exception {
-        nodes.remove(node);
-        node.close();
-    }
 
-    private void crash(QueueTestNode node) throws Exception {
-        nodes.remove(node);
-        node.crash();
-    }
 
     private QueueTestNode node(String name) {
-        return nodes.stream().filter(node -> node.name().equals(name)).findFirst().orElseThrow();
+        return cluster.nodes().stream().filter(node -> node.name().equals(name)).findFirst().orElseThrow();
     }
 
     private void removeFromLoad(QueueTestNode node) {
@@ -345,8 +336,7 @@ public class ChaosTests {
                     received.add(TestWorker.value(item));
                     lastReceived.set(System.currentTimeMillis());
                     // A failed accept leaves it unknown whether the item is done; one that is not comes back later
-                    worker.settle(QueueWorker::accept, item).toCompletionStage().toCompletableFuture()
-                          .handle((v, e) -> e == null).get(30, TimeUnit.SECONDS);
+                    worker.tryAccept(item);
                 }
             }
         } catch (InterruptedException e) {

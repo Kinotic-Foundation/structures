@@ -36,9 +36,22 @@ public enum QueueFailure {
     }
 
     /**
-     * @return the failure with the code, or null for a code no failure has
+     * @return the event bus failure code a request failing with the cause is answered with. A failure another queue
+     * node answered with keeps its code; a request another node did not answer fails as {@link #NOT_OWNER}, so its
+     * sender looks up the shard's owner again.
      */
-    public static QueueFailure fromCode(int code) {
+    public static int codeOf(Throwable cause) {
+        int ret = 0;
+        if (cause instanceof QueueFailureException failure) {
+            ret = failure.getFailure().code();
+        } else if (cause instanceof ReplyException reply) {
+            ret = reply.failureType() == ReplyFailure.RECIPIENT_FAILURE ? reply.failureCode() : NOT_OWNER.code();
+        }
+        return ret;
+    }
+
+    // The failure with the code, or null for a code no failure has
+    private static QueueFailure fromCode(int code) {
         QueueFailure[] failures = values();
         return code >= 1 && code <= failures.length ? failures[code - 1] : null;
     }

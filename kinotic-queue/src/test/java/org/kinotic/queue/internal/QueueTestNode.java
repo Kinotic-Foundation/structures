@@ -29,7 +29,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import static org.kinotic.queue.internal.QueueTestSupport.awaitWithin;
 
 /**
  * A queue node running in the test JVM: its own Ignite node, clustered Vert.x and the queue module's beans, as a
@@ -87,11 +88,10 @@ public final class QueueTestNode implements AutoCloseable {
                 .setCommunicationSpi(new TcpCommunicationSpi().setLocalPort(48100).setLocalPortRange(10));
         Ignite ignite = Ignition.start(configuration);
         registerEventBusRegistryMetadata(ignite);
-        Vertx vertx = Vertx.builder()
-                           .with(new VertxOptions().setEventBusOptions(new EventBusOptions().setHost("127.0.0.1")))
-                           .withClusterManager(new IgniteClusterManager(ignite))
-                           .buildClustered()
-                           .toCompletionStage().toCompletableFuture().get(2, TimeUnit.MINUTES);
+        Vertx vertx = awaitWithin(Vertx.builder()
+                                       .with(new VertxOptions().setEventBusOptions(new EventBusOptions().setHost("127.0.0.1")))
+                                       .withClusterManager(new IgniteClusterManager(ignite))
+                                       .buildClustered(), 120);
         NetworkFaults networkFaults = new NetworkFaults();
         networkFaults.install(vertx);
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
@@ -152,7 +152,7 @@ public final class QueueTestNode implements AutoCloseable {
     @Override
     public void close() throws Exception {
         context.close();
-        vertx.close().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
+        awaitWithin(vertx.close(), 60);
         Ignition.stop(name, true);
     }
 
@@ -164,6 +164,6 @@ public final class QueueTestNode implements AutoCloseable {
     public void crash() throws Exception {
         networkFaults.isolate();
         Ignition.stop(name, true);
-        vertx.close().otherwiseEmpty().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
+        awaitWithin(vertx.close().otherwiseEmpty(), 60);
     }
 }

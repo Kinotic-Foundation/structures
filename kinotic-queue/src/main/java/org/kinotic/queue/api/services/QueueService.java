@@ -81,11 +81,12 @@ public interface QueueService {
      * Joins a group of workers that share a queue's records: each record is leased to one worker of the group at a
      * time, with no ordering between records. A record counts as done once a worker accepts it, or once it is in the
      * group's {@link #deadLetterQueue dead-letter queue} after a worker rejected it or it was leased five times without
-     * being accepted, not counting leases a worker closed before handing to its handler. Delivery is at least once: a record is leased again when its lease expires, when its worker
-     * releases it or closes, and when the shard's owner changes before the group's progress past it reached the
-     * shard's other copies. The group's position on a shard expires once no worker of the group asked for records there
-     * for the queue's retention period, and the group then starts there at its start position again. Fails when the queue does not exist, or when the queue and group names together are too
-     * long to name the dead-letter queue.
+     * being accepted, not counting leases a worker closed before handing to its handler. Delivery is at least once: a
+     * record is leased again when its lease expires, when its worker releases it or closes, and when the shard's owner
+     * changes before the group's progress past it reached the shard's other copies. The group's position on a shard
+     * expires once no worker of the group asked for records there for the queue's retention period, and the group then
+     * starts there at its start position again. Fails when the queue does not exist, or when the queue and group names
+     * together are too long to name the dead-letter queue.
      *
      * @param queue     the queue name
      * @param groupName identifies the group; same character rules as a queue name

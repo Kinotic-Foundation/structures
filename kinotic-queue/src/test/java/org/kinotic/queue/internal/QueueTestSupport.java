@@ -2,13 +2,18 @@ package org.kinotic.queue.internal;
 
 import io.vertx.core.Future;
 import org.kinotic.queue.api.model.QueueRecord;
+import org.kinotic.queue.api.services.QueueService;
 import org.kinotic.queue.internal.log.QueueLog;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
- * Helpers shared by the queue tests: payloads carrying an int, keys of a given shard, and waiting on Vert.x futures.
+ * Helpers shared by the queue tests: payloads carrying an int, keys of a given shard, appending a range of values, and
+ * waiting on Vert.x futures.
  */
 public final class QueueTestSupport {
 
@@ -32,6 +37,22 @@ public final class QueueTestSupport {
             i++;
         }
         return "shard-key-" + i;
+    }
+
+    /**
+     * Appends the values from {@code from} up to {@code to}, one at a time and all under the same key.
+     */
+    public static void appendAll(QueueService service, String queue, int from, int to) throws Exception {
+        for (int i = from; i < to; i++) {
+            await(service.append(queue, "key", payload(i)));
+        }
+    }
+
+    /**
+     * @return the values from {@code from} up to {@code to}
+     */
+    public static Set<Integer> range(int from, int to) {
+        return IntStream.range(from, to).boxed().collect(Collectors.toSet());
     }
 
     public static <T> T await(Future<T> future) throws Exception {

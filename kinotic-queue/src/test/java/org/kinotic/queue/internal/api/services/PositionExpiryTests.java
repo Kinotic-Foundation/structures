@@ -18,15 +18,12 @@ import org.kinotic.queue.internal.TestWorker;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.kinotic.queue.internal.QueueTestSupport.appendAll;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
-import static org.kinotic.queue.internal.QueueTestSupport.payload;
+import static org.kinotic.queue.internal.QueueTestSupport.range;
 import static org.kinotic.queue.internal.QueueTestSupport.value;
 
 /**
@@ -52,9 +49,7 @@ public class PositionExpiryTests {
     public void setUp() throws Exception {
         startNode();
         await(service.createQueueIfNotExist(new QueueDefinition(QUEUE, 1)));
-        for (int i = 0; i < 10; i++) {
-            await(service.append(QUEUE, "key", payload(i)));
-        }
+        appendAll(service, QUEUE, 0, 10);
     }
 
     @AfterEach
@@ -130,7 +125,4 @@ public class PositionExpiryTests {
         return ret;
     }
 
-    private static Set<Integer> range(int from, int to) {
-        return IntStream.range(from, to).boxed().collect(Collectors.toCollection(HashSet::new));
-    }
 }

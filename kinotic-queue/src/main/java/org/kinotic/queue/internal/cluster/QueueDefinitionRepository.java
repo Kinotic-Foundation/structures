@@ -92,20 +92,6 @@ public class QueueDefinitionRepository {
     }
 
     /**
-     * @return the definition, or null when no queue has the name
-     */
-    public QueueDefinition find(String name) {
-        String ret = known.get(name);
-        if (ret == null) {
-            ret = cache.get(name);
-            if (ret != null) {
-                known.put(name, ret);
-            }
-        }
-        return ret != null ? toDefinition(name, ret) : null;
-    }
-
-    /**
      * @return the queue as this node last saw it, without blocking; null when this node has not seen it or saw it
      * deleted. A change made on another node is seen once the cache notifies this node of it.
      */
@@ -125,6 +111,19 @@ public class QueueDefinitionRepository {
             known.remove(name);
         }
         return ret != null ? toStored(name, ret) : null;
+    }
+
+    /**
+     * @return the queue with the name as the cluster stores it now
+     * @throws QueueFailureException with {@link QueueFailure#NO_QUEUE} when the cluster stores no queue of the name
+     *                               and incarnation, which was then deleted
+     */
+    public StoredQueue requireStored(String name, String incarnation) {
+        StoredQueue ret = findStored(name);
+        if (ret == null || !ret.incarnation().equals(incarnation)) {
+            throw QueueFailure.NO_QUEUE.exception("No queue named " + name + " of incarnation " + incarnation);
+        }
+        return ret;
     }
 
     /**

@@ -1,6 +1,5 @@
 package org.kinotic.queue.internal;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.kinotic.queue.api.model.WorkItem;
@@ -10,29 +9,16 @@ import org.kinotic.queue.api.services.QueueWorker;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 /**
- * Drives a {@link QueueWorker} from the test thread, calling it on the context it delivers on as its contract
- * requires, and collects the items leased to it.
+ * Drives a {@link QueueWorker} from the test thread and collects the items leased to it.
  */
-public final class TestWorker {
+public final class TestWorker extends TestStream<QueueWorker, WorkItem> {
 
-    private final Context context;
-    private final QueueWorker worker;
-    private final LinkedBlockingQueue<WorkItem> received;
-    private final LinkedBlockingQueue<Throwable> failures;
-
-    private TestWorker(Context context, QueueWorker worker, LinkedBlockingQueue<WorkItem> received, LinkedBlockingQueue<Throwable> failures) {
-        this.context = context;
-        this.worker = worker;
-        this.received = received;
-        this.failures = failures;
+    private TestWorker(Vertx vertx, QueueService service, String queue, String groupName, WorkerOptions options) throws Exception {
+        super(vertx, () -> service.work(queue, groupName, options));
     }
 
     public static TestWorker start(Vertx vertx,
@@ -40,39 +26,11 @@ public final class TestWorker {
                                    String queue,
                                    String groupName,
                                    WorkerOptions options) throws Exception {
-        Context context = vertx.getOrCreateContext();
-        LinkedBlockingQueue<WorkItem> received = new LinkedBlockingQueue<>();
-        LinkedBlockingQueue<Throwable> failures = new LinkedBlockingQueue<>();
-        CompletableFuture<QueueWorker> started = new CompletableFuture<>();
-        context.runOnContext(v -> service.work(queue, groupName, options)
-                                         .onSuccess(worker -> {
-                                             worker.exceptionHandler(failures::add);
-                                             worker.handler(received::add);
-                                             started.complete(worker);
-                                         })
-                                         .onFailure(started::completeExceptionally));
-        return new TestWorker(context, started.get(30, TimeUnit.SECONDS), received, failures);
-    }
-
-    /**
-     * @return the next failure the worker reported to its exception handler, or null when none came in time
-     */
-    public Throwable pollFailure(long millis) throws InterruptedException {
-        return failures.poll(millis, TimeUnit.MILLISECONDS);
+        return new TestWorker(vertx, service, queue, groupName, options);
     }
 
     public static int value(WorkItem item) {
         return QueueTestSupport.value(item.record());
-    }
-
-    public WorkItem next() throws InterruptedException {
-        WorkItem ret = received.poll(30, TimeUnit.SECONDS);
-        assertNotNull(ret, "no record leased within 30 seconds");
-        return ret;
-    }
-
-    public WorkItem poll(long millis) throws InterruptedException {
-        return received.poll(millis, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -80,23 +38,27 @@ public final class TestWorker {
      */
     public Set<Integer> takeUntilQuiet() throws InterruptedException {
         Set<Integer> ret = new HashSet<>();
-        WorkItem item = received.poll(30, TimeUnit.SECONDS);
+        WorkItem item = poll(30_000);
         while (item != null) {
             ret.add(value(item));
-            item = received.poll(1_500, TimeUnit.MILLISECONDS);
+            item = poll(1_500);
         }
         return ret;
     }
 
     public Future<Void> settle(BiFunction<QueueWorker, WorkItem, Future<Void>> settlement, WorkItem item) throws Exception {
-        CompletableFuture<Future<Void>> ret = new CompletableFuture<>();
-        context.runOnContext(v -> ret.complete(settlement.apply(worker, item)));
-        return ret.get(30, TimeUnit.SECONDS);
+        return call(worker -> settlement.apply(worker, item));
+    }
+
+    /**
+     * @return whether the accept succeeded; it fails when the item's lease ended with its shard's owner, and the item
+     * is then leased again
+     */
+    public boolean tryAccept(WorkItem item) throws Exception {
+        return settle(QueueWorker::accept, item).toCompletionStage().toCompletableFuture().handle((v, e) -> e == null).get(30, TimeUnit.SECONDS);
     }
 
     public Future<Void> close() throws Exception {
-        CompletableFuture<Future<Void>> ret = new CompletableFuture<>();
-        context.runOnContext(v -> ret.complete(worker.close()));
-        return ret.get(30, TimeUnit.SECONDS);
+        return call(QueueWorker::close);
     }
 }

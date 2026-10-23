@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.api.services;
 
 import io.vertx.core.Future;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.kinotic.queue.internal.QueueTestNode;
 import org.kinotic.queue.internal.TestSubscriber;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.kinotic.queue.internal.QueueTestSupport.appendAll;
 import static org.kinotic.queue.internal.QueueTestSupport.await;
 import static org.kinotic.queue.internal.QueueTestSupport.payload;
 import static org.kinotic.queue.internal.QueueTestSupport.value;
@@ -157,9 +160,7 @@ public class QueueServiceTests {
         await(service.createQueueIfNotExist(new QueueDefinition("orders", 1)));
         TestSubscriber subscriber = subscribe("billing", StartPosition.EARLIEST);
         subscriber.onContext(QueueSubscription::pause);
-        for (int i = 0; i < 5; i++) {
-            await(service.append("orders", "key", payload(i)));
-        }
+        appendAll(service, "orders", 0, 5);
         assertNull(subscriber.poll(500));
 
         subscriber.onContext(s -> s.fetch(2));
@@ -229,10 +230,7 @@ public class QueueServiceTests {
             });
             node.vertx().setTimer(3_000, t -> subscription.fetch(1));
         }).onFailure(stopped::complete));
-        long deadline = System.currentTimeMillis() + 60_000;
-        while (received.get() < count && !stopped.isDone() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(50);
-        }
+        Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> received.get() >= count || stopped.isDone());
 
         assertFalse(stopped.isDone(), () -> "the subscription stopped: " + stopped.join());
         assertEquals(count, received.get());

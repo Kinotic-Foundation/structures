@@ -9,18 +9,14 @@ import java.util.List;
  * Asks a shard's owner to append a batch of records. A batch sent again with the same producer and sequence is
  * written once. The reply is the offset of each record, in the order of {@code records}.
  *
- * @param incarnation the incarnation of the queue the records are for, so they are never written to a queue created
- *                    later with the same name
  * @param producerId identifies the client that sent the batch, for as long as that client runs
  * @param sequence   the batch's number among the batches the client sent to the shard; increases with every batch
  */
-public record AppendRequest(String queue, String incarnation, int shard, long producerId, long sequence, List<AppendRecord> records) {
+public record AppendRequest(ShardId shardId, long producerId, long sequence, List<AppendRecord> records) {
 
     public static AppendRequest fromBuffer(Buffer buffer) {
         Wire wire = new Wire(buffer);
-        String queue = wire.readString();
-        String incarnation = wire.readString();
-        int shard = wire.readInt();
+        ShardId shardId = wire.readShardId();
         long producerId = wire.readLong();
         long sequence = wire.readLong();
         int count = wire.readInt();
@@ -28,7 +24,7 @@ public record AppendRequest(String queue, String incarnation, int shard, long pr
         for (int i = 0; i < count; i++) {
             records.add(new AppendRecord(wire.readString(), wire.readBytes()));
         }
-        return new AppendRequest(queue, incarnation, shard, producerId, sequence, records);
+        return new AppendRequest(shardId, producerId, sequence, records);
     }
 
     public static Buffer encodeReply(List<Long> offsets) {
@@ -48,8 +44,7 @@ public record AppendRequest(String queue, String incarnation, int shard, long pr
     }
 
     public Buffer toBuffer() {
-        Buffer ret = Wire.appendString(Wire.appendString(Wire.buffer(), queue), incarnation).appendInt(shard).appendLong(producerId).appendLong(sequence)
-                         .appendInt(records.size());
+        Buffer ret = Wire.appendShardId(Wire.buffer(), shardId).appendLong(producerId).appendLong(sequence).appendInt(records.size());
         for (AppendRecord record : records) {
             Wire.appendString(ret, record.key());
             Wire.appendBytes(ret, record.payload());

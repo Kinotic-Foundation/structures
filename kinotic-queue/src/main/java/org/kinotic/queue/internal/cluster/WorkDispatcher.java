@@ -8,6 +8,7 @@ import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.internal.cluster.message.LeaseResponse;
 import org.kinotic.queue.internal.cluster.message.LeasedEntry;
 import org.kinotic.queue.internal.cluster.message.Settlement;
+import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.ConsumerOffsetRepository;
 import org.kinotic.queue.internal.log.ShardEntry;
 import org.kinotic.queue.internal.log.ShardLog;
@@ -27,11 +28,9 @@ import java.util.function.Supplier;
  * to one worker at a time; a record whose lease expires or is released goes back to the group, and a record rejected,
  * or leased {@link #MAX_DELIVERIES} times without being accepted, is done once it is in the group's dead-letter queue.
  * A lease a closing worker returns unseen does not count. Records the retention deletes before the group finishes them
- * are skipped.
- * The group's low watermark, the offset before which
- * every record is done, is stored in the queue's group offsets and copied to a majority of the shard's copies, so the
- * shard's next owner resumes the group from it. A lease can be renewed while its worker still processes the record.
- * Runs on the owner's context.
+ * are skipped. The group's low watermark, the offset before which every record is done, is stored in the queue's group
+ * offsets and copied to a majority of the shard's copies, so the shard's next owner resumes the group from it. A lease
+ * can be renewed while its worker still processes the record. Runs on the owner's context.
  */
 @Slf4j
 final class WorkDispatcher {
@@ -39,7 +38,7 @@ final class WorkDispatcher {
     /**
      * How many times a record is leased before it goes to the group's dead-letter queue.
      */
-    static final int MAX_DELIVERIES = 5;
+    private static final int MAX_DELIVERIES = 5;
 
     // Bounds the records past the low watermark, which the owner tracks in memory and redelivers after a change of owner
     private static final int MAX_IN_FLIGHT = 1_000;
@@ -48,8 +47,7 @@ final class WorkDispatcher {
     private static final long IDLE_MS = 5 * 60_000;
 
     private final Vertx vertx;
-    private final String queue;
-    private final int shard;
+    private final ShardId shardId;
     private final String groupName;
     private final ShardLog shardLog;
     private final ConsumerOffsetRepository groupOffsets;
@@ -78,8 +76,7 @@ final class WorkDispatcher {
     private int deadLettering;
 
     private WorkDispatcher(Vertx vertx,
-                           String queue,
-                           int shard,
+                           ShardId shardId,
                            String groupName,
                            ShardLog shardLog,
                            ConsumerOffsetRepository groupOffsets,
@@ -88,8 +85,7 @@ final class WorkDispatcher {
                            Function<ShardEntry, Future<Void>> deadLetter,
                            long lowWatermark) {
         this.vertx = vertx;
-        this.queue = queue;
-        this.shard = shard;
+        this.shardId = shardId;
         this.groupName = groupName;
         this.shardLog = shardLog;
         this.groupOffsets = groupOffsets;
@@ -112,8 +108,7 @@ final class WorkDispatcher {
      * @param deadLetter       appends a record to the group's dead-letter queue
      */
     static Future<WorkDispatcher> open(Vertx vertx,
-                                       String queue,
-                                       int shard,
+                                       ShardId shardId,
                                        String groupName,
                                        ShardLog shardLog,
                                        ConsumerOffsetRepository groupOffsets,
@@ -123,15 +118,15 @@ final class WorkDispatcher {
                                        StartPosition startPosition) {
         long latest = committedOffset.getAsLong();
         return vertx.executeBlocking(() -> {
-                        long stored = groupOffsets.findNextOffset(groupName, shard);
+                        long stored = groupOffsets.findNextOffset(groupName, shardId.shard());
                         long ret = stored;
                         if (stored == 0 && startPosition == StartPosition.LATEST) {
                             ret = latest;
-                            groupOffsets.save(groupName, shard, latest);
+                            groupOffsets.save(groupName, shardId.shard(), latest);
                         }
                         return ret;
                     }, false)
-                    .compose(position -> replicateOffsets.get().map(new WorkDispatcher(vertx, queue, shard, groupName, shardLog, groupOffsets,
+                    .compose(position -> replicateOffsets.get().map(new WorkDispatcher(vertx, shardId, groupName, shardLog, groupOffsets,
                                                                                        committedOffset, replicateOffsets, deadLetter,
                                                                                        position)));
     }
@@ -150,14 +145,14 @@ final class WorkDispatcher {
         if (hasLeasable()) {
             ret = leaseNow(workerId, max, leaseMillis);
         } else {
-            PendingLease pending = new PendingLease(workerId, max, leaseMillis, Promise.promise());
-            pendingLeases.add(pending);
-            vertx.setTimer(ShardOwner.FETCH_WAIT_MS, t -> {
-                if (pendingLeases.remove(pending)) {
-                    pending.promise().complete(new LeaseResponse(List.of()));
+            Promise<LeaseResponse> promise = Promise.promise();
+            long timerId = vertx.setTimer(ShardOwner.FETCH_WAIT_MS, t -> {
+                if (pendingLeases.removeIf(pending -> pending.promise() == promise)) {
+                    promise.complete(new LeaseResponse(List.of()));
                 }
             });
-            ret = pending.promise().future();
+            pendingLeases.add(new PendingLease(workerId, max, leaseMillis, promise, timerId));
+            ret = promise.future();
         }
         return ret;
     }
@@ -172,8 +167,8 @@ final class WorkDispatcher {
         lastRequest = System.currentTimeMillis();
         Lease lease = leased.get(offset);
         if (lease == null || !lease.workerId().equals(workerId)) {
-            return Future.failedFuture(QueueFailure.LEASE_EXPIRED.exception("Offset " + offset + " of shard " + shard + " of queue "
-                                                                                    + queue + " is not leased to this worker"));
+            return Future.failedFuture(QueueFailure.LEASE_EXPIRED.exception("Offset " + offset + " of " + shardId
+                                                                                    + " is not leased to this worker"));
         }
         vertx.cancelTimer(lease.timerId());
         Future<Void> ret = Future.succeededFuture();
@@ -191,7 +186,10 @@ final class WorkDispatcher {
                 // A request still waiting from the closing worker would take the record straight back
                 List<PendingLease> closing = pendingLeases.stream().filter(pending -> pending.workerId().equals(workerId)).toList();
                 pendingLeases.removeAll(closing);
-                closing.forEach(pending -> pending.promise().tryComplete(new LeaseResponse(List.of())));
+                closing.forEach(pending -> {
+                    vertx.cancelTimer(pending.timerId());
+                    pending.promise().tryComplete(new LeaseResponse(List.of()));
+                });
                 servePendingLeases();
             }
             case ACCEPT -> {
@@ -231,8 +229,11 @@ final class WorkDispatcher {
     void stop() {
         stopped = true;
         leased.values().forEach(lease -> vertx.cancelTimer(lease.timerId()));
-        QueueFailureException notOwner = QueueFailure.NOT_OWNER.exception("Shard " + shard + " of queue " + queue + " changed owner");
-        pendingLeases.forEach(pending -> pending.promise().tryFail(notOwner));
+        QueueFailureException notOwner = ShardOwner.changedOwner(shardId);
+        pendingLeases.forEach(pending -> {
+            vertx.cancelTimer(pending.timerId());
+            pending.promise().tryFail(notOwner);
+        });
         pendingLeases.clear();
     }
 
@@ -244,8 +245,7 @@ final class WorkDispatcher {
             leased.headMap(start).clear();
             released.headMap(start).clear();
             done.headSet(start).clear();
-            log.warn("Group {} had not finished offsets {} to {} of shard {} of queue {}, which the retention deleted",
-                     groupName, lowWatermark, start, shard, queue);
+            log.warn("Group {} had not finished offsets {} to {} of {}, which the retention deleted", groupName, lowWatermark, start, shardId);
             lowWatermark = start;
             while (done.remove(lowWatermark)) {
                 lowWatermark++;
@@ -288,8 +288,7 @@ final class WorkDispatcher {
                             for (long offset = newFrom; offset < newTo; offset++) {
                                 released.put(offset, 0);
                             }
-                            ret = Future.failedFuture(ar.failed() ? ar.cause() : QueueFailure.NOT_OWNER.exception("Shard " + shard
-                                                                                                                         + " of queue " + queue + " changed owner"));
+                            ret = Future.failedFuture(ar.failed() ? ar.cause() : ShardOwner.changedOwner(shardId));
                         } else {
                             ret = Future.succeededFuture(grant(workerId, leaseMillis, taken, newFrom, newTo, ar.result()));
                         }
@@ -349,6 +348,7 @@ final class WorkDispatcher {
     private void servePendingLeases() {
         while (!stopped && !pendingLeases.isEmpty() && hasLeasable()) {
             PendingLease pending = pendingLeases.removeFirst();
+            vertx.cancelTimer(pending.timerId());
             leaseNow(pending.workerId(), pending.max(), pending.leaseMillis()).onComplete(pending.promise());
         }
     }
@@ -363,17 +363,17 @@ final class WorkDispatcher {
                         deadLettering--;
                         Future<Void> ret;
                         if (stopped) {
-                            ret = Future.failedFuture(QueueFailure.NOT_OWNER.exception("Shard " + shard + " of queue " + queue + " changed owner"));
+                            ret = Future.failedFuture(ShardOwner.changedOwner(shardId));
                         } else if (offset < lowWatermark) {
                             // The retention deleted the record meanwhile, and the group moved past it
                             ret = Future.succeededFuture();
                         } else if (ar.failed()) {
-                            log.warn("Appending offset {} of shard {} of queue {} to the dead-letter queue of group {} failed, retrying",
-                                     offset, shard, queue, groupName, ar.cause());
+                            log.warn("Appending offset {} of {} to the dead-letter queue of group {} failed, retrying",
+                                     offset, shardId, groupName, ar.cause());
                             released.put(offset, MAX_DELIVERIES);
                             ret = Future.failedFuture(ar.cause());
                         } else {
-                            log.info("Dead-lettered offset {} of shard {} of queue {} for group {}", offset, shard, queue, groupName);
+                            log.info("Dead-lettered offset {} of {} for group {}", offset, shardId, groupName);
                             ret = markDone(offset);
                         }
                         return ret;
@@ -402,10 +402,10 @@ final class WorkDispatcher {
         long watermark = lowWatermark;
         lastSaved = System.currentTimeMillis();
         lastSave = lastSave.transform(ignored -> vertx.<Void>executeBlocking(() -> {
-            groupOffsets.save(groupName, shard, watermark);
+            groupOffsets.save(groupName, shardId.shard(), watermark);
             return null;
         }, false));
-        lastSave.onFailure(e -> log.warn("Saving the position of group {} on shard {} of queue {} failed", groupName, shard, queue, e));
+        lastSave.onFailure(e -> log.warn("Saving the position of group {} on {} failed", groupName, shardId, e));
         return lastSave.compose(v -> replicateOffsets.get());
     }
 }

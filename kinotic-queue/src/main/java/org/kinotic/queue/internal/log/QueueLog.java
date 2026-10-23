@@ -1,5 +1,7 @@
 package org.kinotic.queue.internal.log;
 
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.openhft.hashing.LongHashFunction;
 import org.apache.commons.io.FileUtils;
 import org.kinotic.queue.api.config.QueueProperties;
@@ -7,7 +9,6 @@ import org.kinotic.queue.api.model.QueueDefinition;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
  * The shards of a queue this node holds and the committed offsets of the queue's consumers, kept under one
  * directory. Shards are created when first used, so a node holds only the shards placed on it.
  */
+@Accessors(fluent = true)
 public final class QueueLog implements AutoCloseable {
 
     private static final String SHARD_COUNT_FILE = "shard-count";
@@ -34,11 +36,24 @@ public final class QueueLog implements AutoCloseable {
     private static final Pattern NAME_PATTERN = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,127}");
 
     private final Path directory;
+    @Getter
     private final QueueDefinition definition;
+    /**
+     * What tells this queue from earlier ones of the same name.
+     */
+    @Getter
     private final String incarnation;
     private final QueueProperties properties;
     private final ShardLog[] shards;
+    /**
+     * The committed offsets of the queue's subscribed consumers.
+     */
+    @Getter
     private final ConsumerOffsetRepository consumerOffsets;
+    /**
+     * The low watermarks of the queue's worker groups, kept apart from consumers so the two never share a name.
+     */
+    @Getter
     private final ConsumerOffsetRepository groupOffsets;
 
     private QueueLog(Path directory, QueueDefinition definition, String incarnation, QueueProperties properties) {
@@ -88,8 +103,8 @@ public final class QueueLog implements AutoCloseable {
         }
         if (stored == null) {
             // The incarnation first, since a directory without a shard count holds no queue
-            ShardLog.writeDurably(directory.resolve(INCARNATION_FILE), incarnation);
-            ShardLog.writeDurably(directory.resolve(SHARD_COUNT_FILE), String.valueOf(definition.shardCount()));
+            DurableFiles.writeDurably(directory.resolve(INCARNATION_FILE), incarnation);
+            DurableFiles.writeDurably(directory.resolve(SHARD_COUNT_FILE), String.valueOf(definition.shardCount()));
         }
         return new QueueLog(directory, definition, incarnation, properties);
     }
@@ -98,16 +113,7 @@ public final class QueueLog implements AutoCloseable {
      * @return the incarnation of the queue stored in {@code directory}, or null when no queue is stored there
      */
     public static String findIncarnation(Path directory) {
-        Path file = directory.resolve(INCARNATION_FILE);
-        String ret = null;
-        if (Files.exists(file)) {
-            try {
-                ret = Files.readString(file).trim();
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        return ret;
+        return DurableFiles.read(directory.resolve(INCARNATION_FILE));
     }
 
     /**
@@ -127,18 +133,11 @@ public final class QueueLog implements AutoCloseable {
      * @return the names of the deleted queues this node recorded in {@code dataDirectory}, by incarnation
      */
     public static Map<String, String> findDeletedQueues(Path dataDirectory) {
-        Path file = dataDirectory.resolve(DELETED_QUEUES_FILE);
         Map<String, String> ret = new HashMap<>();
-        if (Files.exists(file)) {
-            try {
-                for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-                    String[] fields = line.trim().split(" ");
-                    if (fields.length == 2) {
-                        ret.put(fields[0], fields[1]);
-                    }
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+        for (String line : DurableFiles.readLines(dataDirectory.resolve(DELETED_QUEUES_FILE))) {
+            String[] fields = line.trim().split(" ");
+            if (fields.length == 2) {
+                ret.put(fields[0], fields[1]);
             }
         }
         return ret;
@@ -150,7 +149,7 @@ public final class QueueLog implements AutoCloseable {
     public static void saveDeletedQueues(Path dataDirectory, Map<String, String> deletedQueues) {
         List<String> lines = new ArrayList<>();
         deletedQueues.forEach((incarnation, name) -> lines.add(incarnation + " " + name));
-        ShardLog.writeDurably(dataDirectory.resolve(DELETED_QUEUES_FILE), String.join("\n", lines));
+        DurableFiles.writeDurably(dataDirectory.resolve(DELETED_QUEUES_FILE), String.join("\n", lines));
     }
 
     /**
@@ -159,17 +158,9 @@ public final class QueueLog implements AutoCloseable {
      * @return the definition, or null when no queue is stored there
      */
     public static QueueDefinition findDefinition(Path directory) {
-        Path shardCountFile = directory.resolve(SHARD_COUNT_FILE);
-        QueueDefinition ret = null;
-        if (isValidName(directory.getFileName().toString()) && Files.exists(shardCountFile)) {
-            try {
-                ret = new QueueDefinition(directory.getFileName().toString(),
-                                          Integer.parseInt(Files.readString(shardCountFile).trim()));
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        return ret;
+        String name = directory.getFileName().toString();
+        String shardCount = isValidName(name) ? DurableFiles.read(directory.resolve(SHARD_COUNT_FILE)) : null;
+        return shardCount != null ? new QueueDefinition(name, Integer.parseInt(shardCount)) : null;
     }
 
     /**
@@ -179,16 +170,10 @@ public final class QueueLog implements AutoCloseable {
      */
     public static String storageId(Path dataDirectory) {
         Path file = dataDirectory.resolve(STORAGE_ID_FILE);
-        String ret;
-        try {
-            if (Files.exists(file)) {
-                ret = Files.readString(file).trim();
-            } else {
-                ret = UUID.randomUUID().toString();
-                ShardLog.writeDurably(file, ret);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        String ret = DurableFiles.read(file);
+        if (ret == null) {
+            ret = UUID.randomUUID().toString();
+            DurableFiles.writeDurably(file, ret);
         }
         return ret;
     }
@@ -245,29 +230,35 @@ public final class QueueLog implements AutoCloseable {
         return copy != null ? copy.promise(epoch) : ShardLog.promiseWithoutCopy(shardDirectory(shard), epoch);
     }
 
-    public QueueDefinition definition() {
-        return definition;
+    /**
+     * @return the positions of the consumers and worker groups on the shard that have not expired
+     */
+    public ShardPositions positions(int shard) {
+        return new ShardPositions(consumerOffsets.findAll(shard), groupOffsets.findAll(shard));
     }
 
     /**
-     * @return what tells this queue from earlier ones of the same name
+     * Merges the positions another copy of the shard holds, as {@link ConsumerOffsetRepository#saveAll} does.
      */
-    public String incarnation() {
-        return incarnation;
+    public void savePositions(int shard, ShardPositions positions) {
+        consumerOffsets.saveAll(shard, positions.consumers());
+        groupOffsets.saveAll(shard, positions.groups());
     }
 
     /**
-     * @return the committed offsets of the queue's subscribed consumers
+     * @return a number that grows whenever a position stored for the shard changes
      */
-    public ConsumerOffsetRepository consumerOffsets() {
-        return consumerOffsets;
+    public long positionsVersion(int shard) {
+        // Both versions only grow, so their sum grows whenever either repository changes
+        return consumerOffsets.version(shard) + groupOffsets.version(shard);
     }
 
     /**
-     * @return the low watermarks of the queue's worker groups, kept apart from consumers so the two never share a name
+     * Deletes the expired positions of the queue's consumers and worker groups.
      */
-    public ConsumerOffsetRepository groupOffsets() {
-        return groupOffsets;
+    public void deleteExpiredPositions() {
+        consumerOffsets.deleteExpired();
+        groupOffsets.deleteExpired();
     }
 
     @Override

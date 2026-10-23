@@ -6,9 +6,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.kinotic.queue.api.config.QueueProperties;
+import org.kinotic.queue.api.model.QueueDefinition;
 import org.kinotic.queue.internal.QueueTestNode;
 import org.kinotic.queue.internal.log.Membership;
-import org.kinotic.queue.internal.log.ShardLog;
+import org.kinotic.queue.internal.log.QueueLog;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -43,8 +44,8 @@ public class ShardMembershipTests {
 
     @Test
     public void aSetLargerThanTheReplicationFactorNeedsAMajorityOfItself() {
-        try (ShardLog shardLog = shardLogCounting(new Membership(List.of("a", "b", "c", "d"), List.of()))) {
-            ShardMembership membership = new ShardMembership(node.placement(), shardLog, change -> Future.failedFuture("unused"));
+        try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b", "c", "d"), List.of()))) {
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
 
             // Two of four copies can be disjoint from another two, so they never commit
             assertEquals(0, membership.committable(progress(Map.of("a", 100L, "d", 100L))));
@@ -54,8 +55,8 @@ public class ShardMembershipTests {
 
     @Test
     public void aSetSmallerThanTheReplicationFactorNeedsAMajorityOfTheReplicationFactor() {
-        try (ShardLog shardLog = shardLogCounting(new Membership(List.of("a", "b"), List.of()))) {
-            ShardMembership membership = new ShardMembership(node.placement(), shardLog, change -> Future.failedFuture("unused"));
+        try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b"), List.of()))) {
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
 
             assertEquals(0, membership.committable(progress(Map.of("a", 100L))));
             assertEquals(100, membership.committable(progress(Map.of("a", 100L, "b", 100L))));
@@ -64,8 +65,8 @@ public class ShardMembershipTests {
 
     @Test
     public void aJointChangeNeedsAMajorityOfBothSets() {
-        try (ShardLog shardLog = shardLogCounting(new Membership(List.of("a", "b", "c"), List.of("a", "d", "e", "f")))) {
-            ShardMembership membership = new ShardMembership(node.placement(), shardLog, change -> Future.failedFuture("unused"));
+        try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b", "c"), List.of("a", "d", "e", "f")))) {
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
 
             // A majority of the old set, but only two of the four new copies
             assertEquals(0, membership.committable(progress(Map.of("a", 100L, "b", 100L, "d", 100L))));
@@ -73,9 +74,10 @@ public class ShardMembershipTests {
         }
     }
 
-    private ShardLog shardLogCounting(Membership voting) {
-        ShardLog ret = new ShardLog(directory.resolve("0"), new QueueProperties());
-        ret.appendMembership(1, voting);
+    // A queue of one shard, whose copies counting toward a commit are the voting ones
+    private QueueLog queueLogCounting(Membership voting) {
+        QueueLog ret = QueueLog.openOrCreate(directory.resolve("orders"), new QueueDefinition("orders", 1), "first", new QueueProperties());
+        ret.shard(0).appendMembership(1, voting);
         return ret;
     }
 
