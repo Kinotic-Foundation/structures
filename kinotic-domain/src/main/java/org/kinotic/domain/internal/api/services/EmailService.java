@@ -23,6 +23,7 @@ import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.InviteEmailTemplate;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.OrganizationLoginLink;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.internal.api.repositories.InviteEmailTemplateRepository;
 import org.springframework.stereotype.Component;
@@ -87,8 +88,8 @@ public class EmailService {
      * @param verificationToken the token to include in the verification URL
      * @param template          the email to send in place of Kinotic's, whose UI's verification page the link opens,
      *                          or {@code null} for Kinotic's, which links to the portal's
-     * @return a future emitting the verification link when {@link #showsLinksInUI()}, for the UI to open in place
-     *         of the email, or {@code null} once the email is sent (failing if ACS rejects it)
+     * @return a future emitting the verification link when {@code kinotic.domain.email.showLinksInUI} applies, for the
+     *         UI to open in place of the email, or {@code null} once the email is sent (failing if ACS rejects it)
      */
     public Future<String> sendVerificationEmail(String email,
                                               String displayName,
@@ -99,7 +100,7 @@ public class EmailService {
         if (!properties.getDomain().getEmail().isEnabled()) {
             log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
                     displayName, email, verificationUrl);
-            return Future.succeededFuture(showsLinksInUI() ? verificationUrl : null);
+            return Future.succeededFuture(properties.getDomain().getEmail().showsLinksInUI() ? verificationUrl : null);
         }
 
         Map<String, Object> variables = Map.of("displayName", displayName,
@@ -182,42 +183,39 @@ public class EmailService {
      *
      * @param email         the recipient's email address
      * @param organizations the organizations the address is a member of, possibly none
-     * @return a future that completes once the send has finished (or fails if ACS rejects it)
+     * @return a future emitting the organizations' login links when {@code kinotic.domain.email.showLinksInUI}
+     *         applies, for the UI to show in place of the email, or {@code null} once the email is sent (failing if
+     *         ACS rejects it)
      */
-    public Future<Void> sendOrganizationsEmail(String email, List<Organization> organizations) {
-        List<Map<String, Object>> rows = organizations.stream()
-                .map(organization -> Map.<String, Object>of(
-                        "name", organization.getName(),
-                        "loginUrl", portalBaseUrl() + ORGANIZATION_LOGIN_PATH + organization.getId()))
+    public Future<List<OrganizationLoginLink>> sendOrganizationsEmail(String email, List<Organization> organizations) {
+        List<OrganizationLoginLink> links = organizations.stream()
+                .map(organization -> new OrganizationLoginLink(organization.getName(),
+                                                               portalBaseUrl() + ORGANIZATION_LOGIN_PATH + organization.getId()))
                 .toList();
 
         if (!properties.getDomain().getEmail().isEnabled()) {
             log.warn("Email sending is disabled; organizations of <{}>: {}", email,
-                     rows.stream().map(row -> row.get("loginUrl")).toList());
-            return Future.succeededFuture();
+                     links.stream().map(OrganizationLoginLink::loginUrl).toList());
+            return Future.succeededFuture(properties.getDomain().getEmail().showsLinksInUI() ? links : null);
         }
 
         // HashMap rather than Map.of: an empty list is omitted so the templates' {{#if organizations}} sees it as falsy
         Map<String, Object> variables = new HashMap<>();
-        if (!rows.isEmpty()) {
-            variables.put("organizations", rows);
+        if (!links.isEmpty()) {
+            variables.put("organizations", links.stream()
+                                                .map(link -> Map.<String, Object>of("name", link.name(), "loginUrl", link.loginUrl()))
+                                                .toList());
         }
         return send(email,
                     email,
                     ORGANIZATIONS_SUBJECT,
                     render(ORGANIZATIONS_HTML, variables),
-                    render(ORGANIZATIONS_TEXT, variables));
+                    render(ORGANIZATIONS_TEXT, variables))
+                .map((List<OrganizationLoginLink>) null);
     }
 
     /**
-     * Whether the links a person must open are returned for the UI to show, because no email carries them.
-     */
-    public boolean showsLinksInUI() {
-        return !properties.getDomain().getEmail().isEnabled() && properties.getDomain().getEmail().isShowLinksInUI();
-    }
-
-    /**
-     * The accept link of {@code invite} for the UI to show the inviter when {@link #showsLinksInUI()}. Anyone holding
+     * The accept link of {@code invite} for the UI to show the inviter when {@code kinotic.domain.email.showLinksInUI} applies. Anyone holding
      * the link can accept the invitation as the invited address.
      *
      * @return the link Kinotic's invitation email carries, which opens the portal's invitation page

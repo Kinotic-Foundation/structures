@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.EmailTemplate;
@@ -38,6 +39,7 @@ public class DefaultSignUpService implements SignUpService {
     private final OrganizationMembershipService membershipService;
     private final OrganizationService organizationService;
     private final EmailService emailService;
+    private final KinoticDomainProperties domainProperties;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
 
     @Override
@@ -69,7 +71,7 @@ public class DefaultSignUpService implements SignUpService {
                         ret = cleared.compose(v -> requireNoOrganizationUser(pending))
                                      .compose(v -> pendingSignUpRepository.saveSync(pending))
                                      .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplate));
-                    } else if (existing.getAuthType() == AuthType.PASSWORD && emailService.showsLinksInUI()) {
+                    } else if (existing.getAuthType() == AuthType.PASSWORD && domainProperties.getDomain().getEmail().showsLinksInUI()) {
                         // no email carries the link, so asking again is the only way back to it
                         ret = emailService.sendVerificationEmail(existing.getEmail(), existing.getDisplayName(),
                                                                  existing.getVerificationToken(), emailTemplate);

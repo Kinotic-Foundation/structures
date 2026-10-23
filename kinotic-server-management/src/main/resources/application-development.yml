@@ -9,6 +9,12 @@ kinotic:
     # ~/.kinotic/dev-environment/kinotic-server-management/application.yml, imported below, so SPA links,
     # OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP surface all share the tunnel's one origin.
     apiBaseUrl: http://localhost:5173
+  managementServer:
+    turnstile:
+      # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every
+      # token verifies, so the form works with no Turnstile site of one's own
+      siteKey: 1x00000000000000000000AA
+      secretKey: 1x0000000000000000000000000000000AA
   domain:
     cors:
       # The portal, however dev runs it: the vite dev server (pnpm dev, 5173), this server's own

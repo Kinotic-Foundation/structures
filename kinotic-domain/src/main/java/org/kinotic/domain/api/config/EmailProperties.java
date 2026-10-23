@@ -32,6 +32,14 @@ public class EmailProperties {
     private boolean showLinksInUI = false;
 
     /**
+     * Whether the links a person must open are returned for the UI to show, because no email carries them:
+     * {@link #enabled} is {@code false} and {@link #showLinksInUI} is {@code true}.
+     */
+    public boolean showsLinksInUI() {
+        return !enabled && showLinksInUI;
+    }
+
+    /**
      * ACS endpoint URL, e.g. {@code https://my-acs-resource.communication.azure.com}.
      * Required when {@link #enabled} is {@code true}.
      */
