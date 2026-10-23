@@ -138,7 +138,14 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
                     if (existing != null) {
                         return Future.succeededFuture(existing);
                     }
-                    return repoProvisioner.provision(project).compose(this::save).compose(this::contained);
+                    // the create refuses an id already held, so of two callers at once only the first places the
+                    // project in the graph, and grants made on it since are kept
+                    return repoProvisioner.provision(project)
+                                          .compose(super::createSync)
+                                          .compose(this::contained)
+                                          .recover(ex -> AlreadyExistsException.isCause(ex)
+                                                  ? super.findById(project.getId())
+                                                  : Future.failedFuture(ex));
                 });
     }
 

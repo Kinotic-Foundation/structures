@@ -401,6 +401,20 @@ public class EndpointConnectionHandlerTests {
     }
 
     @Test
+    public void testARequestAuthorizedAfterItsConnectionClosedIsNotSent() throws Exception {
+        Promise<Void> authorization = Promise.promise();
+        when(services.requestAuthorizer.authorize(any(), any(), any(), any())).thenReturn(authorization.future());
+        EndpointConnectionHandler handler = connect(Map.of());
+        String replyTo = subscribeReplies(handler);
+        Future<Void> requested = handler.send(request(replyTo, "inv-10"));
+
+        handler.shutdown();
+        authorization.complete();
+        requested.toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        verify(eventBusService, never()).sendWithAck(any());
+    }
+
+    @Test
     public void testClientSuppliedSenderHeaderIsDropped() throws Exception {
         EndpointConnectionHandler handler = connect(Map.of());
         String replyTo = subscribeReplies(handler);

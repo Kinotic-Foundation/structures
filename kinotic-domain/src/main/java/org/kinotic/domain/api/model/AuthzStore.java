@@ -25,7 +25,7 @@ public class AuthzStore implements Reconcilable<AuthzModelRevision> {
 
     /**
      * {@link #SYSTEM} for the system's store, or the application's id in the stores,
-     * {@link org.kinotic.domain.api.utils.DomainUtil#authzApplicationId}.
+     * {@link org.kinotic.domain.api.utils.AuthzGraphUtil#authzApplicationId}.
      */
     private String id;
     /**

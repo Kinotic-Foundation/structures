@@ -245,6 +245,10 @@ class DefaultRequestAuthorizerTest {
         // a client's arguments are positional; only a tool call names them
         assertTrue(refused("save", sally(), EventConstants.CONTENT_TYPE_NAMED_JSON, "{\"entity\":{\"id\":\"proj-a\"}}")
                            .getMessage().contains(EventConstants.CONTENT_TYPE_NAMED_JSON));
+        // nesting past the parser's limit, before the id the check reads
+        String deep = "[".repeat(5_000) + "]".repeat(5_000);
+        assertTrue(refused("save", sally(), EventConstants.CONTENT_TYPE_JSON, "[{\"tags\":" + deep + ",\"id\":\"proj-a\"}]")
+                           .getMessage().contains("cannot be read"));
         verify(relationships, never()).check(any(), any(), any(), any());
     }
 

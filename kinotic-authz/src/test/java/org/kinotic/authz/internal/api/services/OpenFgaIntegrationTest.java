@@ -183,11 +183,13 @@ class OpenFgaIntegrationTest {
         assertTrue(await(relationshipService.holds(store, new RelationshipTuple("user:bob", "end_user", "application:" + store))));
 
         String name = await(fga.getStore(storeId)).getName();
+        // a duplicate a concurrent creator left under the name goes with the store
+        await(fga.createStore(new CreateStoreRequest().name(name)));
 
         await(storeService.deleteStore(store));
 
         assertThrows(ExecutionException.class, () -> await(storeService.modelId(store)));
-        assertTrue(await(fga.listStores(1, null, name)).getStores().isEmpty());
+        assertTrue(await(fga.listStores(10, null, name)).getStores().isEmpty());
         // a store already gone leaves nothing to delete
         await(storeService.deleteStore(store));
     }

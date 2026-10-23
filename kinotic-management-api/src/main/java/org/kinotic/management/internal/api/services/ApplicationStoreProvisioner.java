@@ -8,8 +8,10 @@ import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
+import org.kinotic.core.api.crud.CursorPage;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.AuthzModelRevision;
@@ -166,18 +168,19 @@ public class ApplicationStoreProvisioner {
     }
 
     private static <T> Future<Void> eachPage(Function<Pageable, Future<Page<T>>> pager, Function<List<T>, Future<Void>> action) {
-        return eachPage(pager, action, 0);
+        return eachPage(pager, action, null);
     }
 
-    private static <T> Future<Void> eachPage(Function<Pageable, Future<Page<T>>> pager, Function<List<T>, Future<Void>> action, int pageNumber) {
-        return pager.apply(Pageable.create(pageNumber, PAGE_SIZE, null)).compose(page -> {
+    // Pages by cursor in id order, so every document is read once however many there are, past the offset window
+    private static <T> Future<Void> eachPage(Function<Pageable, Future<Page<T>>> pager, Function<List<T>, Future<Void>> action, String cursor) {
+        return pager.apply(Pageable.create(cursor, PAGE_SIZE, Sort.by("id"))).compose(page -> {
             Future<Void> ret;
             if (page.getContent().isEmpty()) {
                 ret = Future.succeededFuture();
             } else {
                 ret = action.apply(page.getContent());
-                if (page.getContent().size() == PAGE_SIZE) {
-                    ret = ret.compose(v -> eachPage(pager, action, pageNumber + 1));
+                if (page.getContent().size() == PAGE_SIZE && page instanceof CursorPage<T> cursorPage) {
+                    ret = ret.compose(v -> eachPage(pager, action, cursorPage.getCursor()));
                 }
             }
             return ret;

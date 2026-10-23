@@ -147,6 +147,22 @@ public class SystemTierTests extends KinoticTestBase {
     }
 
     @Test
+    public void theLastAdministratorIsKept() throws Exception {
+        assertTrue(awaitUntil(() -> grantsOf(SEEDED_ADMIN_ID, AuthzConstants.SYSTEM_ADMIN_ROLE) == 1), "the seeded system user never administered the system");
+        List<Grant> administrators = await(access.findGrants()).stream()
+                                                               .filter(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId()))
+                                                               .toList();
+        assertEquals(1, administrators.size(), administrators.toString());
+        SystemParticipantIdentity second = systemUser("second-admin");
+        Grant secondGrant = await(access.grant(new Subject(SubjectType.USER, second.getId()), AuthzConstants.SYSTEM_ADMIN_ROLE));
+
+        // either of two administrators may go, and the one left stays
+        await(access.revoke(secondGrant.id()));
+        assertInstanceOf(IllegalStateException.class, failure(() -> access.revoke(administrators.getFirst().id())));
+        assertEquals(1, grantsOf(SEEDED_ADMIN_ID, AuthzConstants.SYSTEM_ADMIN_ROLE));
+    }
+
+    @Test
     public void supportReadsTheSystemAndIsRefusedItsWrites() throws Exception {
         SystemParticipantIdentity support = systemUser("system-user");
         Subject subject = new Subject(SubjectType.USER, support.getId());

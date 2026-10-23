@@ -36,10 +36,10 @@ import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
 import tools.jackson.core.StreamReadFeature;
-import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -443,7 +443,8 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
             if (ret != null) {
                 finish(parser, path.size());
             }
-        } catch (StreamReadException e) {
+        } catch (JacksonException e) {
+            // a malformed body and one past the parser's limits on length and nesting are refused alike
             throw securityExceptions.notAuthorized("The request's body cannot be read for its check: {}", e.getOriginalMessage());
         }
         return ret;
