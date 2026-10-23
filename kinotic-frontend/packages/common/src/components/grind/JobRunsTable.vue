@@ -60,19 +60,18 @@ import { computed, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import Tag from 'primevue/tag'
 import { Direction, Kinotic, FunctionalIterablePage, Order,
-         type IterablePage, type Page, type Pageable, type Sort } from '@kinotic-ai/core'
-import type { ExecutionStatus, JobRun } from '@kinotic-ai/management-api'
+         type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
+import { JobOwnerType, type ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
 import CrudTable from '../CrudTable.vue'
 import SteppingDrawer from '../SteppingDrawer.vue'
 import { useSteppingDrawer } from '../../composables/useSteppingDrawer'
-import { pageNumberOf, useCrudTablePage } from '../useCrudTablePage'
+import { useCrudTablePage } from '../useCrudTablePage'
 import type { CrudHeader } from '../../types/CrudHeader'
 import type { DescriptiveIdentifiable } from '../../types/DescriptiveIdentifiable'
 import DatetimeUtil from '../../util/DatetimeUtil'
 import TimePill from '../TimePill.vue'
 import { executionStatusSeverity } from './jobRunDisplay'
-import { scanJobRuns, type JobRunFilter } from './jobRunScan'
-import { JobRunOwnerType } from './JobRunOwnerType'
+import { jobRunFilter } from './jobRunScan'
 
 /**
  * The job runs the caller may view, most recently started first, narrowed to a scope when one
@@ -88,7 +87,7 @@ const props = defineProps<{
   organizationId?: string
   applicationId?: string
   projectId?: string
-  ownerType?: JobRunOwnerType | null
+  ownerType?: JobOwnerType | null
   status?: ExecutionStatus | null
   runRoute?: (jobRunId: string) => RouteLocationRaw
 }>()
@@ -115,7 +114,7 @@ const DEFAULT_SORT = [new Order('started', Direction.DESC)]
 
 const ownerHeader = computed<string | null>(() => {
   let ret: string | null
-  if (props.projectId !== undefined || props.ownerType === JobRunOwnerType.PLATFORM) {
+  if (props.projectId !== undefined || props.ownerType === JobOwnerType.SYSTEM) {
     ret = null
   } else if (props.applicationId !== undefined) {
     ret = 'Project'
@@ -152,44 +151,23 @@ const headers = computed<CrudHeader[]>(() => {
   return ret
 })
 
-// Null when nothing narrows the runs, in which case the facade pages them itself
-const filter = computed<JobRunFilter | null>(() => {
-  const ret: JobRunFilter = {}
-  if (props.organizationId !== undefined) ret.organizationId = props.organizationId
-  if (props.applicationId !== undefined) ret.applicationId = props.applicationId
-  if (props.projectId !== undefined) ret.projectId = props.projectId
-  if (props.ownerType) ret.ownerType = props.ownerType
-  if (props.status) ret.status = props.status
-  return Object.keys(ret).length > 0 ? ret : null
-})
+const filter = computed(() => jobRunFilter({
+  organizationId: props.organizationId,
+  applicationId: props.applicationId,
+  projectId: props.projectId,
+  ownerType: props.ownerType ?? null,
+  status: props.status ?? null
+}))
 
 const { tableSearch, dataSource, refreshTable, shownRows: tableRows } = useCrudTablePage(load)
 
-// The scan behind a narrowed table, kept across its pages; page 0 and refresh() read anew
-let scanned: JobRun[] | null = null
-
 async function load(pageable: Pageable, searchText: string | null): Promise<IterablePage<DescriptiveIdentifiable>> {
-  let page: Page<DescriptiveIdentifiable>
-  if (filter.value) {
-    if (scanned === null || pageNumberOf(pageable) === 0) {
-      scanned = await scanJobRuns(filter.value)
-    }
-    const matching = scanned.filter(run => matches(run, searchText))
-    sortRuns(matching, pageable.sort)
-    const start = pageNumberOf(pageable) * pageable.pageSize
-    page = {
-      content: matching.slice(start, start + pageable.pageSize).map(toRow),
-      totalElements: matching.length,
-      cursor: undefined
-    }
-  } else {
-    const runs = await Kinotic.jobMonitoring.findJobRuns(pageable)
-    // the facade has no server-side search, so the filter narrows the fetched page by name
-    page = {
-      content: (runs.content ?? []).filter(run => matches(run, searchText)).map(toRow),
-      totalElements: runs.totalElements,
-      cursor: undefined
-    }
+  const runs = await Kinotic.jobMonitoring.findJobRuns(filter.value, pageable)
+  // the service has no text search, so the search narrows the fetched page by name
+  const page: Page<DescriptiveIdentifiable> = {
+    content: (runs.content ?? []).filter(run => matches(run, searchText)).map(toRow),
+    totalElements: runs.totalElements,
+    cursor: undefined
   }
   return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
 }
@@ -199,19 +177,6 @@ function matches(run: JobRun, searchText: string | null): boolean {
   return !needle
       || run.name.toLowerCase().includes(needle)
       || (run.description ?? '').toLowerCase().includes(needle)
-}
-
-// A scanned table sorts in memory by the column the user picked; started descending otherwise
-function sortRuns(runs: JobRun[], sort: Sort | null | undefined): void {
-  const order = sort?.orders?.[0]
-  const byName = order?.property === 'name'
-  const ascending = order?.direction === Direction.ASC
-  runs.sort((a, b) => {
-    const cmp = byName
-        ? a.name.localeCompare(b.name)
-        : (DatetimeUtil.toEpochMillis(a.started) ?? 0) - (DatetimeUtil.toEpochMillis(b.started) ?? 0)
-    return ascending ? cmp : -cmp
-  })
 }
 
 function ownerOf(run: JobRun): string | null {
@@ -240,7 +205,6 @@ function toRow(run: JobRun): RunRow {
 }
 
 function refresh() {
-  scanned = null
   refreshTable()
 }
 

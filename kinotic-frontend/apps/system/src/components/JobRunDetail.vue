@@ -6,8 +6,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { JobRun } from '@kinotic-ai/management-api'
-import { JobRunOwnerType, JobRunProgress, ownerTypeOf, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
+import { JobOwnerType, type JobRun } from '@kinotic-ai/management-api'
+import { JobRunProgress, ownerTypeOf, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
 
 /**
  * One job run's progress, step by step, with each step's detail. A failed deployment explains its
@@ -37,7 +37,7 @@ watch(() => props.jobRunId, () => {
 })
 
 function onLoaded(run: JobRun): void {
-  platformRun.value = ownerTypeOf(run) === JobRunOwnerType.PLATFORM
+  platformRun.value = ownerTypeOf(run) === JobOwnerType.SYSTEM
   if (!props.organizationId) {
     emit('organization', run.organizationId)
   }

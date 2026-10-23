@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The system jobs as the console's System jobs page drives them: listed, and started on behalf of
+ * The system jobs as the console's Jobs page drives them: listed, and started on behalf of
  * the platform as recorded job runs.
  */
 @SpringBootTest

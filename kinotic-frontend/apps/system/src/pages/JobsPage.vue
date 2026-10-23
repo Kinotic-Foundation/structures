@@ -8,7 +8,7 @@
     </PageHeader>
 
     <!-- how the runs have gone, at a glance: the share that completed and the split by outcome -->
-    <section v-if="counted.length > 0"
+    <section v-if="statusCounts.total > 0"
              class="mb-4 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-surface-200 bg-surface-0 px-5 py-4 dark:border-surface-700 dark:bg-surface-800/30">
       <div class="flex items-center gap-3">
         <span :class="['flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', scopeTint(scope)]">
@@ -60,9 +60,8 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import { LaptopMinimalCheck } from '@lucide/vue'
 
-import { ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
-import { JobRunOwnerType, JobRunsTable, PageHeader, executionStatusSeverity, matchesJobRunFilter, scanJobRuns, StatusChips,
-         type StatusChip } from '@kinotic-ai/frontend-common'
+import { ExecutionStatus, JobOwnerType } from '@kinotic-ai/management-api'
+import { countJobRuns, JobRunsTable, PageHeader, executionStatusSeverity, StatusChips, type StatusChip } from '@kinotic-ai/frontend-common'
 
 import JobRunDetail from '@/components/JobRunDetail.vue'
 import RunSystemJobDrawer from '@/components/RunSystemJobDrawer.vue'
@@ -98,8 +97,8 @@ const description = computed(() => scope.value.organizationId
     : 'Grind job runs across the platform: deployments and system jobs, step by step.')
 
 const OWNER_CHIPS = [
-  { label: 'Organizations', value: JobRunOwnerType.ORGANIZATION },
-  { label: 'Platform', value: JobRunOwnerType.PLATFORM }
+  { label: 'Organizations', value: JobOwnerType.ORGANIZATION },
+  { label: 'Platform', value: JobOwnerType.SYSTEM }
 ]
 
 /** The platform's own scope, where every run is listed and system jobs are started. */
@@ -107,45 +106,46 @@ const platformScope = computed(() => !scope.value.organizationId)
 
 const runDrawerVisible = ref(false)
 
-const scanned = ref<JobRun[]>([])
-
-const ownerFilter = computed<JobRunOwnerType | null>({
+const ownerFilter = computed<JobOwnerType | null>({
   get: () => platformScope.value && OWNER_CHIPS.some(chip => chip.value === route.query.owner)
-      ? route.query.owner as JobRunOwnerType
+      ? route.query.owner as JobOwnerType
       : null,
   set: value => { router.replace({ query: { ...route.query, owner: value ?? undefined } }) }
 })
 
+/** How many of the scope's runs each owner has, the first count being all of them. */
+const ownerCounts = ref<number[]>([0, 0, 0])
+
+/** How many of the chosen owner's runs there are in all, and in each of the chips' states. */
+const statusCounts = ref<{ total: number, byState: Record<string, number> }>({ total: 0, byState: {} })
+
 const ownerChips = computed<StatusChip[]>(() => [
-  { label: 'All owners', value: null, count: scanned.value.length },
-  ...OWNER_CHIPS.map(chip => ({ ...chip, count: scanned.value.filter(run => matchesJobRunFilter(run, { ownerType: chip.value })).length }))
+  { label: 'All owners', value: null, count: ownerCounts.value[0] },
+  ...OWNER_CHIPS.map((chip, index) => ({ ...chip, count: ownerCounts.value[index + 1] }))
 ])
 
-/** The scanned runs of the chosen owner, which the outcome and the status chips count. */
-const counted = computed<JobRun[]>(() => {
-  const ownerType = ownerFilter.value
-  return ownerType ? scanned.value.filter(run => matchesJobRunFilter(run, { ownerType })) : scanned.value
-})
+function stateCount(state: ExecutionStatus): number {
+  return statusCounts.value.byState[state] ?? 0
+}
 
 /** The runs by outcome, in the status colours the tags use, each with its share of all the runs. */
 const outcome = computed(() => {
-  const total = counted.value.length || 1
+  const total = statusCounts.value.total || 1
   return [
     { label: 'Completed', status: ExecutionStatus.COMPLETED, bar: 'bg-green-500' },
     { label: 'Failed', status: ExecutionStatus.FAILED, bar: 'bg-red-500' },
     { label: 'Running', status: ExecutionStatus.RUNNING, bar: 'bg-sky-500' }
   ].map(part => {
-    const count = counted.value.filter(run => run.status === part.status).length
+    const count = stateCount(part.status)
     return { ...part, count, share: Math.round((count / total) * 100) }
   })
 })
 
-const finished = computed(() => counted.value.filter(run =>
-    run.status === ExecutionStatus.COMPLETED || run.status === ExecutionStatus.FAILED).length)
+const finished = computed(() => stateCount(ExecutionStatus.COMPLETED) + stateCount(ExecutionStatus.FAILED))
 
 const successRate = computed(() => finished.value === 0
     ? 0
-    : Math.round((counted.value.filter(run => run.status === ExecutionStatus.COMPLETED).length / finished.value) * 100))
+    : Math.round((stateCount(ExecutionStatus.COMPLETED) / finished.value) * 100))
 
 const statusFilter = computed<ExecutionStatus | null>({
   get: () => CHIP_STATES.includes(route.query.status as ExecutionStatus) ? route.query.status as ExecutionStatus : null,
@@ -153,23 +153,35 @@ const statusFilter = computed<ExecutionStatus | null>({
 })
 
 const chips = computed<StatusChip[]>(() => [
-  { label: 'All', value: null, count: counted.value.length },
+  { label: 'All', value: null, count: statusCounts.value.total },
   ...CHIP_STATES.map(state => ({
     label: state.charAt(0) + state.slice(1).toLowerCase(),
     value: state,
-    count: counted.value.filter(run => run.status === state).length,
+    count: stateCount(state),
     severity: executionStatusSeverity(state)
   }))
 ])
 
-// The chips count from a scan of the scope's runs; the table pages the runs itself
+// The chips count on the server, a total for each filter; the table pages the runs itself
 async function count() {
+  const inScope = {
+    organizationId: scope.value.organizationId,
+    applicationId: scope.value.applicationId,
+    projectId: scope.value.projectId
+  }
+  const ofOwner = { ...inScope, ownerType: ownerFilter.value }
   try {
-    scanned.value = await scanJobRuns({
-      organizationId: scope.value.organizationId,
-      applicationId: scope.value.applicationId,
-      projectId: scope.value.projectId
-    })
+    const [total, ...byState] = await Promise.all([
+      countJobRuns(ofOwner),
+      ...CHIP_STATES.map(state => countJobRuns({ ...ofOwner, status: state }))
+    ])
+    statusCounts.value = { total, byState: Object.fromEntries(CHIP_STATES.map((state, index) => [state, byState[index]])) }
+    if (platformScope.value) {
+      ownerCounts.value = await Promise.all([
+        countJobRuns(inScope),
+        ...OWNER_CHIPS.map(chip => countJobRuns({ ...inScope, ownerType: chip.value }))
+      ])
+    }
   } catch {
     // The chips keep their last counts; the table reports the failure itself
   }
@@ -189,5 +201,5 @@ function runRoute(jobRunId: string): string {
 }
 
 // The header's switchers navigate in place, so the router reuses this instance across scopes
-watch(() => [scope.value.organizationId, scope.value.applicationId, scope.value.projectId], count, { immediate: true })
+watch(() => [scope.value.organizationId, scope.value.applicationId, scope.value.projectId, ownerFilter.value], count, { immediate: true })
 </script>
