@@ -491,8 +491,6 @@ public class DefaultPermissionService implements PermissionService {
         Validate.notBlank(resource.id(), "resource id cannot be blank");
     }
 
-
-
     private static RelationshipTuple membership(String member, String groupId) {
         return new RelationshipTuple(member,
                                      AuthzConstants.MEMBER_RELATION,

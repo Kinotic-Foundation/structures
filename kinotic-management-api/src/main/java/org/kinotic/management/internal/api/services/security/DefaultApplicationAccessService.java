@@ -204,7 +204,6 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         return AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId());
     }
 
-
     private static String objectOf(Application application, Resource resource) {
         return AuthzGraphUtil.authzObject(application.getOrganizationId(), resource);
     }
