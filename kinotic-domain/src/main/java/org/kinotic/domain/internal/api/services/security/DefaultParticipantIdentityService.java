@@ -1,6 +1,7 @@
 package org.kinotic.domain.internal.api.services.security;
 
 import io.vertx.core.Future;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.services.AuthzStoreService;
@@ -46,6 +47,7 @@ import java.util.Objects;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+@Slf4j
 @Component
 public class DefaultParticipantIdentityService extends AbstractCrudService<ParticipantIdentity> implements ParticipantIdentityService {
 
@@ -404,10 +406,23 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 // create refuses an id already held, which the index guarantees whatever its shards, so of two creations
                 // under one email at once exactly one succeeds
                 .recover(err -> err instanceof AlreadyExistsException ? Future.failedFuture(emailTaken(user)) : Future.failedFuture(err))
-                .compose(saved -> password != null
-                        ? saveCredential(user.getId(), password).map(user)
-                        : Future.succeededFuture(user))
-                .compose(this::endUser);
+                .compose(saved -> completed(user, password));
+    }
+
+    // A user whose credential or place in the graph could not be written is removed again, so the creation can be
+    // made again under its email. What the graph holds of it stays: a user created again under the email has the
+    // same id and is placed the same way, and the application store's tuples are written in one request, so none
+    // of them name a tenant the next creation does not
+    private <T extends UserParticipantIdentity> Future<T> completed(T user, String password) {
+        Future<T> credential = password != null
+                ? saveCredential(user.getId(), password).map(user)
+                : Future.succeededFuture(user);
+        return credential.compose(this::endUser)
+                         .recover(err -> credentialRepository.deleteById(user.getId())
+                                                             .compose(v -> identityRepository.deleteByIdSync(user.getId()))
+                                                             .onFailure(cleanupErr -> log.warn("Could not remove the user {} whose creation failed: {}",
+                                                                                               user.getId(), cleanupErr.getMessage()))
+                                                             .transform(v -> Future.<T>failedFuture(err)));
     }
 
     // An application's user is an end user of its application, in the system's store and in the application's

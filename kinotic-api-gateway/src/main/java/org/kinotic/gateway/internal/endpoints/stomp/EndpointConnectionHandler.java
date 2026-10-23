@@ -226,7 +226,14 @@ public class EndpointConnectionHandler {
                 dispatched = handedOff.future();
                 return earlier.transform(previous -> authorized)
                         .compose(v -> {
-                            Future<String> accepted = services.eventBusService.sendWithAck(incomingEvent);
+                            Future<String> accepted;
+                            // the connection closed while the request waited for its check or an earlier request
+                            if (connectedInfo == null) {
+                                accepted = Future.failedFuture(new IllegalStateException("The connection closed before the request to "
+                                                                                                 + incomingEvent.cri() + " was sent"));
+                            } else {
+                                accepted = services.eventBusService.sendWithAck(incomingEvent);
+                            }
                             handedOff.complete();
                             return accepted;
                         })

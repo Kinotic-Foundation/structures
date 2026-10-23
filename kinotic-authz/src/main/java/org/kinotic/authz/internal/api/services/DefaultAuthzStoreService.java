@@ -88,11 +88,19 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
 
     @Override
     public Future<Void> deleteStore(String store) {
-        return findStore(storeNameOf(store))
-                .compose(id -> id == null ? Future.succeededFuture() : fga.deleteStore(id).onSuccess(v -> {
-                    forget(store, id);
-                    vertx.eventBus().publish(STORE_DELETED_ADDRESS, new JsonObject().put("store", store).put("id", id));
-                }))
+        // every store of the name goes, so a duplicate a creator failed to delete is not adopted by a store created
+        // again under the name
+        return findStores(storeNameOf(store), null, new ArrayList<>())
+                .compose(ids -> {
+                    Future<Void> ret = Future.succeededFuture();
+                    for (String id : ids) {
+                        ret = ret.compose(v -> fga.deleteStore(id).onSuccess(deleted -> {
+                            forget(store, id);
+                            vertx.eventBus().publish(STORE_DELETED_ADDRESS, new JsonObject().put("store", store).put("id", id));
+                        }));
+                    }
+                    return ret;
+                })
                 .onSuccess(v -> log.info("Deleted the authorization store of '{}'", store));
     }
 
@@ -344,11 +352,21 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
     // create one under the name; the oldest is the store of the name, so a creator whose store is not it deletes
     // its own and answers with the oldest, which every lookup by name answers with as well
     private Future<String> keepOldest(String store, String name, String created) {
-        return findStore(name).compose(oldest -> oldest.equals(created)
-                ? Future.succeededFuture(created)
-                : fga.deleteStore(created)
-                     .map(oldest)
-                     .onSuccess(v -> log.info("Deleted authorization store {} of '{}', created beside {}", created, store, oldest)));
+        return findStore(name).compose(oldest -> {
+            Future<String> ret;
+            if (oldest == null) {
+                // a delete of the name ran between the create and this listing
+                ret = Future.failedFuture(new IllegalStateException("The authorization store " + created + " of '" + store
+                                                                            + "' was deleted while it was created"));
+            } else if (oldest.equals(created)) {
+                ret = Future.succeededFuture(created);
+            } else {
+                ret = fga.deleteStore(created)
+                         .map(oldest)
+                         .onSuccess(v -> log.info("Deleted authorization store {} of '{}', created beside {}", created, store, oldest));
+            }
+            return ret;
+        });
     }
 
     /**
