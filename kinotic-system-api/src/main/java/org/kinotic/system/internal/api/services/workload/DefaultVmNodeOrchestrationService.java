@@ -23,7 +23,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.workload.Workload;
@@ -102,15 +102,13 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
      */
     private Future<Void> contained(String nodeId, Participant registrar) {
         String node = AuthzUtil.object(VmNodeService.RESOURCE_TYPE, nodeId);
-        RelationshipTuple onSystem = new RelationshipTuple(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
-                                                             AuthzConstants.SYSTEM_TYPE,
-                                                             node);
+        RelationshipTuple onSystem = AuthzGraphUtil.containment(AuthzConstants.SYSTEM_OBJECT, node);
         Future<Void> ret = relationships.ensure(AuthzStoreService.SYSTEM, List.of(onSystem));
         if (registrar != null) {
             // one binding per node and machine, so a node registering again, or on another server, binds nothing twice
             String bindingId = nodeId + "-agent-" + registrar.getId();
             ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.SYSTEM, bindingId, AGENT_ROLE,
-                                                             DomainUtil.authzUser(registrar), node));
+                                                             AuthzGraphUtil.authzUser(registrar), node));
         }
         return ret;
     }

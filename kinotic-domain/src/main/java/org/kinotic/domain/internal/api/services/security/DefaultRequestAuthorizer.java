@@ -11,7 +11,6 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
-import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.event.CRI;
@@ -25,6 +24,7 @@ import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.api.services.security.RequestPermissionResolver;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.model.FunctionSpec;
 import org.kinotic.domain.internal.api.model.ParameterReference;
@@ -84,14 +84,13 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
 
     // the scope levels a check can be made on, each named by the template of its id, innermost first: a caller
     // missing one is checked on the next, and one missing them all on the system
-    private static final List<Resource> SCOPE_LEVELS = List.of(new Resource(AuthzConstants.TENANT_TYPE, "{@tenantId}"),
-                                                               new Resource(AuthzConstants.APPLICATION_TYPE, "{@applicationId}"),
-                                                               new Resource(AuthzConstants.ORGANIZATION_TYPE, "{@organizationId}"));
+    private static final List<Resource> SCOPE_LEVELS = List.of(new Resource(AuthzConstants.TENANT_TYPE, "{" + AuthzConstants.TENANT_ID_REFERENCE + "}"),
+                                                               new Resource(AuthzConstants.APPLICATION_TYPE, "{" + AuthzConstants.APPLICATION_ID_REFERENCE + "}"),
+                                                               new Resource(AuthzConstants.ORGANIZATION_TYPE, "{" + AuthzConstants.ORGANIZATION_ID_REFERENCE + "}"));
     private static final Resource SYSTEM_LEVEL = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final ObjectProvider<ServiceDirectory> directoryProvider;
     private final ObjectProvider<RequestPermissionResolver> permissionResolvers;
-    private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final JsonMapper jsonMapper;
     private final Vertx vertx;
@@ -142,7 +141,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         Future<Void> ret;
         if (participant instanceof ScopedParticipant scoped) {
             String store = participant instanceof ApplicationParticipant application
-                    ? DomainUtil.authzApplicationId(application.getOrganizationId(), application.getApplicationId())
+                    ? AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getApplicationId())
                     : SYSTEM;
             ret = authorization.apply(scoped, store);
         } else {
@@ -328,16 +327,15 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
             String object = withinTenant
                     ? AuthzUtil.object(AuthzConstants.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(resourceId, scope.tenantId()))
                     : AuthzUtil.object(checked.type(), resourceId);
-            List<RelationshipTuple> edges = withinTenant ? DomainUtil.tenantDefinitionEdges(resourceId, scope.tenantId()) : List.of();
-            RelationshipTuple relationship = new RelationshipTuple(DomainUtil.authzUser(participant),
+            List<RelationshipTuple> edges = withinTenant ? AuthzGraphUtil.tenantDefinitionEdges(resourceId, scope.tenantId()) : List.of();
+            RelationshipTuple relationship = new RelationshipTuple(AuthzGraphUtil.authzUser(participant),
                                                                    AuthzUtil.permissionName(check.getPermissionResource(), permission.getPermission()),
                                                                    object);
             Consistency consistency = check.isConsistent() ? Consistency.HIGHER_CONSISTENCY : Consistency.MINIMIZE_LATENCY;
-            ret = stores.modelId(store)
-                        .compose(modelId -> relationships.check(store, modelId, relationship, consistency, edges))
-                        .compose(allowed -> allowed
-                                ? Future.succeededFuture()
-                                : Future.failedFuture(refusal(relationship, permission.getReason())));
+            ret = relationships.check(store, relationship, consistency, edges)
+                               .compose(allowed -> allowed
+                                       ? Future.succeededFuture()
+                                       : Future.failedFuture(refusal(relationship, permission.getReason())));
         } catch (AuthorizationException e) {
             ret = Future.failedFuture(e);
         }
@@ -347,7 +345,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     // A delegate exercises its owner's permissions within its type's ceiling, so a client the owner authorized reaches
     // only what that type of client needs; a delegate naming no type of a known ceiling is refused everything
     private void requireWithinCeiling(Participant participant, String type, String permission) {
-        if (!DomainUtil.withinDelegateCeiling(participant, type, permission)) {
+        if (!AuthzGraphUtil.withinDelegateCeiling(participant, type, permission)) {
             throw securityExceptions.notAuthorized("{} of {} is beyond what a {} delegate may exercise", permission, type,
                                                    participant.getMetadata().get(DomainUtil.DELEGATE_TYPE_METADATA_KEY));
         }
@@ -384,7 +382,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     // organization names none
     private String authzIdOf(String type, String id, ParticipantScope scope) {
         try {
-            return DomainUtil.authzId(type, scope.organizationId(), id);
+            return AuthzGraphUtil.authzId(type, scope.organizationId(), id);
         } catch (IllegalArgumentException e) {
             throw securityExceptions.notAuthorized("The check names {} {}, which only a caller in an organization addresses",
                                                    type, id);
@@ -408,9 +406,9 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
 
     private String scopeValue(String reference, ParticipantScope scope) {
         return switch (reference) {
-            case "@organizationId" -> scope.organizationId();
-            case "@applicationId" -> scope.applicationId();
-            case "@tenantId" -> scope.tenantId();
+            case AuthzConstants.ORGANIZATION_ID_REFERENCE -> scope.organizationId();
+            case AuthzConstants.APPLICATION_ID_REFERENCE -> scope.applicationId();
+            case AuthzConstants.TENANT_ID_REFERENCE -> scope.tenantId();
             default -> throw securityExceptions.notAuthorized("The check names the unknown scope value {}", reference);
         };
     }

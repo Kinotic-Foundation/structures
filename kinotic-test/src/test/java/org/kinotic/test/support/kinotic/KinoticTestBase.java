@@ -32,7 +32,7 @@ import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -156,11 +156,11 @@ public abstract class KinoticTestBase {
     private boolean placed() throws Exception {
         String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID);
         return await(relationshipService.read(AuthzStoreService.SYSTEM, organization))
-                .contains(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), organization));
+                .contains(AuthzGraphUtil.containment(AuthzConstants.SYSTEM_OBJECT, organization));
     }
 
     private boolean bound() {
-        String member = DomainUtil.authzMember(TEST_ORGANIZATION_PARTICIPANT.getId(), TEST_ORG_ID);
+        String member = AuthzGraphUtil.authzMember(TEST_ORGANIZATION_PARTICIPANT.getId(), TEST_ORG_ID);
         String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID);
         boolean ret;
         try {

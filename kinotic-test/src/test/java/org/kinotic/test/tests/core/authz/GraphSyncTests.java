@@ -1,6 +1,5 @@
 package org.kinotic.test.tests.core.authz;
 
-import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
@@ -30,7 +29,7 @@ import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.internal.api.repositories.PendingSignUpRepository;
 import org.kinotic.idl.api.schema.ObjectC3Type;
 import org.kinotic.idl.api.schema.StringC3Type;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
@@ -47,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -107,7 +105,7 @@ public class GraphSyncTests extends KinoticTestBase {
         Application application = await(runAsOrganization(() -> applicationService.createApplicationIfNotExist("Graph Sync " + suffix, "graph sync", null)));
         RelationshipTuple applicationInOrganization = new RelationshipTuple(AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID),
                                                                             AuthzConstants.ORGANIZATION_TYPE,
-                                                                            AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId())));
+                                                                            AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId())));
         assertTrue(holds(applicationInOrganization), "the application is in its organization");
         // ensuring an application that exists writes nothing twice and fails on nothing
         await(runAsOrganization(() -> applicationService.createApplicationIfNotExist("Graph Sync " + suffix, "graph sync", null)));
@@ -117,14 +115,14 @@ public class GraphSyncTests extends KinoticTestBase {
         project.setApplicationId(application.getId());
         project.setName("graph-sync-project");
         Project created = await(runAsOrganization(() -> projectService.createProjectIfNotExist(project)));
-        RelationshipTuple projectInApplication = new RelationshipTuple(AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId())),
+        RelationshipTuple projectInApplication = new RelationshipTuple(AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId())),
                                                                        AuthzConstants.APPLICATION_TYPE,
-                                                                       AuthzUtil.object(ProjectService.RESOURCE_TYPE, DomainUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, created.getId())));
+                                                                       AuthzUtil.object(ProjectService.RESOURCE_TYPE, AuthzGraphUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, created.getId())));
         assertTrue(holds(projectInApplication), "the project is in its application");
 
         EntityDefinition definition = definition(application.getId(), created.getId(), suffix);
         EntityDefinition saved = await(runAsOrganization(() -> entityDefinitionService.create(definition)));
-        RelationshipTuple definitionInApplication = new RelationshipTuple(AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId())),
+        RelationshipTuple definitionInApplication = new RelationshipTuple(AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId())),
                                                                           AuthzConstants.APPLICATION_TYPE,
                                                                           AuthzUtil.object(EntityDefinitionService.RESOURCE_TYPE, saved.getId()));
         assertTrue(holds(definitionInApplication), "the entity definition is in its application");
@@ -138,7 +136,7 @@ public class GraphSyncTests extends KinoticTestBase {
     @Test
     public void aNewUserJoinsItsScope() throws Exception {
         OrganizationParticipantIdentity member = member(TEST_ORG_ID, "graph-sync");
-        assertTrue(holds(new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID),
+        assertTrue(holds(new RelationshipTuple(AuthzGraphUtil.authzMember(member.getId(), TEST_ORG_ID),
                                                AuthzConstants.MEMBER_RELATION,
                                                AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID))),
                    "an organization user is a member of its organization");
@@ -148,7 +146,7 @@ public class GraphSyncTests extends KinoticTestBase {
         UserParticipantIdentity endUser = await(identityService.createUser(user(TEST_ORG_ID, application.getId()), "Graph-sync-1"));
         assertTrue(holds(new RelationshipTuple(AuthzUtil.object(AuthzConstants.USER_TYPE, endUser.getId()),
                                                AuthzConstants.END_USER_RELATION,
-                                               AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId())))),
+                                               AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId())))),
                    "an application user is an end user of its application");
     }
 
@@ -175,7 +173,7 @@ public class GraphSyncTests extends KinoticTestBase {
         String suffix = suffix();
         AuthzModel model = modelFromDirectory();
         assertTrue(awaitUntil(() -> reconciledTo(model.hash())), "the system store never reconciled to the directory's model");
-        String modelId = await(storeService.ensureModel(AuthzStoreService.SYSTEM, model));
+        await(storeService.ensureModel(AuthzStoreService.SYSTEM, model));
 
         String token = UUID.randomUUID().toString();
         PendingSignUp pending = new PendingSignUp();
@@ -189,26 +187,25 @@ public class GraphSyncTests extends KinoticTestBase {
         await(pendingSignUps.saveSync(pending));
         OrganizationParticipant admin = (OrganizationParticipant) await(signUpService.completeLocalSignUp(token, "Graph Org " + suffix, "graph sync", "Graph-sync-1"));
         String organizationId = admin.getOrganizationId();
-        String user = DomainUtil.authzMember(admin.getId(), organizationId);
+        String user = AuthzGraphUtil.authzMember(admin.getId(), organizationId);
         String organization = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId);
 
-        assertTrue(holds(new RelationshipTuple(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), AuthzConstants.SYSTEM_TYPE, organization)),
+        assertTrue(holds(new RelationshipTuple(AuthzConstants.SYSTEM_OBJECT, AuthzConstants.SYSTEM_TYPE, organization)),
                    "the organization is under the system");
         assertTrue(holds(new RelationshipTuple(user, AuthzConstants.MEMBER_RELATION, organization)), "the creator is a member");
 
         // the binding of the organization admin role reaches the organization and everything created inside it
-        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "application_can_edit", organization), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(user, "application_can_edit", organization), Consistency.HIGHER_CONSISTENCY)));
         DefaultOrganizationParticipant creator = new DefaultOrganizationParticipant(admin.getId(), organizationId,
                                                                                     Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
                                                                                            ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                                                     List.of("ADMIN"));
         Application application = await(runAs(creator, () -> applicationService.createApplicationIfNotExist("Graph Admin App", "graph sync", null)));
-        String applicationObject = AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
-        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "application_can_edit", applicationObject), Consistency.HIGHER_CONSISTENCY)));
-        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId, new RelationshipTuple(user, "project_can_delete", applicationObject), Consistency.HIGHER_CONSISTENCY)));
+        String applicationObject = AuthzUtil.object(AuthzConstants.APPLICATION_TYPE, AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId()));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(user, "application_can_edit", applicationObject), Consistency.HIGHER_CONSISTENCY)));
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(user, "project_can_delete", applicationObject), Consistency.HIGHER_CONSISTENCY)));
         // and nothing outside the organization
-        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
-                                              new RelationshipTuple(user, "application_can_edit",
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(user, "application_can_edit",
                                                                     AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, TEST_ORG_ID)), Consistency.HIGHER_CONSISTENCY)));
     }
 

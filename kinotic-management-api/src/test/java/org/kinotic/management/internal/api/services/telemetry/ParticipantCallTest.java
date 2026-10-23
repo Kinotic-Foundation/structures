@@ -13,7 +13,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -49,13 +49,11 @@ abstract class ParticipantCallTest {
         // No Vertx provider, since callAs is unused. SecurityContext registers its ContextLocal at class load, which must happen
         // before any Vertx instance is created
         securityContext = new SecurityContext(null);
-        AuthzStoreService stores = mock(AuthzStoreService.class);
-        when(stores.modelId(AuthzStoreService.SYSTEM)).thenReturn(Future.succeededFuture("model-1"));
         RelationshipService relationships = mock(RelationshipService.class);
         // the system user holds what it is asked about on the system, the newcomer nothing
-        when(relationships.check(eq(AuthzStoreService.SYSTEM), eq("model-1"), any(), any()))
-                .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(2).user().equals(DomainUtil.authzUser(SYSTEM_USER))));
-        tenantAccess = new TenantAccess(securityContext, stores, relationships);
+        when(relationships.check(eq(AuthzStoreService.SYSTEM), any(), any()))
+                .thenAnswer(call -> Future.succeededFuture(call.<RelationshipTuple>getArgument(1).user().equals(AuthzGraphUtil.authzUser(SYSTEM_USER))));
+        tenantAccess = new TenantAccess(securityContext, relationships);
         vertx = Vertx.vertx();
     }
 

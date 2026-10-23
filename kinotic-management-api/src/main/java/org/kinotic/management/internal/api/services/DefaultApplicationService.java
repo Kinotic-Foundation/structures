@@ -17,6 +17,7 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.management.api.repositories.ProjectRepository;
@@ -182,8 +183,8 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     // application created under the same id afterwards starts with no grant and an empty store
     private Future<Void> released(String applicationId) {
         String organizationId = requireOrganizationId();
-        String store = DomainUtil.authzApplicationId(organizationId, applicationId);
-        return relationships.removeObject(AuthzStoreService.SYSTEM, DomainUtil.authzApplication(organizationId, applicationId))
+        String store = AuthzGraphUtil.authzApplicationId(organizationId, applicationId);
+        return relationships.removeObject(AuthzStoreService.SYSTEM, AuthzGraphUtil.authzApplication(organizationId, applicationId))
                             .compose(v -> storeService.deleteStore(store))
                             .compose(v -> stores.deleteByIdSync(store));
     }

@@ -13,7 +13,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.openhft.hashing.LongTupleHashFunction;
 import org.kinotic.authz.api.config.KinoticAuthzProperties;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.services.AuthzStoreService;
@@ -26,7 +25,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -323,8 +321,7 @@ public class DefaultAuthzStoreService implements AuthzStoreService, Initializing
         if (SYSTEM.equals(store)) {
             ret = SYSTEM_STORE_NAME;
         } else {
-            long[] hash = LongTupleHashFunction.xx128().hashChars(store);
-            ret = APPLICATION_STORE_PREFIX + HexFormat.of().formatHex(ByteBuffer.allocate(Long.BYTES * 2).putLong(hash[0]).putLong(hash[1]).array());
+            ret = APPLICATION_STORE_PREFIX + HexFormat.of().formatHex(KinoticUtil.xx128(store));
         }
         return ret;
     }

@@ -15,6 +15,7 @@ import org.kinotic.domain.api.model.security.ZoneRules;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.ZoneRulesService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -184,7 +185,7 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
                                         "runtime-of-" + runtime.getId() + "-" + applicationId,
                                         AuthzConstants.APPLICATION_RUNTIME_ROLE,
                                         AuthzUtil.object(AuthzConstants.USER_TYPE, runtime.getId()),
-                                        DomainUtil.authzApplication(TEST_ORG_ID, applicationId)));
+                                        AuthzGraphUtil.authzApplication(TEST_ORG_ID, applicationId)));
     }
 
     private static ServiceDirectoryEntry entry(String applicationId, String zone, ServiceDefinition definition) {

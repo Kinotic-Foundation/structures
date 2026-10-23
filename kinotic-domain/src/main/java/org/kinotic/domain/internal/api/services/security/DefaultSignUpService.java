@@ -17,6 +17,7 @@ import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.services.security.SignUpService;
@@ -154,7 +155,7 @@ public class DefaultSignUpService implements SignUpService {
                                                                      return organizationService.save(savedOrg)
                                                                                                .compose(v -> relationships.bind(AuthzStoreService.SYSTEM,
                                                                                                                                 AuthzConstants.ORGANIZATION_ADMIN_ROLE,
-                                                                                                                                DomainUtil.authzMember(founder.getId(), savedOrg.getId()),
+                                                                                                                                AuthzGraphUtil.authzMember(founder.getId(), savedOrg.getId()),
                                                                                                                                 AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, savedOrg.getId())))
                                                                                                .map(DomainUtil.createParticipant(founder, membership));
                                                                  })

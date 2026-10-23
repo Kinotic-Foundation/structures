@@ -11,6 +11,7 @@ import org.kinotic.domain.internal.api.repositories.OrganizationRepository;
 import org.kinotic.domain.internal.api.repositories.OrganizationMembershipRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
@@ -102,8 +103,8 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
     private Future<Organization> contained(Organization organization) {
         return released(organization.getId())
                 .compose(v -> relationships.ensure(AuthzStoreService.SYSTEM,
-                                                   List.of(DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID),
-                                                                                  AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId())))))
+                                                   List.of(AuthzGraphUtil.containment(AuthzConstants.SYSTEM_OBJECT,
+                                                                                      AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId())))))
                 .map(organization);
     }
 

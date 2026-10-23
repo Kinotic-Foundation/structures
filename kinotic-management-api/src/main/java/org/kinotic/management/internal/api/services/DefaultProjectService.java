@@ -4,6 +4,7 @@ import com.github.slugify.Slugify;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
@@ -13,7 +14,6 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.WatchEvent;
 import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.idl.api.utils.AuthzConstants;
-import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
@@ -23,6 +23,7 @@ import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.repositories.ProjectRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.internal.api.services.AbstractApplicationScopedService;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.services.EntityDefinitionService;
 import org.kinotic.management.api.services.ProjectRepoProvisioner;
@@ -167,9 +168,8 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
     }
 
     static RelationshipTuple containment(Project project) {
-        return DomainUtil.containment(DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId()),
-                                      AuthzUtil.object(ProjectService.RESOURCE_TYPE,
-                                                       DomainUtil.authzId(ProjectService.RESOURCE_TYPE, project.getOrganizationId(), project.getId())));
+        return AuthzGraphUtil.containment(AuthzGraphUtil.authzApplication(project.getOrganizationId(), project.getApplicationId()),
+                                          AuthzGraphUtil.authzObject(project.getOrganizationId(), new Resource(ProjectService.RESOURCE_TYPE, project.getId())));
     }
 
     @Override

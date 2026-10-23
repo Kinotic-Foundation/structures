@@ -12,7 +12,7 @@ import org.kinotic.core.api.directory.ServiceDirectoryEntry;
 import org.kinotic.core.api.directory.ServiceDirectoryStrategy;
 import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.domain.internal.api.repositories.ServiceDirectoryEntryRepository;
 import org.springframework.stereotype.Component;
 
@@ -54,7 +54,7 @@ public class ElasticServiceDirectoryStrategy implements ServiceDirectoryStrategy
             if (changed.contains(entry.getId())) {
                 stores.add(entry.getApplicationId() == null
                                    ? AuthzStore.SYSTEM
-                                   : DomainUtil.authzApplicationId(entry.getOrganizationId(), entry.getApplicationId()));
+                                   : AuthzGraphUtil.authzApplicationId(entry.getOrganizationId(), entry.getApplicationId()));
             }
         }
         for (String store : stores) {

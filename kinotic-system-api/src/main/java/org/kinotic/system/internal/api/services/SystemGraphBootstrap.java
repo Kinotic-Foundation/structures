@@ -10,7 +10,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.system.api.services.workload.VmNodeOrchestrationService;
@@ -43,7 +43,6 @@ public class SystemGraphBootstrap {
     private static final long MAX_RETRY_MILLIS = 60_000;
     // The system users, machines and nodes fit one page: a system has a handful of each
     private static final int PAGE_SIZE = 1000;
-    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final Vertx vertx;
     private final ParticipantIdentityService identities;
@@ -58,7 +57,7 @@ public class SystemGraphBootstrap {
 
     private void run() {
         stores.modelId(SYSTEM)
-              .compose(modelId -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT))
+              .compose(modelId -> relationships.findGrants(SYSTEM, AuthzConstants.SYSTEM_OBJECT))
               .onSuccess(grants -> {
                   // the administrators are bound last, so a sweep cut short before them is made again
                   if (grants.stream().noneMatch(grant -> AuthzConstants.SYSTEM_ADMIN_ROLE.equals(grant.roleId()))) {
@@ -94,8 +93,8 @@ public class SystemGraphBootstrap {
         Pageable page = Pageable.create(0, PAGE_SIZE, null);
         return nodes.findAll(page)
                     .compose(found -> relationships.ensure(SYSTEM, found.getContent().stream()
-                                                                         .map(node -> DomainUtil.containment(SYSTEM_OBJECT,
-                                                                                                             AuthzUtil.object(VmNodeService.RESOURCE_TYPE, node.getId())))
+                                                                         .map(node -> AuthzGraphUtil.containment(AuthzConstants.SYSTEM_OBJECT,
+                                                                                                                 AuthzUtil.object(VmNodeService.RESOURCE_TYPE, node.getId())))
                                                                          .toList()))
                     .compose(v -> identities.findMachinesByScope(null, null, page))
                     .compose(machines -> bindEach(machines.getContent().stream()
@@ -119,8 +118,8 @@ public class SystemGraphBootstrap {
     private Future<Integer> bindEach(List<String> users, String roleId, AtomicInteger failed) {
         Future<Integer> ret = Future.succeededFuture(0);
         for (String user : users) {
-            String bindingId = roleId + "-of-" + AuthzUtil.idOf(user);
-            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, SYSTEM_OBJECT)
+            String bindingId = AuthzUtil.roleBindingIdOf(roleId, AuthzUtil.idOf(user));
+            ret = ret.compose(count -> relationships.ensureBound(SYSTEM, bindingId, roleId, user, AuthzConstants.SYSTEM_OBJECT)
                                                     .map(count + 1)
                                                     .recover(e -> {
                                                         log.warn("{} could not be bound as {}: {}", user, roleId, e.getMessage());

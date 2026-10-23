@@ -13,7 +13,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.Requeue;
 import org.kinotic.domain.api.services.Reconciler;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
@@ -115,9 +115,6 @@ public class DeployWorkerTests extends KinoticTestBase {
 
     @Autowired
     private RelationshipService relationships;
-
-    @Autowired
-    private AuthzStoreService stores;
 
     private final List<String> microserviceIds = new ArrayList<>();
     private final List<String> uiIds = new ArrayList<>();
@@ -248,12 +245,9 @@ public class DeployWorkerTests extends KinoticTestBase {
 
         String machine = AuthzUtil.object(AuthzConstants.USER_TYPE, deployed.getMachineIdentityId());
         String registers = AuthzUtil.permissionName(AuthzConstants.APPLICATION_TYPE, AuthzConstants.CAN_REGISTER_SERVICES);
-        String modelId = await(stores.modelId(AuthzStoreService.SYSTEM));
-        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
-                                             new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID)),
+        assertTrue(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(machine, registers, AuthzGraphUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID)),
                                              Consistency.HIGHER_CONSISTENCY)));
-        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, modelId,
-                                              new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID)),
+        assertFalse(await(relationships.check(AuthzStoreService.SYSTEM, new RelationshipTuple(machine, registers, AuthzGraphUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID)),
                                               Consistency.HIGHER_CONSISTENCY)));
     }
 

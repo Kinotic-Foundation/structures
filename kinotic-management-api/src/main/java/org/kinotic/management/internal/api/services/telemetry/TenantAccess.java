@@ -5,14 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.RelationshipTuple;
-import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.telemetry.TelemetryTenant;
@@ -37,7 +36,6 @@ public class TenantAccess {
     private static final String READS_TELEMETRY = AuthzUtil.permissionName(AuthzConstants.ORGANIZATION_TYPE, AuthzConstants.CAN_READ_TELEMETRY);
 
     private final SecurityContext securityContext;
-    private final AuthzStoreService stores;
     private final RelationshipService relationships;
 
     /**
@@ -65,16 +63,14 @@ public class TenantAccess {
     public Future<String> readableTenant(Participant participant, String organizationId) {
         Future<String> ret;
         if (participant instanceof SystemParticipant) {
-            RelationshipTuple reads = new RelationshipTuple(DomainUtil.authzUser(participant), READS_TELEMETRY,
-                                                            AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID));
-            ret = stores.modelId(SYSTEM)
-                        .compose(modelId -> relationships.check(SYSTEM, modelId, reads, Consistency.MINIMIZE_LATENCY))
-                        .map(allowed -> {
-                            if (!allowed) {
-                                throw denied(participant, organizationId);
-                            }
-                            return TelemetryTenant.of(organizationId);
-                        });
+            RelationshipTuple reads = new RelationshipTuple(AuthzGraphUtil.authzUser(participant), READS_TELEMETRY, AuthzConstants.SYSTEM_OBJECT);
+            ret = relationships.check(SYSTEM, reads, Consistency.MINIMIZE_LATENCY)
+                               .map(allowed -> {
+                                   if (!allowed) {
+                                       throw denied(participant, organizationId);
+                                   }
+                                   return TelemetryTenant.of(organizationId);
+                               });
         } else if (participant instanceof OrganizationParticipant op && op.getOrganizationId().equals(organizationId)) {
             ret = Future.succeededFuture(organizationId);
         } else {

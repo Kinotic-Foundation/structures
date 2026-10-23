@@ -11,13 +11,12 @@ import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.system.api.services.SystemAccessService;
@@ -32,10 +31,8 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class DefaultSystemAccessService implements SystemAccessService {
 
     private static final Resource SYSTEM_RESOURCE = new Resource(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
-    private static final String SYSTEM_OBJECT = AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID);
 
     private final AuthzModelService models;
-    private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final ParticipantIdentityService identities;
 
@@ -46,7 +43,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
 
     @Override
     public Future<List<Grant>> findGrants() {
-        return relationships.findGrants(SYSTEM, SYSTEM_OBJECT).map(grants -> grants.stream().map(DomainUtil::localGrant).toList());
+        return relationships.findGrants(SYSTEM, AuthzConstants.SYSTEM_OBJECT).map(grants -> grants.stream().map(AuthzGraphUtil::localGrant).toList());
     }
 
     @Override
@@ -58,14 +55,14 @@ public class DefaultSystemAccessService implements SystemAccessService {
                 throw new IllegalArgumentException("No role of the system has id " + roleId);
             }
             return requireStaff(subject);
-        }).compose(stored -> relationships.bind(SYSTEM, roleId, userOf(stored), SYSTEM_OBJECT))
+        }).compose(stored -> relationships.bind(SYSTEM, roleId, AuthzGraphUtil.authzSubject(stored), AuthzConstants.SYSTEM_OBJECT))
           .map(bindingId -> new Grant(bindingId, roleId, subject, SYSTEM_RESOURCE));
     }
 
     @Override
     public Future<Void> revoke(String grantId) {
         Validate.notBlank(grantId, "grantId cannot be blank");
-        return relationships.revoke(SYSTEM, grantId, SYSTEM_OBJECT);
+        return relationships.revoke(SYSTEM, grantId, AuthzConstants.SYSTEM_OBJECT);
     }
 
     @Override
@@ -73,10 +70,10 @@ public class DefaultSystemAccessService implements SystemAccessService {
         validate(subject);
         Validate.notBlank(permission, "permission cannot be blank");
         String name = AuthzUtil.permissionName(AuthzConstants.SYSTEM_TYPE, permission);
-        return requireStaff(subject).compose(stored -> relationships.findGrants(SYSTEM, SYSTEM_OBJECT)
-                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> relationships.explain(
-                        SYSTEM, modelId, stored, new RelationshipTuple(userOf(stored), name, SYSTEM_OBJECT), List.of(), grants)))
-                .map(DomainUtil::localExplanation));
+        return requireStaff(subject).compose(stored -> relationships.findGrants(SYSTEM, AuthzConstants.SYSTEM_OBJECT)
+                .compose(grants -> relationships.explain(SYSTEM, stored, new RelationshipTuple(AuthzGraphUtil.authzSubject(stored), name, AuthzConstants.SYSTEM_OBJECT),
+                                                         List.of(), grants))
+                .map(AuthzGraphUtil::localExplanation));
     }
 
     private Future<AuthzModel> model() {
@@ -104,7 +101,4 @@ public class DefaultSystemAccessService implements SystemAccessService {
         Validate.notBlank(subject.id(), "subject id cannot be blank");
     }
 
-    private static String userOf(Subject subject) {
-        return AuthzUtil.object(AuthzConstants.USER_TYPE, subject.id());
-    }
 }

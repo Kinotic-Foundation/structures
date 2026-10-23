@@ -11,13 +11,17 @@ import org.kinotic.core.api.crud.CursorPage;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
+import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.OrganizationMember;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
-import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.api.utils.AuthzGraphUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
 import org.kinotic.idl.api.utils.AuthzUtil;
+import org.kinotic.management.internal.api.services.ApplicationStoreProvisioner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -31,11 +35,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 
 /**
- * Places every organization that is not yet on the system in the authorization graph, once the server is up and
- * the system store runs a model: the organization on the system, its enabled members as its members, and the
- * membership of its creator, while an enabled member, as its administrator. A sign-up does the same for the
- * organization it creates; an organization a migration seeds has records but no tuples, and this gives it the ones
- * a sign-up would have. An organization on the system, whatever was granted or revoked since, is left as it is.
+ * Places every organization and application a migration seeded in the authorization graph, once the server is up
+ * and the system store runs a model. An organization not yet on the system is placed with its enabled members as
+ * its members and the membership of its creator, while an enabled member, as its administrator; an application
+ * without a store is provisioned one, so its users are answered by a store of its own. A sign-up and an
+ * application's creation do the same for what they create; a migration seeds records but no tuples, and this gives
+ * them the ones those services would have. An organization on the system and an application with a store, whatever
+ * was granted or revoked since, are left as they are.
  */
 @Slf4j
 @Component
@@ -43,14 +49,18 @@ import static org.kinotic.authz.api.services.AuthzStoreService.SYSTEM;
 public class OrganizationGraphBootstrap {
 
     private static final long RETRY_MILLIS = 2_000;
-    // an organization that could not be placed is tried again by a later sweep, after a delay that doubles with each sweep
-    // that leaves one, since a model the system store runs at startup may lack the types the sweep writes
+    // an organization or application that could not be placed is tried again by a later sweep, after a delay that
+    // doubles with each sweep that leaves one, since a model the system store runs at startup may lack the types the
+    // sweep writes
     private static final long MAX_RETRY_MILLIS = 60_000;
     private static final int PAGE_SIZE = 100;
 
     private final Vertx vertx;
     private final OrganizationService organizations;
     private final OrganizationMembershipService memberships;
+    private final ApplicationRepository applications;
+    private final AuthzStoreRepository records;
+    private final ApplicationStoreProvisioner provisioner;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
 
@@ -60,15 +70,17 @@ public class OrganizationGraphBootstrap {
     }
 
     private void run(long failedDelay) {
+        AtomicInteger placed = new AtomicInteger();
         AtomicInteger failed = new AtomicInteger();
         stores.modelId(SYSTEM)
-              .compose(modelId -> page(null, 0, failed))
-              .onSuccess(placed -> {
-                  if (placed > 0) {
-                      log.info("Placed {} organization(s) in the authorization graph", placed);
+              .compose(modelId -> organizationPage(null, placed, failed))
+              .onSuccess(v -> {
+                  if (placed.get() > 0) {
+                      log.info("Placed {} organization(s) and application(s) in the authorization graph", placed.get());
                   }
                   if (failed.get() > 0) {
-                      log.warn("{} organization(s) could not be placed in the authorization graph; the sweep is made again", failed.get());
+                      log.warn("{} organization(s) and application(s) could not be placed in the authorization graph; the sweep is made again",
+                               failed.get());
                       vertx.setTimer(failedDelay, t -> run(Math.min(failedDelay * 2, MAX_RETRY_MILLIS)));
                   }
               })
@@ -80,32 +92,64 @@ public class OrganizationGraphBootstrap {
               });
     }
 
-    private Future<Integer> page(String cursor, int placed, AtomicInteger failed) {
+    private Future<Void> organizationPage(String cursor, AtomicInteger placed, AtomicInteger failed) {
         return organizations.findAll(Pageable.create(cursor, PAGE_SIZE, Sort.by("id")))
                             .compose(page -> {
-                                Future<Integer> ret = Future.succeededFuture(placed);
+                                Future<Void> ret = Future.succeededFuture();
                                 for (Organization organization : page.getContent()) {
-                                    // one organization that fails leaves the others to be placed
-                                    ret = ret.compose(count -> place(organization).map(did -> did ? count + 1 : count)
-                                                                                  .recover(e -> {
-                                                                                      log.warn("Organization {} could not be placed in the authorization graph: {}",
-                                                                                               organization.getId(), e.getMessage());
-                                                                                      failed.incrementAndGet();
-                                                                                      return Future.succeededFuture(count);
-                                                                                  }));
+                                    // one organization that fails leaves the others to be placed, and its applications
+                                    ret = ret.compose(v -> counted(place(organization), placed, failed,
+                                                                   "Organization " + organization.getId()))
+                                             .compose(v -> applicationPage(organization.getId(), 0, placed, failed));
                                 }
                                 String next = nextCursor(page);
-                                return next == null ? ret : ret.compose(count -> page(next, count, failed));
+                                return next == null ? ret : ret.compose(v -> organizationPage(next, placed, failed));
                             });
+    }
+
+    private Future<Void> applicationPage(String organizationId, int pageNumber, AtomicInteger placed, AtomicInteger failed) {
+        return applications.findAll(organizationId, Pageable.create(pageNumber, PAGE_SIZE, Sort.by("id")))
+                           .compose(page -> {
+                               Future<Void> ret = Future.succeededFuture();
+                               for (Application application : page.getContent()) {
+                                   ret = ret.compose(v -> counted(provision(application), placed, failed,
+                                                                  "Application " + application.getId() + " of " + organizationId));
+                               }
+                               return page.getContent().size() < PAGE_SIZE
+                                       ? ret
+                                       : ret.compose(v -> applicationPage(organizationId, pageNumber + 1, placed, failed));
+                           });
+    }
+
+    // Counts what was placed, and what failed so the sweep is made again, leaving the rest of the sweep to run
+    private static Future<Void> counted(Future<Boolean> placement, AtomicInteger placed, AtomicInteger failed, String what) {
+        return placement.map(did -> {
+                            if (did) {
+                                placed.incrementAndGet();
+                            }
+                            return (Void) null;
+                        })
+                        .recover(e -> {
+                            log.warn("{} could not be placed in the authorization graph: {}", what, e.getMessage());
+                            failed.incrementAndGet();
+                            return Future.succeededFuture();
+                        });
     }
 
     private static String nextCursor(Page<Organization> page) {
         return page instanceof CursorPage<Organization> cursorPage && !page.getContent().isEmpty() ? cursorPage.getCursor() : null;
     }
 
+    private Future<Boolean> provision(Application application) {
+        return records.findById(AuthzGraphUtil.authzApplicationId(application.getOrganizationId(), application.getId()))
+                      .compose(record -> record != null
+                              ? Future.succeededFuture(false)
+                              : provisioner.provision(application).map(true));
+    }
+
     private Future<Boolean> place(Organization organization) {
         String object = AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organization.getId());
-        RelationshipTuple containment = DomainUtil.containment(AuthzUtil.object(AuthzConstants.SYSTEM_TYPE, AuthzConstants.SYSTEM_OBJECT_ID), object);
+        RelationshipTuple containment = AuthzGraphUtil.containment(AuthzConstants.SYSTEM_OBJECT, object);
         return relationships.holds(SYSTEM, containment)
                             .compose(held -> held ? Future.succeededFuture(false) : placed(organization, object, containment));
     }
@@ -119,9 +163,9 @@ public class OrganizationGraphBootstrap {
                     Future<Void> ret = Future.succeededFuture();
                     // the creator administers the organization while it is an enabled member of it
                     if (organization.getCreatedBy() != null && enabled.contains(organization.getCreatedBy())) {
-                        String creator = DomainUtil.authzMember(organization.getCreatedBy(), organization.getId());
+                        String creator = AuthzGraphUtil.authzMember(organization.getCreatedBy(), organization.getId());
                         ret = relationships.ensureBound(SYSTEM,
-                                                        AuthzConstants.ORGANIZATION_ADMIN_ROLE + "-of-" + AuthzUtil.idOf(creator),
+                                                        AuthzUtil.roleBindingIdOf(AuthzConstants.ORGANIZATION_ADMIN_ROLE, AuthzUtil.idOf(creator)),
                                                         AuthzConstants.ORGANIZATION_ADMIN_ROLE,
                                                         creator,
                                                         object);
@@ -139,9 +183,7 @@ public class OrganizationGraphBootstrap {
             for (OrganizationMember member : page.getContent()) {
                 if (member.enabled()) {
                     enabled.add(member.id());
-                    tuples.add(new RelationshipTuple(DomainUtil.authzMember(member.id(), organizationId),
-                                                     AuthzConstants.MEMBER_RELATION,
-                                                     AuthzUtil.object(AuthzConstants.ORGANIZATION_TYPE, organizationId)));
+                    tuples.add(AuthzGraphUtil.organizationMember(member.id(), organizationId));
                 }
             }
             Future<Void> ret = relationships.ensure(SYSTEM, tuples);
