@@ -33,16 +33,12 @@
       </div>
     </section>
 
-    <div class="mb-4 flex flex-wrap gap-3">
-      <StatusChips v-if="platformScope" v-model="ownerFilter" :chips="ownerChips" />
-      <StatusChips v-model="statusFilter" :chips="chips" />
-    </div>
+    <StatusChips v-model="statusFilter" :chips="chips" class="mb-4" />
 
     <JobRunsTable ref="jobRunsTable"
                   :organization-id="scope.organizationId"
                   :application-id="scope.applicationId"
                   :project-id="scope.projectId"
-                  :owner-type="ownerFilter"
                   :status="statusFilter"
                   :run-route="runRoute">
       <template #run="{ jobRunId }">
@@ -60,7 +56,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import { LaptopMinimalCheck } from '@lucide/vue'
 
-import { ExecutionStatus, JobOwnerType } from '@kinotic-ai/management-api'
+import { ExecutionStatus } from '@kinotic-ai/management-api'
 import { countJobRuns, JobRunsTable, PageHeader, executionStatusSeverity, StatusChips, type StatusChip } from '@kinotic-ai/frontend-common'
 
 import JobRunDetail from '@/components/JobRunDetail.vue'
@@ -70,9 +66,8 @@ import { scopeName, scopePath, scopeTint, type Scope } from '@/util/scope'
 /**
  * The job runs of the scope the route names: every run on the platform, or the deployments of
  * an organization, an application or a project. State chips carry the counts
- * and live in the URL so a tile can link to the failed runs. On the platform's own scope, owner
- * chips narrow the runs to the organizations' or the platform's, and Run system job starts one of
- * the platform's system jobs and opens its run.
+ * and live in the URL so a tile can link to the failed runs. On the platform's own scope, Run
+ * system job starts one of the platform's system jobs and opens its run.
  */
 const props = defineProps<{
   organizationId?: string
@@ -96,33 +91,13 @@ const description = computed(() => scope.value.organizationId
     ? `Job runs executed for ${scopeName(scope.value)}: its deployments.`
     : 'Grind job runs across the platform: deployments and system jobs, step by step.')
 
-const OWNER_CHIPS = [
-  { label: 'Organizations', value: JobOwnerType.ORGANIZATION },
-  { label: 'Platform', value: JobOwnerType.SYSTEM }
-]
-
 /** The platform's own scope, where every run is listed and system jobs are started. */
 const platformScope = computed(() => !scope.value.organizationId)
 
 const runDrawerVisible = ref(false)
 
-const ownerFilter = computed<JobOwnerType | null>({
-  get: () => platformScope.value && OWNER_CHIPS.some(chip => chip.value === route.query.owner)
-      ? route.query.owner as JobOwnerType
-      : null,
-  set: value => { router.replace({ query: { ...route.query, owner: value ?? undefined } }) }
-})
-
-/** How many of the scope's runs each owner has, the first count being all of them. */
-const ownerCounts = ref<number[]>([0, 0, 0])
-
-/** How many of the chosen owner's runs there are in all, and in each of the chips' states. */
+/** How many of the scope's runs there are in all, and in each of the chips' states. */
 const statusCounts = ref<{ total: number, byState: Record<string, number> }>({ total: 0, byState: {} })
-
-const ownerChips = computed<StatusChip[]>(() => [
-  { label: 'All owners', value: null, count: ownerCounts.value[0] },
-  ...OWNER_CHIPS.map((chip, index) => ({ ...chip, count: ownerCounts.value[index + 1] }))
-])
 
 function stateCount(state: ExecutionStatus): number {
   return statusCounts.value.byState[state] ?? 0
@@ -169,19 +144,12 @@ async function count() {
     applicationId: scope.value.applicationId,
     projectId: scope.value.projectId
   }
-  const ofOwner = { ...inScope, ownerType: ownerFilter.value }
   try {
     const [total, ...byState] = await Promise.all([
-      countJobRuns(ofOwner),
-      ...CHIP_STATES.map(state => countJobRuns({ ...ofOwner, status: state }))
+      countJobRuns(inScope),
+      ...CHIP_STATES.map(state => countJobRuns({ ...inScope, status: state }))
     ])
     statusCounts.value = { total, byState: Object.fromEntries(CHIP_STATES.map((state, index) => [state, byState[index]])) }
-    if (platformScope.value) {
-      ownerCounts.value = await Promise.all([
-        countJobRuns(inScope),
-        ...OWNER_CHIPS.map(chip => countJobRuns({ ...inScope, ownerType: chip.value }))
-      ])
-    }
   } catch {
     // The chips keep their last counts; the table reports the failure itself
   }
@@ -201,5 +169,5 @@ function runRoute(jobRunId: string): string {
 }
 
 // The header's switchers navigate in place, so the router reuses this instance across scopes
-watch(() => [scope.value.organizationId, scope.value.applicationId, scope.value.projectId, ownerFilter.value], count, { immediate: true })
+watch(() => [scope.value.organizationId, scope.value.applicationId, scope.value.projectId], count, { immediate: true })
 </script>

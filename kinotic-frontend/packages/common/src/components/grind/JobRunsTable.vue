@@ -61,7 +61,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import Tag from 'primevue/tag'
 import { Direction, Kinotic, FunctionalIterablePage, Order,
          type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
-import { JobOwnerType, type ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
+import type { ExecutionStatus, JobRun } from '@kinotic-ai/management-api'
 import CrudTable from '../CrudTable.vue'
 import SteppingDrawer from '../SteppingDrawer.vue'
 import { useSteppingDrawer } from '../../composables/useSteppingDrawer'
@@ -75,10 +75,9 @@ import { jobRunFilter } from './jobRunScan'
 
 /**
  * The job runs the caller may view, most recently started first, narrowed to a scope when one
- * is given: an organization's runs, one of its applications', one of its projects', the runs of
- * one owner type, or the runs in one status. Under each run's name sits what the scope leaves
- * unsaid — the organization, the application, or the project — and nothing inside a project or
- * among the platform's own runs. A clicked run opens in a
+ * is given: an organization's runs, one of its applications', one of its projects', or the runs
+ * in one status. Under each run's name sits what the scope leaves unsaid — the organization, the
+ * application, or the project — and nothing inside a project. A clicked run opens in a
  * drawer beside the list, showing the {@code run} slot (given the run's id), whose arrows step
  * through the rows on the page; given {@code runRoute}, the drawer links to the run's own page.
  * refresh() reloads the table.
@@ -87,7 +86,6 @@ const props = defineProps<{
   organizationId?: string
   applicationId?: string
   projectId?: string
-  ownerType?: JobOwnerType | null
   status?: ExecutionStatus | null
   runRoute?: (jobRunId: string) => RouteLocationRaw
 }>()
@@ -114,7 +112,7 @@ const DEFAULT_SORT = [new Order('started', Direction.DESC)]
 
 const ownerHeader = computed<string | null>(() => {
   let ret: string | null
-  if (props.projectId !== undefined || props.ownerType === JobOwnerType.SYSTEM) {
+  if (props.projectId !== undefined) {
     ret = null
   } else if (props.applicationId !== undefined) {
     ret = 'Project'
@@ -155,7 +153,6 @@ const filter = computed(() => jobRunFilter({
   organizationId: props.organizationId,
   applicationId: props.applicationId,
   projectId: props.projectId,
-  ownerType: props.ownerType ?? null,
   status: props.status ?? null
 }))
 

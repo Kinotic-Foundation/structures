@@ -6,8 +6,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { JobOwnerType, type JobRun } from '@kinotic-ai/management-api'
-import { JobRunProgress, ownerTypeOf, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
+import type { JobRun } from '@kinotic-ai/management-api'
+import { JobRunProgress, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
 
 /**
  * One job run's progress, step by step, with each step's detail. A failed deployment explains its
@@ -25,7 +25,7 @@ const emit = defineEmits<{
 
 const SYSTEM_JOB_RETRY_HINT = 'To try again, start the job again with Run system job on the platform\'s Jobs page.'
 
-// true once the loaded run is the platform's own, one of its system jobs
+// true once the loaded run is the platform's own, one of its system jobs, which no organization owns
 const platformRun = ref(false)
 
 // another run's organization is cleared at once, so a run that fails to load never shows the last one's
@@ -37,7 +37,7 @@ watch(() => props.jobRunId, () => {
 })
 
 function onLoaded(run: JobRun): void {
-  platformRun.value = ownerTypeOf(run) === JobOwnerType.SYSTEM
+  platformRun.value = !run.organizationId
   if (!props.organizationId) {
     emit('organization', run.organizationId)
   }

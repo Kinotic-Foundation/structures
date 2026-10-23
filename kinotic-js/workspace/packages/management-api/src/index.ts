@@ -55,7 +55,6 @@ export * from '@/api/model/MigrationRequest'
 export * from '@/api/model/MigrationResult'
 
 export * from '@/api/model/grind/ExecutionStatus'
-export * from '@/api/model/grind/JobOwnerType'
 export * from '@/api/model/grind/JobRun'
 export * from '@/api/model/grind/JobRunFilter'
 export * from '@/api/model/grind/StoreType'

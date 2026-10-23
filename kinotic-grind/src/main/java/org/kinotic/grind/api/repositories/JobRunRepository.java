@@ -17,7 +17,6 @@ import org.kinotic.domain.internal.api.repositories.WatchedIndex;
 import org.kinotic.domain.internal.api.repositories.WatchedStateRepository;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.grind.api.model.ExecutionStatus;
-import org.kinotic.grind.api.model.JobOwnerType;
 import org.kinotic.grind.api.model.JobRun;
 import org.kinotic.grind.api.model.JobRunFilter;
 import org.kinotic.grind.api.model.TaskRecord;
@@ -189,21 +188,8 @@ public class JobRunRepository extends AbstractWatchedRepository<JobRun> {
             filter.getOrganizationId() != null ? termFilter("organizationId", filter.getOrganizationId()) : null,
             filter.getApplicationId() != null ? termFilter("applicationId", filter.getApplicationId()) : null,
             filter.getProjectId() != null ? termFilter("projectId", filter.getProjectId()) : null,
-            ownerTypeFilter(filter.getOwnerType()),
             filter.getStatus() != null ? termFilter("status", filter.getStatus().name()) : null,
             filter.getStartedSince() != null ? startedSinceFilter(filter.getStartedSince()) : null)));
-    }
-
-    private Query ownerTypeFilter(JobOwnerType ownerType) {
-        Query ret;
-        if (ownerType == JobOwnerType.ORGANIZATION) {
-            ret = existsFilter("organizationId");
-        } else if (ownerType == JobOwnerType.SYSTEM) {
-            ret = missingFilter("organizationId");
-        } else {
-            ret = null;
-        }
-        return ret;
     }
 
     private static Query startedSinceFilter(Date since) {

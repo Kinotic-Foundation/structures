@@ -33,11 +33,6 @@ public class JobRunFilter {
     private String projectId;
 
     /**
-     * Whether the runs are owned by an organization or by the system.
-     */
-    private JobOwnerType ownerType;
-
-    /**
      * The status the runs are in.
      */
     private ExecutionStatus status;

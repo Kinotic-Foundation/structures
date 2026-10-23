@@ -1,15 +1,10 @@
 import { Direction, Kinotic, Order, Pageable, Sort } from '@kinotic-ai/core'
-import { JobOwnerType, JobRunFilter, type JobRun } from '@kinotic-ai/management-api'
+import { JobRunFilter, type JobRun } from '@kinotic-ai/management-api'
 
 /** How many runs a scan returns at most. */
 export const JOB_RUN_SCAN_LIMIT = 500
 
 const SCAN_PAGE_SIZE = 100
-
-/** Who owns the run. */
-export function ownerTypeOf(run: JobRun): JobOwnerType {
-  return run.organizationId ? JobOwnerType.ORGANIZATION : JobOwnerType.SYSTEM
-}
 
 /** The filter that narrows the runs by the given fields, each field left out matching every run. */
 export function jobRunFilter(fields: Partial<JobRunFilter>): JobRunFilter {

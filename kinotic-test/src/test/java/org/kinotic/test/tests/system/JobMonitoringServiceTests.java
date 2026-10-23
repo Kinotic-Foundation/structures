@@ -10,7 +10,6 @@ import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipan
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
 import org.kinotic.grind.api.model.ExecutionStatus;
-import org.kinotic.grind.api.model.JobOwnerType;
 import org.kinotic.grind.api.model.JobRun;
 import org.kinotic.grind.api.model.JobRunFilter;
 import org.kinotic.grind.api.repositories.JobRunRepository;
@@ -33,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The job runs JobMonitoringService finds for a filter, narrowed on the server: by owner type,
+ * The job runs JobMonitoringService finds for a filter, narrowed on the server: by organization,
  * status and start time, and for an organization participant to its own organization. Each test
  * seeds runs that start at a random day in the far future and asks only for runs started since
  * then, so the shared index's other runs never match.
@@ -64,13 +63,12 @@ public class JobMonitoringServiceTests extends KinoticTestBase {
     }
 
     @Test
-    public void theOwnerTypeSeparatesTheSystemsRunsFromTheOrganizations() throws Exception {
+    public void aSystemParticipantFindsEveryRunOrOneOrganizations() throws Exception {
         String system = seed(null, ExecutionStatus.COMPLETED, 1);
         String organization = seed(TEST_ORG_ID, ExecutionStatus.COMPLETED, 2);
 
-        assertEquals(List.of(system), idsFound(SYSTEM_PARTICIPANT, filter().setOwnerType(JobOwnerType.SYSTEM)));
-        assertEquals(List.of(organization), idsFound(SYSTEM_PARTICIPANT, filter().setOwnerType(JobOwnerType.ORGANIZATION)));
         assertEquals(List.of(organization, system), idsFound(SYSTEM_PARTICIPANT, filter()));
+        assertEquals(List.of(organization), idsFound(SYSTEM_PARTICIPANT, filter().setOrganizationId(TEST_ORG_ID)));
     }
 
     @Test
@@ -92,7 +90,6 @@ public class JobMonitoringServiceTests extends KinoticTestBase {
         seed("another-organization", ExecutionStatus.COMPLETED, 3);
 
         assertEquals(List.of(own), idsFound(TEST_ORGANIZATION_PARTICIPANT, filter()));
-        assertEquals(List.of(), idsFound(TEST_ORGANIZATION_PARTICIPANT, filter().setOwnerType(JobOwnerType.SYSTEM)));
     }
 
     @Test
@@ -105,11 +102,11 @@ public class JobMonitoringServiceTests extends KinoticTestBase {
 
     @Test
     public void aPageCarriesTheTotalTheFilterMatches() throws Exception {
-        seed(null, ExecutionStatus.COMPLETED, 1);
-        seed(null, ExecutionStatus.COMPLETED, 2);
-        seed(TEST_ORG_ID, ExecutionStatus.COMPLETED, 3);
+        seed(TEST_ORG_ID, ExecutionStatus.COMPLETED, 1);
+        seed(TEST_ORG_ID, ExecutionStatus.COMPLETED, 2);
+        seed(null, ExecutionStatus.COMPLETED, 3);
 
-        Long total = await(runAs(SYSTEM_PARTICIPANT, () -> jobMonitoring.findJobRuns(filter().setOwnerType(JobOwnerType.SYSTEM),
+        Long total = await(runAs(SYSTEM_PARTICIPANT, () -> jobMonitoring.findJobRuns(filter().setOrganizationId(TEST_ORG_ID),
                                                                                       Pageable.create(0, 1, null))))
                 .getTotalElements();
 
