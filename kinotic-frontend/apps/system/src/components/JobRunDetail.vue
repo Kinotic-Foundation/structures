@@ -1,7 +1,7 @@
 <template>
   <JobRunProgress :key="jobRunId" :job-run-id="jobRunId"
-                  :failure-of="platformRun ? undefined : ProjectDeployResultNames.failureOf"
-                  :next-step="platformRun ? SYSTEM_JOB_RETRY_HINT : undefined" @loaded="onLoaded" />
+                  :failure-of="systemRun ? undefined : ProjectDeployResultNames.failureOf"
+                  :next-step="systemRun ? SYSTEM_JOB_RETRY_HINT : undefined" @loaded="onLoaded" />
 </template>
 
 <script setup lang="ts">
@@ -11,7 +11,7 @@ import { JobRunProgress, ProjectDeployResultNames } from '@kinotic-ai/frontend-c
 
 /**
  * One job run's progress, step by step, with each step's detail. A failed deployment explains its
- * failure as a deployment, and a failed platform run says how to run it again. Without the
+ * failure as a deployment, and a failed system run says how to run it again. Without the
  * organization the run belongs to, it emits that organization once the run is loaded.
  */
 const props = defineProps<{
@@ -23,21 +23,21 @@ const emit = defineEmits<{
   (e: 'organization', organizationId: string | null): void
 }>()
 
-const SYSTEM_JOB_RETRY_HINT = 'To try again, start the job again with Run system job on the platform\'s Jobs page.'
+const SYSTEM_JOB_RETRY_HINT = 'To try again, start the job again with Run system job on the Jobs page.'
 
-// true once the loaded run is the platform's own, one of its system jobs, which no organization owns
-const platformRun = ref(false)
+// true once the loaded run is one of the system jobs' runs, which no organization owns
+const systemRun = ref(false)
 
 // another run's organization is cleared at once, so a run that fails to load never shows the last one's
 watch(() => props.jobRunId, () => {
-  platformRun.value = false
+  systemRun.value = false
   if (!props.organizationId) {
     emit('organization', null)
   }
 })
 
 function onLoaded(run: JobRun): void {
-  platformRun.value = !run.organizationId
+  systemRun.value = !run.organizationId
   if (!props.organizationId) {
     emit('organization', run.organizationId)
   }

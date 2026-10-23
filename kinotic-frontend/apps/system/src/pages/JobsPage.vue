@@ -3,7 +3,7 @@
     <PageHeader title="Jobs" :description="description">
       <template #actions>
         <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refresh" />
-        <Button v-if="platformScope" label="Run system job" icon="pi pi-play" @click="runDrawerVisible = true" />
+        <Button v-if="systemScope" label="Run system job" icon="pi pi-play" @click="runDrawerVisible = true" />
       </template>
     </PageHeader>
 
@@ -46,7 +46,7 @@
       </template>
     </JobRunsTable>
 
-    <RunSystemJobDrawer v-if="platformScope" v-model:visible="runDrawerVisible" @started="openStartedRun" />
+    <RunSystemJobDrawer v-if="systemScope" v-model:visible="runDrawerVisible" @started="openStartedRun" />
   </div>
 </template>
 
@@ -64,10 +64,10 @@ import RunSystemJobDrawer from '@/components/RunSystemJobDrawer.vue'
 import { scopeName, scopePath, scopeTint, type Scope } from '@/util/scope'
 
 /**
- * The job runs of the scope the route names: every run on the platform, or the deployments of
+ * The job runs of the scope the route names: every run in the system, or the deployments of
  * an organization, an application or a project. State chips carry the counts
- * and live in the URL so a tile can link to the failed runs. On the platform's own scope, Run
- * system job starts one of the platform's system jobs and opens its run.
+ * and live in the URL so a tile can link to the failed runs. On the system scope, Run system job
+ * starts one of the system jobs and opens its run.
  */
 const props = defineProps<{
   organizationId?: string
@@ -89,10 +89,10 @@ const scope = computed<Scope>(() => ({
 
 const description = computed(() => scope.value.organizationId
     ? `Job runs executed for ${scopeName(scope.value)}: its deployments.`
-    : 'Grind job runs across the platform: deployments and system jobs, step by step.')
+    : 'Every grind job run: deployments and system jobs, step by step.')
 
-/** The platform's own scope, where every run is listed and system jobs are started. */
-const platformScope = computed(() => !scope.value.organizationId)
+/** The system scope, where every run is listed and system jobs are started. */
+const systemScope = computed(() => !scope.value.organizationId)
 
 const runDrawerVisible = ref(false)
 

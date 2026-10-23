@@ -1,6 +1,6 @@
 <template>
   <FormDrawer :visible="visible" title="Run system job"
-              description="A platform job, run now on behalf of the platform." @close="emit('update:visible', false)">
+              description="A system job, run now on behalf of the system." @close="emit('update:visible', false)">
     <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
     <p v-else-if="!loading && jobs.length === 0" class="text-sm text-muted-color">No system jobs are available.</p>
 
@@ -39,7 +39,7 @@ import type { SystemJobDescriptor } from '@kinotic-ai/system-api'
 import { FormDrawer, showErrorToast } from '@kinotic-ai/frontend-common'
 
 /**
- * Picks one of the platform's system jobs and starts a run of it. Lists the jobs each time it
+ * Picks one of the system jobs and starts a run of it. Lists the jobs each time it
  * opens, and emits {@code started} with the run's id once the run is recorded.
  */
 const props = defineProps<{

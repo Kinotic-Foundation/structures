@@ -127,7 +127,7 @@ const ownerHeader = computed<string | null>(() => {
 const ownerFallback = computed(() => {
   let ret: string
   if (ownerHeader.value === 'Organization') {
-    ret = 'platform'
+    ret = 'system'
   } else if (ownerHeader.value === 'Application') {
     ret = 'organization'
   } else {
