@@ -92,7 +92,9 @@ public class DefaultGitHubApiClient implements GitHubApiClient {
     public void start() {
         this.webClient = WebClient.create(vertx, new WebClientOptions()
                 .setSsl(true)
-                .setUserAgent(USER_AGENT));
+                .setUserAgent(USER_AGENT)
+                // github.com's token endpoint answers with a ~9 KB Content-Security-Policy header, past Vert.x's 8 KB default
+                .setMaxHeaderSize(32 * 1024));
         this.tokenCache = Caffeine.newBuilder()
                                   .expireAfter(TOKEN_EXPIRY)
                                   .maximumSize(10_000)
