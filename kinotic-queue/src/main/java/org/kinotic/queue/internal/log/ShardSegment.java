@@ -18,12 +18,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
@@ -37,7 +32,6 @@ import java.util.stream.Stream;
 @Accessors(fluent = true)
 final class ShardSegment implements AutoCloseable {
 
-
     private final Path directory;
     @Getter
     private final long startOffset;
@@ -46,18 +40,16 @@ final class ShardSegment implements AutoCloseable {
      */
     @Getter
     private final long createdMillis;
-    // Chronicle sequence numbers are dense within a roll cycle and so are offsets, so an offset's queue index is
-    // its cycle plus its distance from the first offset written in that cycle. Keyed by that first offset.
-    private final ConcurrentSkipListMap<Long, Integer> cycleByFirstOffset = new ConcurrentSkipListMap<>();
-    // The queue's clock stays at or after the start of its newest cycle file, so a wall clock set back across a day
-    // keeps writing to that file: an entry written to an earlier cycle would sit past the end a tailer reads to
-    private final AtomicLong latestTime = new AtomicLong();
     private final SingleChronicleQueue queue;
     private final RollCycle rollCycle;
+    // The queue's clock stays at the segment's creation, so all of the segment is one cycle file, in which Chronicle
+    // sequence numbers are dense like offsets: an offset's queue index is its distance from the segment's start
+    private final int cycle;
     private final ExcerptAppender appender;
-    // The cycle files written since the last sync(), which forces them to disk
-    private final Set<File> unsyncedFiles = new LinkedHashSet<>();
-    private boolean newCycleWritten;
+    // The segment's cycle file, once an entry was written to it since the segment opened
+    private File cycleFile;
+    // The offset before which every entry is forced to disk
+    private long syncedEnd;
     private volatile long nextOffset;
     private volatile long sealedEnd = -1;
     /**
@@ -74,14 +66,13 @@ final class ShardSegment implements AutoCloseable {
         this.bytes = bytes;
         this.queue = SingleChronicleQueueBuilder.binary(directory)
                                                 .rollCycle(RollCycles.FAST_DAILY)
-                                                .timeProvider(() -> latestTime.accumulateAndGet(System.currentTimeMillis(), Math::max))
+                                                .timeProvider(() -> createdMillis)
                                                 .build();
         this.rollCycle = queue.rollCycle();
-        this.nextOffset = startOffset;
-        if (queue.lastIndex() >= 0) {
-            latestTime.set((long) queue.lastCycle() * rollCycle.lengthInMillis());
-            loadCycleOffsets();
-        }
+        this.cycle = queue.cycle();
+        long lastIndex = queue.lastIndex();
+        this.nextOffset = lastIndex >= 0 ? startOffset + rollCycle.toSequenceNumber(lastIndex) + 1 : startOffset;
+        this.syncedEnd = nextOffset;
         this.appender = queue.createAppender();
     }
 
@@ -159,13 +150,8 @@ final class ShardSegment implements AutoCloseable {
                 throw e;
             }
         }
-        long index = appender.lastIndexAppended();
-        if (cycleByFirstOffset.putIfAbsent(entry.offset() - rollCycle.toSequenceNumber(index), rollCycle.toCycle(index)) == null) {
-            newCycleWritten = true;
-        }
-        unsyncedFiles.add(appender.currentFile());
+        cycleFile = appender.currentFile();
         this.bytes += entry.size();
-        // Written after the cycle map so a reader that sees the new offset also finds its cycle
         nextOffset = entry.offset() + 1;
     }
 
@@ -173,22 +159,19 @@ final class ShardSegment implements AutoCloseable {
      * Forces every entry written so far to disk.
      */
     void sync() {
-        // The entries written since the last sync span two files when the cycle rolled between them
-        for (File file : unsyncedFiles) {
-            DurableFiles.force(file.toPath());
-        }
-        unsyncedFiles.clear();
-        if (newCycleWritten) {
-            // A new cycle adds a file to the directory and updates the queue's metadata files; the first one also
-            // follows the creation of the directory itself
-            try (Stream<Path> files = Files.list(directory)) {
-                files.filter(file -> file.getFileName().toString().endsWith(".cq4t")).forEach(DurableFiles::force);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+        if (syncedEnd < nextOffset) {
+            DurableFiles.force(cycleFile.toPath());
+            // The first entries also created the cycle file, the queue's metadata files and the directory itself
+            if (syncedEnd == startOffset) {
+                try (Stream<Path> files = Files.list(directory)) {
+                    files.filter(file -> file.getFileName().toString().endsWith(".cq4t")).forEach(DurableFiles::force);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+                DurableFiles.force(directory);
+                DurableFiles.force(directory.getParent());
             }
-            DurableFiles.force(directory);
-            DurableFiles.force(directory.getParent());
-            newCycleWritten = false;
+            syncedEnd = nextOffset;
         }
     }
 
@@ -281,8 +264,7 @@ final class ShardSegment implements AutoCloseable {
     }
 
     private long indexOf(long offset) {
-        Map.Entry<Long, Integer> cycle = cycleByFirstOffset.floorEntry(offset);
-        return rollCycle.toIndex(cycle.getValue(), offset - cycle.getKey());
+        return rollCycle.toIndex(cycle, offset - startOffset);
     }
 
     private <T> T readNext(ExcerptTailer tailer, long expected, BiFunction<Long, Bytes<?>, T> decoder) {
@@ -316,25 +298,5 @@ final class ShardSegment implements AutoCloseable {
             ret.add(bytes.readUtf8());
         }
         return List.copyOf(ret);
-    }
-
-    // Fills the cycle map from the first entry of every cycle on disk, and reads the last entry
-    private void loadCycleOffsets() {
-        try (ExcerptTailer tailer = queue.createTailer()) {
-            for (Long cycle : queue.listCyclesBetween(queue.firstCycle(), queue.lastCycle())) {
-                if (tailer.moveToCycle(cycle.intValue())) {
-                    try (DocumentContext dc = tailer.readingDocument()) {
-                        if (dc.isPresent()) {
-                            long offset = dc.wire().bytes().readLong();
-                            cycleByFirstOffset.put(offset - rollCycle.toSequenceNumber(dc.index()), rollCycle.toCycle(dc.index()));
-                        }
-                    }
-                }
-            }
-            tailer.moveToIndex(queue.lastIndex());
-            try (DocumentContext dc = tailer.readingDocument()) {
-                nextOffset = dc.wire().bytes().readLong() + 1;
-            }
-        }
     }
 }

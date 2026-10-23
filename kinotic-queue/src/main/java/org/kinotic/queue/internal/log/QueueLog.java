@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.regex.Pattern;
 
 /**
@@ -25,8 +26,8 @@ import java.util.regex.Pattern;
 @Accessors(fluent = true)
 public final class QueueLog implements AutoCloseable {
 
-    private static final String SHARD_COUNT_FILE = "shard-count";
-    private static final String INCARNATION_FILE = "incarnation";
+    // "<incarnation> <shard count>"
+    private static final String QUEUE_FILE = "queue";
     // The incarnations of deleted queues this node knows of, one "<incarnation> <name>" per line
     private static final String DELETED_QUEUES_FILE = ".deleted-queues";
     // Starts with a dot, which no queue name does, so it is never taken for a queue's directory
@@ -45,6 +46,8 @@ public final class QueueLog implements AutoCloseable {
     private final String incarnation;
     private final QueueProperties properties;
     private final ShardLog[] shards;
+    // Counts the changes of the positions stored for each shard, by consumers and groups alike
+    private final AtomicLongArray positionVersions;
     /**
      * The committed offsets of the queue's subscribed consumers.
      */
@@ -62,8 +65,9 @@ public final class QueueLog implements AutoCloseable {
         this.incarnation = incarnation;
         this.properties = properties;
         this.shards = new ShardLog[definition.shardCount()];
-        this.consumerOffsets = new ConsumerOffsetRepository(directory.resolve("consumers"), definition.shardCount(), properties);
-        this.groupOffsets = new ConsumerOffsetRepository(directory.resolve("groups"), definition.shardCount(), properties);
+        this.positionVersions = new AtomicLongArray(definition.shardCount());
+        this.consumerOffsets = new ConsumerOffsetRepository(directory.resolve("consumers"), positionVersions, properties);
+        this.groupOffsets = new ConsumerOffsetRepository(directory.resolve("groups"), positionVersions, properties);
     }
 
     /**
@@ -102,9 +106,7 @@ public final class QueueLog implements AutoCloseable {
                                                     + " shards, but the cluster defines it with " + definition.shardCount());
         }
         if (stored == null) {
-            // The incarnation first, since a directory without a shard count holds no queue
-            DurableFiles.writeDurably(directory.resolve(INCARNATION_FILE), incarnation);
-            DurableFiles.writeDurably(directory.resolve(SHARD_COUNT_FILE), String.valueOf(definition.shardCount()));
+            DurableFiles.writeDurably(directory.resolve(QUEUE_FILE), incarnation + " " + definition.shardCount());
         }
         return new QueueLog(directory, definition, incarnation, properties);
     }
@@ -113,7 +115,8 @@ public final class QueueLog implements AutoCloseable {
      * @return the incarnation of the queue stored in {@code directory}, or null when no queue is stored there
      */
     public static String findIncarnation(Path directory) {
-        return DurableFiles.read(directory.resolve(INCARNATION_FILE));
+        String stored = DurableFiles.read(directory.resolve(QUEUE_FILE));
+        return stored != null ? stored.split(" ")[0] : null;
     }
 
     /**
@@ -121,8 +124,8 @@ public final class QueueLog implements AutoCloseable {
      */
     public static void delete(Path directory) {
         try {
-            // The shard count first, so a crash partway leaves a directory that holds no queue
-            Files.deleteIfExists(directory.resolve(SHARD_COUNT_FILE));
+            // The queue file first, so a crash partway leaves a directory that holds no queue
+            Files.deleteIfExists(directory.resolve(QUEUE_FILE));
             FileUtils.deleteDirectory(directory.toFile());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -159,8 +162,8 @@ public final class QueueLog implements AutoCloseable {
      */
     public static QueueDefinition findDefinition(Path directory) {
         String name = directory.getFileName().toString();
-        String shardCount = isValidName(name) ? DurableFiles.read(directory.resolve(SHARD_COUNT_FILE)) : null;
-        return shardCount != null ? new QueueDefinition(name, Integer.parseInt(shardCount)) : null;
+        String stored = isValidName(name) ? DurableFiles.read(directory.resolve(QUEUE_FILE)) : null;
+        return stored != null ? new QueueDefinition(name, Integer.parseInt(stored.split(" ")[1])) : null;
     }
 
     /**
@@ -196,13 +199,13 @@ public final class QueueLog implements AutoCloseable {
     }
 
     /**
-     * @return the shards this node has opened, by shard
+     * @return about how many bytes the entries of the shards this node has opened take, as {@link ShardLog#bytes()}
      */
-    public synchronized Map<Integer, ShardLog> openShards() {
-        Map<Integer, ShardLog> ret = new HashMap<>();
-        for (int shard = 0; shard < shards.length; shard++) {
-            if (shards[shard] != null) {
-                ret.put(shard, shards[shard]);
+    public synchronized long bytes() {
+        long ret = 0;
+        for (ShardLog shard : shards) {
+            if (shard != null) {
+                ret += shard.bytes();
             }
         }
         return ret;
@@ -246,18 +249,19 @@ public final class QueueLog implements AutoCloseable {
     }
 
     /**
-     * @return the version of the positions on the shard; reading it never waits for a write to the positions
+     * @return a number that grows whenever a position stored for the shard changes; zero before any did since the queue
+     * opened. Reading it never waits for a write to the positions.
      */
-    public PositionsVersion positionsVersion(int shard) {
-        return new PositionsVersion(consumerOffsets.version(shard), groupOffsets.version(shard));
+    public long positionsVersion(int shard) {
+        return positionVersions.get(shard);
     }
 
     /**
-     * @return the positions on the shard that changed after the version and have not expired
+     * @return the positions on the shard that changed after the {@link #positionsVersion version} and have not
+     * expired; every position when the version is -1
      */
-    public ShardPositions positionsChangedSince(int shard, PositionsVersion version) {
-        return new ShardPositions(consumerOffsets.findChangedSince(shard, version.consumers()),
-                                  groupOffsets.findChangedSince(shard, version.groups()));
+    public ShardPositions positionsChangedSince(int shard, long version) {
+        return new ShardPositions(consumerOffsets.findChangedSince(shard, version), groupOffsets.findChangedSince(shard, version));
     }
 
     /**

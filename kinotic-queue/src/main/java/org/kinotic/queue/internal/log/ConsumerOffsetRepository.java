@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.log;
 
 import lombok.Getter;
+import org.apache.commons.io.IOUtils;
 import org.kinotic.queue.api.config.QueueProperties;
 
 import java.io.IOException;
@@ -46,8 +47,7 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
      */
     @Getter
     private final Duration refreshInterval;
-    // Counts the changes of the positions stored for each shard, so a change can be noticed without comparing positions.
-    // Read without the monitor, so a version is known while a write is being forced to disk.
+    // Counts the changes of the positions stored for each shard, so a change can be noticed without comparing positions
     private final AtomicLongArray versions;
     // Each consumer's position on each shard, by name
     private final Map<String, StoredPosition[]> positions = new HashMap<>();
@@ -56,7 +56,8 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
         protected boolean removeEldestEntry(Map.Entry<String, FileChannel> eldest) {
             boolean ret = size() > MAX_OPEN_FILES;
             if (ret) {
-                closeQuietly(eldest.getValue());
+                // A failed close loses nothing: every offset was written before it, and the file is opened again when needed
+                IOUtils.closeQuietly(eldest.getValue());
             }
             return ret;
         }
@@ -65,16 +66,18 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     private boolean closed;
 
     /**
+     * @param versions   one counter per shard, which every change of a position stored for the shard increments; it may
+     *                   be shared with other repositories, so one version covers their positions too
      * @param properties whether each save is forced to disk before it returns, and the retention period after which an
      *                   unused position expires
      */
-    ConsumerOffsetRepository(Path directory, int shardCount, QueueProperties properties) {
+    ConsumerOffsetRepository(Path directory, AtomicLongArray versions, QueueProperties properties) {
         this.directory = directory;
-        this.shardCount = shardCount;
+        this.shardCount = versions.length();
+        this.versions = versions;
         this.syncWrites = properties.isSyncWrites();
         this.expiry = properties.getRetentionPeriod();
         this.refreshInterval = refreshInterval(expiry);
-        this.versions = new AtomicLongArray(shardCount);
     }
 
     /**
@@ -103,8 +106,8 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     }
 
     /**
-     * @return the position of every consumer whose position on the shard changed after the {@link #version} and has not
-     * expired, by consumer name
+     * @return the position of every consumer whose position on the shard changed after the version, a value its
+     * counter had, and has not expired, by consumer name
      */
     public synchronized Map<String, ConsumerPosition> findChangedSince(int shard, long version) {
         loadAll();
@@ -116,14 +119,6 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
             }
         });
         return ret;
-    }
-
-    /**
-     * @return a number that grows whenever a position stored for the shard changes; zero before any did since the
-     * repository opened
-     */
-    public long version(int shard) {
-        return versions.get(shard);
     }
 
     /**
@@ -191,9 +186,7 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
         for (String consumerName : gone) {
             positions.remove(consumerName);
             FileChannel channel = channels.remove(consumerName);
-            if (channel != null) {
-                closeQuietly(channel);
-            }
+            IOUtils.closeQuietly(channel);
             try {
                 Files.deleteIfExists(directory.resolve(consumerName));
             } catch (IOException e) {
@@ -205,17 +198,8 @@ public final class ConsumerOffsetRepository implements AutoCloseable {
     @Override
     public synchronized void close() {
         closed = true;
-        channels.values().forEach(ConsumerOffsetRepository::closeQuietly);
+        channels.values().forEach(IOUtils::closeQuietly);
         channels.clear();
-    }
-
-    // A failed close loses nothing: every offset was written before it, and the file is opened again when needed
-    private static void closeQuietly(FileChannel channel) {
-        try {
-            channel.close();
-        } catch (IOException ignored) {
-            // The channel is released either way
-        }
     }
 
     private long expiredBefore() {

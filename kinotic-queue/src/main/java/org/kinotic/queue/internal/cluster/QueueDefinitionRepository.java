@@ -10,15 +10,11 @@ import org.kinotic.queue.api.model.QueueDefinition;
 import org.springframework.stereotype.Component;
 
 import javax.cache.Cache;
-import javax.cache.event.EventType;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -35,9 +31,7 @@ public class QueueDefinitionRepository {
     private final IgniteCache<String, QueueRegistration> cache;
     // Queue name by incarnation, for every deleted queue
     private final IgniteCache<String, String> deleted;
-    // The queues as this node last saw them, kept current by changesSeen, so a lookup on an event loop never blocks
-    private final ConcurrentHashMap<String, QueueRegistration> known = new ConcurrentHashMap<>();
-    // Counts the queues this node saw created or deleted
+    // Counts the changes of the queues this node saw, made on any node
     private final AtomicLong version = new AtomicLong();
     private final QueryCursor<Cache.Entry<String, QueueRegistration>> changesSeen;
 
@@ -46,14 +40,7 @@ public class QueueDefinitionRepository {
         this.deleted = ignite.getOrCreateCache(ShardPlacement.<String>queueNodeCache(DELETED_CACHE));
         // Every node learns of a queue's deletion or creation as the cache changes, not only at its next lookup
         ContinuousQuery<String, QueueRegistration> changes = new ContinuousQuery<>();
-        changes.setLocalListener(events -> events.forEach(event -> {
-            if (event.getEventType() == EventType.REMOVED || event.getEventType() == EventType.EXPIRED || event.getValue() == null) {
-                known.remove(event.getKey());
-            } else {
-                known.put(event.getKey(), event.getValue());
-            }
-            version.incrementAndGet();
-        }));
+        changes.setLocalListener(events -> version.incrementAndGet());
         this.changesSeen = cache.query(changes);
     }
 
@@ -84,7 +71,6 @@ public class QueueDefinitionRepository {
             // A deletion recorded between the check and the store takes the queue out again
             if (ret.equals(incarnation) && deleted.containsKey(incarnation)) {
                 cache.remove(definition.name(), stored);
-                known.remove(definition.name());
                 ret = null;
             }
         }
@@ -92,11 +78,12 @@ public class QueueDefinitionRepository {
     }
 
     /**
-     * @return the queue as this node last saw it, without blocking; null when this node has not seen it or saw it
-     * deleted. A change made on another node is seen once the cache notifies this node of it.
+     * @return the queue as this node's copy of the queues holds it, without blocking; null when the copy holds no queue
+     * of the name, which a node still receiving the queues after joining the cluster may lack
      */
     public StoredQueue findKnown(String name) {
-        QueueRegistration ret = known.get(name);
+        // Replicated to every queue node, this one among them, so this node holds every partition, as primary or backup
+        QueueRegistration ret = cache.localPeek(name, CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
         return ret != null ? ret.toStoredQueue(name) : null;
     }
 
@@ -105,11 +92,6 @@ public class QueueDefinitionRepository {
      */
     public StoredQueue findStored(String name) {
         QueueRegistration ret = cache.get(name);
-        if (ret != null) {
-            known.put(name, ret);
-        } else {
-            known.remove(name);
-        }
         return ret != null ? ret.toStoredQueue(name) : null;
     }
 
@@ -121,8 +103,8 @@ public class QueueDefinitionRepository {
     }
 
     /**
-     * As {@link #requireStored}, but without reading the cluster's store when this node last saw the queue of the
-     * incarnation; a queue deleted that this node has not seen deleted yet passes.
+     * As {@link #requireStored}, but without reading the cluster's store when this node's copy of the queues holds the
+     * queue of the incarnation.
      */
     public StoredQueue requireKnown(String name, String incarnation) {
         StoredQueue known = findKnown(name);
@@ -143,36 +125,26 @@ public class QueueDefinitionRepository {
     }
 
     /**
-     * @return every queue; {@link #findKnown} then finds each, and no longer finds others
+     * @return every queue
      */
     public List<StoredQueue> findAll() {
         List<StoredQueue> ret = new ArrayList<>();
-        Set<String> names = new HashSet<>();
         for (Cache.Entry<String, QueueRegistration> entry : cache) {
             ret.add(entry.getValue().toStoredQueue(entry.getKey()));
-            names.add(entry.getKey());
-            // Never over a value the change listener set meanwhile, which may be newer
-            known.putIfAbsent(entry.getKey(), entry.getValue());
         }
-        known.keySet().retainAll(names);
         return ret;
     }
 
     /**
-     * Deletes the queue, recording its incarnation as deleted.
-     *
-     * @return the queue deleted, or null when no queue had the name
+     * Deletes the queue with the name, if there is one, recording its incarnation as deleted.
      */
-    public StoredQueue delete(String name) {
+    public void delete(String name) {
         QueueRegistration value = cache.get(name);
         if (value != null) {
             // Recorded first, so a node that sees the queue gone also sees why
             deleted.put(value.getIncarnation(), name);
             cache.remove(name, value);
-            known.remove(name);
-            version.incrementAndGet();
         }
-        return value != null ? value.toStoredQueue(name) : null;
     }
 
     /**
@@ -206,8 +178,6 @@ public class QueueDefinitionRepository {
             QueueRegistration value = cache.get(name);
             if (value != null && value.getIncarnation().equals(incarnation)) {
                 cache.remove(name, value);
-                known.remove(name);
-                version.incrementAndGet();
             }
         });
     }
@@ -216,9 +186,6 @@ public class QueueDefinitionRepository {
     private QueueRegistration store(QueueDefinition definition, String incarnation) {
         QueueRegistration value = new QueueRegistration(definition.shardCount(), incarnation);
         QueueRegistration existing = cache.getAndPutIfAbsent(definition.name(), value);
-        QueueRegistration ret = existing != null ? existing : value;
-        known.put(definition.name(), ret);
-        version.incrementAndGet();
-        return ret;
+        return existing != null ? existing : value;
     }
 }

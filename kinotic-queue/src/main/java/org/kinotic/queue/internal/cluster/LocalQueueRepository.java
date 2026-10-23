@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,7 +141,7 @@ public class LocalQueueRepository {
      */
     public Map<String, Long> findSizes() {
         Map<String, Long> ret = new HashMap<>();
-        logs.forEach((queue, queueLog) -> ret.put(queue, queueLog.openShards().values().stream().mapToLong(ShardLog::bytes).sum()));
+        logs.forEach((queue, queueLog) -> ret.put(queue, queueLog.bytes()));
         return ret;
     }
 
@@ -168,16 +169,16 @@ public class LocalQueueRepository {
         Map<String, String> clusterDeleted = definitions.findDeleted();
         Map<String, String> deleted = new HashMap<>(clusterDeleted);
         deleted.putAll(recorded);
-        if (!clusterDeleted.keySet().containsAll(recorded.keySet())) {
-            Map<String, String> unrecorded = new HashMap<>(recorded);
-            unrecorded.keySet().removeAll(clusterDeleted.keySet());
-            definitions.saveDeleted(unrecorded);
+        if (deleted.size() > clusterDeleted.size()) {
+            definitions.saveDeleted(recorded);
         }
-        if (!recorded.keySet().containsAll(deleted.keySet())) {
+        if (deleted.size() > recorded.size()) {
             QueueLog.saveDeletedQueues(dataDirectory, deleted);
         }
         // Owners of a deleted queue stopped before this, so none stores its shards' states again
-        deleted.keySet().stream().filter(incarnation -> !deletedQueues.contains(incarnation)).forEach(shardStates::deleteAll);
+        Set<String> newlyDeleted = new HashSet<>(deleted.keySet());
+        newlyDeleted.removeAll(deletedQueues);
+        shardStates.deleteAll(newlyDeleted);
         if (Files.isDirectory(dataDirectory)) {
             try (Stream<Path> directories = Files.list(dataDirectory)) {
                 for (Path directory : directories.toList()) {

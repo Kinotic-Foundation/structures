@@ -154,7 +154,7 @@ public class QueueClusterClient {
     private Future<Long> findNextOffset(List<String> replicas, OffsetQuery query, int required) {
         Buffer body = query.toBuffer();
         List<Future<Long>> replies = replicas.stream()
-                                              .map(replica -> request(replica, QueueAction.FIND_OFFSET, body).map(OffsetQuery::decodeReply))
+                                              .map(replica -> request(replica, QueueAction.FIND_OFFSET, body).map(reply -> new Wire(reply).readLong()))
                                               .toList();
         return Future.join(replies).transform(ar -> {
             long nextOffset = -1;
@@ -197,13 +197,6 @@ public class QueueClusterClient {
 
     public Future<ShardStatus> prepare(String node, PrepareRequest request) {
         return request(node, QueueAction.PREPARE, request.toBuffer()).map(ShardStatus::fromBuffer);
-    }
-
-    /**
-     * Passes a request a client sent to this node on to the node serving the shard.
-     */
-    public Future<Buffer> forward(String node, QueueAction action, Buffer body) {
-        return request(node, action, body);
     }
 
     private Future<List<Long>> sendBatch(AppendRequest request) {
@@ -252,7 +245,10 @@ public class QueueClusterClient {
         return ret;
     }
 
-    private Future<Buffer> request(String node, QueueAction action, Buffer body) {
+    /**
+     * Sends the request to the queue node, answered with the node's reply.
+     */
+    Future<Buffer> request(String node, QueueAction action, Buffer body) {
         return vertx.eventBus()
                     .<Buffer>request(action.address(node), body, new DeliveryOptions().setSendTimeout(action.getTimeoutMs()))
                     .map(Message::body);

@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,7 +28,7 @@ public class ConsumerOffsetRepositoryTests {
 
     @Test
     public void aPositionUnusedForTheRetentionPeriodExpiresUnlessSavedAgain() throws Exception {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 2, ONE_SECOND)) {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, new AtomicLongArray(2), ONE_SECOND)) {
             positions.save("billing", 0, 10);
             positions.save("audit", 1, 5);
             Thread.sleep(600);
@@ -48,7 +49,7 @@ public class ConsumerOffsetRepositoryTests {
 
     @Test
     public void positionsFromAnotherCopyKeepTheLaterOffsetAndUseAndExpiredOnesAreIgnored() {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, new AtomicLongArray(1), ONE_SECOND)) {
             long now = System.currentTimeMillis();
             positions.save("billing", 0, 10);
 
@@ -64,7 +65,7 @@ public class ConsumerOffsetRepositoryTests {
 
     @Test
     public void anExpiredPositionNotDeletedYetDoesNotRaiseAPositionReceivedFromAnotherCopy() throws Exception {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, new AtomicLongArray(1), ONE_SECOND)) {
             positions.save("billing", 0, 100);
             Thread.sleep(1_200);
 
@@ -77,20 +78,21 @@ public class ConsumerOffsetRepositoryTests {
 
     @Test
     public void onlyPositionsChangedAfterAVersionAreFoundAsChanged() {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+        AtomicLongArray versions = new AtomicLongArray(1);
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, versions, ONE_SECOND)) {
             positions.save("billing", 0, 10);
-            long version = positions.version(0);
+            long version = versions.get(0);
             positions.save("audit", 0, 5);
 
             assertEquals(Set.of("audit"), positions.findChangedSince(0, version).keySet());
             assertEquals(Set.of("billing", "audit"), positions.findChangedSince(0, -1).keySet());
-            assertTrue(positions.findChangedSince(0, positions.version(0)).isEmpty());
+            assertTrue(positions.findChangedSince(0, versions.get(0)).isEmpty());
         }
     }
 
     @Test
     public void expiredPositionsAreDeletedWithTheFilesOfConsumersLeftWithNone() throws Exception {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 2, ONE_SECOND)) {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, new AtomicLongArray(2), ONE_SECOND)) {
             positions.save("billing", 0, 10);
             positions.save("audit", 0, 5);
             Thread.sleep(1_200);
@@ -107,10 +109,10 @@ public class ConsumerOffsetRepositoryTests {
 
     @Test
     public void aPositionKeepsWhenItWasLastUsedAcrossAReopen() throws Exception {
-        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+        try (ConsumerOffsetRepository positions = new ConsumerOffsetRepository(directory, new AtomicLongArray(1), ONE_SECOND)) {
             positions.save("billing", 0, 10);
         }
-        try (ConsumerOffsetRepository reopened = new ConsumerOffsetRepository(directory, 1, ONE_SECOND)) {
+        try (ConsumerOffsetRepository reopened = new ConsumerOffsetRepository(directory, new AtomicLongArray(1), ONE_SECOND)) {
             assertEquals(10, reopened.findNextOffset("billing", 0));
             Thread.sleep(1_200);
             assertEquals(0, reopened.findNextOffset("billing", 0));

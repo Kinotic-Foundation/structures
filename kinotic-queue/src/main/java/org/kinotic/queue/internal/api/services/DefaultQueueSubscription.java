@@ -154,13 +154,7 @@ public class DefaultQueueSubscription extends ShardPullStream<QueueRecord, Fetch
                     committedNextOffsets[shard] = Math.max(committedNextOffsets[shard], nextOffset);
                 }
                 Map<Long, List<Promise<Void>>> answered = awaiting.headMap(nextOffset, true);
-                answered.values().forEach(promises -> promises.forEach(promise -> {
-                    if (ar.succeeded()) {
-                        promise.complete();
-                    } else {
-                        promise.fail(ar.cause());
-                    }
-                }));
+                answered.values().forEach(promises -> promises.forEach(promise -> promise.handle(ar)));
                 answered.clear();
                 commitNext(shard);
             });

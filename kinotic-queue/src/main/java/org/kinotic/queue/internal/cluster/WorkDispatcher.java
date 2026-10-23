@@ -3,6 +3,7 @@ package org.kinotic.queue.internal.cluster;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.api.model.StartPosition;
 import org.kinotic.queue.internal.cluster.message.LeaseResponse;
@@ -33,6 +34,7 @@ import java.util.function.Supplier;
  * can be renewed while its worker still processes the record. Runs on the owner's context.
  */
 @Slf4j
+@RequiredArgsConstructor
 final class WorkDispatcher {
 
     /**
@@ -52,11 +54,10 @@ final class WorkDispatcher {
     private final ShardLog shardLog;
     private final ConsumerOffsetRepository groupOffsets;
     private final LongSupplier committedOffset;
+    // Copies the shard's offsets to a majority of its copies
     private final Supplier<Future<Void>> replicateOffsets;
+    // Appends a record to the group's dead-letter queue
     private final Function<ShardEntry, Future<Void>> deadLetter;
-    private final long refreshMillis;
-    private final long idleMillis;
-    private final long expiryMillis;
     private final TreeMap<Long, Lease> leased = new TreeMap<>();
     // Records waiting to be leased again, with how many times they have been leased
     private final TreeMap<Long, Integer> released = new TreeMap<>();
@@ -78,47 +79,14 @@ final class WorkDispatcher {
     // Records on their way to the dead-letter queue, held in none of the maps above
     private int deadLettering;
 
-    private WorkDispatcher(Vertx vertx,
-                           ShardId shardId,
-                           String groupName,
-                           ShardLog shardLog,
-                           ConsumerOffsetRepository groupOffsets,
-                           LongSupplier committedOffset,
-                           Supplier<Future<Void>> replicateOffsets,
-                           Function<ShardEntry, Future<Void>> deadLetter,
-                           long lowWatermark) {
-        this.vertx = vertx;
-        this.shardId = shardId;
-        this.groupName = groupName;
-        this.shardLog = shardLog;
-        this.groupOffsets = groupOffsets;
-        this.committedOffset = committedOffset;
-        this.replicateOffsets = replicateOffsets;
-        this.deadLetter = deadLetter;
-        this.refreshMillis = groupOffsets.getRefreshInterval().toMillis();
-        this.idleMillis = Math.min(IDLE_MS, 2 * refreshMillis);
-        this.expiryMillis = groupOffsets.getExpiry().toMillis();
-        this.lowWatermark = lowWatermark;
-        this.nextToLease = lowWatermark;
-    }
-
     /**
      * Opens the group's dispatcher at the group's stored position, or at {@code startPosition} when it has none. A
      * resolved latest position is stored and replicated before the dispatcher opens, so a later owner starts the group
      * from the same offset.
      *
-     * @param replicateOffsets copies the shard's offsets to a majority of its copies
-     * @param deadLetter       appends a record to the group's dead-letter queue
+     * @return this dispatcher, once it is open
      */
-    static Future<WorkDispatcher> open(Vertx vertx,
-                                       ShardId shardId,
-                                       String groupName,
-                                       ShardLog shardLog,
-                                       ConsumerOffsetRepository groupOffsets,
-                                       LongSupplier committedOffset,
-                                       Supplier<Future<Void>> replicateOffsets,
-                                       Function<ShardEntry, Future<Void>> deadLetter,
-                                       StartPosition startPosition) {
+    Future<WorkDispatcher> open(StartPosition startPosition) {
         long latest = committedOffset.getAsLong();
         return vertx.executeBlocking(() -> {
                         long stored = groupOffsets.findNextOffset(groupName, shardId.shard());
@@ -129,9 +97,11 @@ final class WorkDispatcher {
                         }
                         return ret;
                     }, false)
-                    .compose(position -> replicateOffsets.get().map(new WorkDispatcher(vertx, shardId, groupName, shardLog, groupOffsets,
-                                                                                       committedOffset, replicateOffsets, deadLetter,
-                                                                                       position)));
+                    .compose(position -> {
+                        lowWatermark = position;
+                        nextToLease = position;
+                        return replicateOffsets.get().map(this);
+                    });
     }
 
     /**
@@ -141,7 +111,7 @@ final class WorkDispatcher {
     Future<LeaseResponse> lease(String workerId, int max, long leaseMillis) {
         lastRequest = System.currentTimeMillis();
         // A group whose workers wait on a shard with no new records makes no progress, so its position is used again
-        if (lowWatermark > 0 && lastRequest - lastSaved >= refreshMillis) {
+        if (lowWatermark > 0 && lastRequest - lastSaved >= groupOffsets.getRefreshInterval().toMillis()) {
             saveLowWatermark();
         }
         Future<LeaseResponse> ret;
@@ -225,7 +195,8 @@ final class WorkDispatcher {
     boolean isIdle(long now) {
         // Released records keep their delivery counts until the group's position expires, so a record that fails every
         // worker still reaches the dead-letter queue
-        long idleFor = released.isEmpty() ? idleMillis : expiryMillis;
+        long idleFor = released.isEmpty() ? Math.min(IDLE_MS, 2 * groupOffsets.getRefreshInterval().toMillis())
+                                          : groupOffsets.getExpiry().toMillis();
         return lastRequest < now - idleFor && leased.isEmpty() && pendingLeases.isEmpty() && deadLettering == 0;
     }
 

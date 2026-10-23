@@ -147,12 +147,15 @@ public class RetentionTests {
         });
     }
 
-    // The last line of the copy's list of membership changes: offset, epoch, voting copies, joining copies
+    // The copy's last membership change as its manifest lists it: offset, epoch, voting copies, joining copies
     private static String latestMembership(QueueTestNode node) {
         String ret;
         try {
-            List<String> lines = Files.readAllLines(node.dataDirectory().resolve(QUEUE).resolve("shards").resolve("0").resolve("memberships"));
-            ret = lines.isEmpty() ? "" : lines.getLast();
+            List<String> memberships = Files.readAllLines(node.dataDirectory().resolve(QUEUE).resolve("shards").resolve("0").resolve("segments"))
+                                            .stream()
+                                            .filter(line -> line.startsWith("membership "))
+                                            .toList();
+            ret = memberships.isEmpty() ? "" : memberships.getLast();
         } catch (Exception e) {
             ret = "";
         }

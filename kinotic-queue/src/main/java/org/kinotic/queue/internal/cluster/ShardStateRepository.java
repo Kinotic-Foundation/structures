@@ -6,9 +6,8 @@ import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.springframework.stereotype.Component;
 
 import javax.cache.Cache;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Set;
 
 /**
  * Stores the highest offset known to be committed on each shard of each queue incarnation, shared by every queue node
@@ -46,16 +45,18 @@ public class ShardStateRepository {
     }
 
     /**
-     * Deletes what is stored for the shards of a deleted queue.
+     * Deletes what is stored for the shards of the deleted queues with the incarnations.
      */
-    public void deleteAll(String incarnation) {
-        List<String> keys = new ArrayList<>();
-        for (Cache.Entry<String, Long> entry : cache) {
-            if (entry.getKey().startsWith(incarnation + "/")) {
-                keys.add(entry.getKey());
+    public void deleteAll(Set<String> incarnations) {
+        if (!incarnations.isEmpty()) {
+            Set<String> keys = new HashSet<>();
+            for (Cache.Entry<String, Long> entry : cache) {
+                if (incarnations.contains(entry.getKey().substring(0, entry.getKey().lastIndexOf('/')))) {
+                    keys.add(entry.getKey());
+                }
             }
+            cache.removeAll(keys);
         }
-        cache.removeAll(new HashSet<>(keys));
     }
 
     private static String key(ShardId shardId) {

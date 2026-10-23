@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -85,8 +86,7 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
 
     @Override
     public Future<Void> close() {
-        Set<QueuePosition> undelivered = new HashSet<>();
-        end().forEach(item -> undelivered.add(item.record().position()));
+        Set<QueuePosition> undelivered = end().stream().map(item -> item.record().position()).collect(Collectors.toSet());
         List<Future<Void>> released = List.copyOf(held).stream()
                                           .map(position -> settle(position, undelivered.contains(position) ? Settlement.RETURN
                                                                                                            : Settlement.RELEASE))
@@ -141,9 +141,7 @@ public class DefaultQueueWorker extends ShardPullStream<WorkItem, LeaseResponse>
                          // A renewed item stays held; any other settlement, or a failure, means it is no longer leased here
                          if (settlement != Settlement.RENEW || ar.failed()) {
                              held.remove(position);
-                             if (!isEnded()) {
-                                 pullAll();
-                             }
+                             pullAll();
                          }
                      });
     }

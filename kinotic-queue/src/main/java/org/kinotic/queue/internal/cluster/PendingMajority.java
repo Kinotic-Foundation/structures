@@ -7,5 +7,5 @@ import io.vertx.core.Promise;
  *
  * @param deadline the time, in epoch milliseconds, after which the request fails
  */
-record PendingMajority<T>(Promise<T> promise, long deadline) {
+record PendingMajority(Promise<Void> promise, long deadline) {
 }

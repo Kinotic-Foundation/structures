@@ -16,7 +16,6 @@ import org.kinotic.queue.api.services.QueueWorker;
 import org.kinotic.queue.internal.cluster.QueueClusterClient;
 import org.kinotic.queue.internal.cluster.QueueDefinitionRepository;
 import org.kinotic.queue.internal.cluster.LocalQueueRepository;
-import org.kinotic.queue.internal.cluster.ShardStateRepository;
 import org.kinotic.queue.internal.cluster.StoredQueue;
 import org.kinotic.queue.internal.log.ConsumerOffsetRepository;
 import org.kinotic.queue.internal.log.QueueLog;
@@ -37,7 +36,6 @@ public class DefaultQueueService implements QueueService {
     private final QueueDefinitionRepository definitions;
     private final LocalQueueRepository localQueues;
     private final QueueClusterClient client;
-    private final ShardStateRepository shardStates;
 
     @Override
     public Future<QueueDefinition> createQueueIfNotExist(QueueDefinition definition) {
@@ -53,10 +51,7 @@ public class DefaultQueueService implements QueueService {
     public Future<Void> deleteQueue(String name) {
         return vertx.executeBlocking(() -> {
             QueueLog.requireValidName(name);
-            StoredQueue deleted = definitions.delete(name);
-            if (deleted != null) {
-                shardStates.deleteAll(deleted.incarnation());
-            }
+            definitions.delete(name);
             return null;
         }, false);
     }

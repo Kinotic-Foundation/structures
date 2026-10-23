@@ -13,14 +13,6 @@ public record OffsetQuery(ShardId shardId, String consumerName) {
         return new OffsetQuery(wire.readShardId(), wire.readString());
     }
 
-    public static Buffer encodeReply(long nextOffset) {
-        return Wire.buffer().appendLong(nextOffset);
-    }
-
-    public static long decodeReply(Buffer buffer) {
-        return new Wire(buffer).readLong();
-    }
-
     public Buffer toBuffer() {
         return Wire.appendString(Wire.appendShardId(Wire.buffer(), shardId), consumerName);
     }

@@ -3,12 +3,12 @@ package org.kinotic.queue.internal.cluster;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.internal.cluster.message.ReplicateRequest;
 import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.kinotic.queue.internal.log.LogStart;
-import org.kinotic.queue.internal.log.PositionsVersion;
 import org.kinotic.queue.internal.log.QueueLog;
 import org.kinotic.queue.internal.log.ReplicationBatch;
 import org.kinotic.queue.internal.log.ReplicationResult;
@@ -27,6 +27,7 @@ import java.util.List;
  */
 @Slf4j
 @Accessors(fluent = true)
+@RequiredArgsConstructor
 final class ShardReplicator {
 
     /**
@@ -41,10 +42,14 @@ final class ShardReplicator {
     private final QueueClusterClient client;
     private final String follower;
     private final ShardId shardId;
+    // The owner's copy of the shard's queue, whose positions are replicated
     private final QueueLog queueLog;
+    // The owner's copy of the shard
     private final ShardLog shardLog;
     private final long epoch;
+    // Called when the follower holds more of the shard, or newer positions, than before
     private final Runnable onProgress;
+    // Called when the follower has promised a newer owner
     private final Runnable onStaleEpoch;
 
     private long nextToSend;
@@ -55,12 +60,15 @@ final class ShardReplicator {
      */
     @Getter
     private long matchedOffset;
-    // The version of the owner's positions the follower holds, so a batch carries only positions changed since
-    private PositionsVersion replicatedPositions = PositionsVersion.NONE;
+    /**
+     * The {@link QueueLog#positionsVersion version} of the owner's positions the follower holds, or -1 before it holds
+     * any; a batch carries only the positions changed since.
+     */
+    @Getter
+    private long replicatedPositionsVersion = -1;
+    // Set while a batch is on its way or waits to be sent again; changes made meanwhile are sent once it is answered
     private boolean inFlight;
-    private boolean changedWhileInFlight;
     private boolean stopped;
-    private long retryTimer = -1;
     private long lastSentMillis;
     // The epoch of this copy's entry at knownEpochOffset, from the last batch built, whose last entry or previous entry
     // is usually the next batch's previous entry
@@ -73,70 +81,30 @@ final class ShardReplicator {
     @Getter
     private long lastAnsweredMillis = System.currentTimeMillis();
 
-    /**
-     * @param queueLog     the owner's copy of the shard's queue, whose positions are replicated
-     * @param shardLog     the owner's copy of the shard
-     * @param onProgress   called when the follower holds more of the shard, or newer positions, than before
-     * @param onStaleEpoch called when the follower has promised a newer owner
-     */
-    ShardReplicator(Vertx vertx,
-                    QueueClusterClient client,
-                    String follower,
-                    ShardId shardId,
-                    QueueLog queueLog,
-                    ShardLog shardLog,
-                    long epoch,
-                    Runnable onProgress,
-                    Runnable onStaleEpoch) {
-        this.vertx = vertx;
-        this.client = client;
-        this.follower = follower;
-        this.shardId = shardId;
-        this.queueLog = queueLog;
-        this.shardLog = shardLog;
-        this.epoch = epoch;
-        this.onProgress = onProgress;
-        this.onStaleEpoch = onStaleEpoch;
-        this.nextToSend = shardLog.nextOffset();
-    }
-
     void start() {
+        nextToSend = shardLog.nextOffset();
         send();
     }
 
     /**
-     * Sends the owner's new entries and positions, once the batch on its way is answered or right away when none is,
-     * unless a batch is waiting to be retried.
+     * Sends the owner's new entries and positions, right away when no batch is on its way or waiting to be sent again,
+     * otherwise once that batch is answered.
      */
     void notifyChanged() {
-        if (inFlight) {
-            changedWhileInFlight = true;
-        } else if (retryTimer < 0) {
-            send();
-        }
+        send();
     }
 
     /**
      * Sends an empty batch when nothing was sent for {@link #HEARTBEAT_INTERVAL_MS}.
      */
     void heartbeat() {
-        if (!inFlight && retryTimer < 0 && System.currentTimeMillis() - lastSentMillis >= HEARTBEAT_INTERVAL_MS) {
+        if (System.currentTimeMillis() - lastSentMillis >= HEARTBEAT_INTERVAL_MS) {
             send();
         }
     }
 
-    /**
-     * @return the {@link PositionsVersion#total() total} of the version of the owner's positions the follower holds
-     */
-    long replicatedPositionsVersion() {
-        return replicatedPositions.total();
-    }
-
     void stop() {
         stopped = true;
-        if (retryTimer >= 0) {
-            vertx.cancelTimer(retryTimer);
-        }
     }
 
     private void send() {
@@ -149,13 +117,13 @@ final class ShardReplicator {
             long conflict = conflictEpoch;
             conflictEpoch = -1;
             // Read before the positions, so the positions sent include every change up to it
-            PositionsVersion version = queueLog.positionsVersion(shardId.shard());
-            PositionsVersion held = replicatedPositions;
+            long version = queueLog.positionsVersion(shardId.shard());
+            long held = replicatedPositionsVersion;
             long epochOffset = knownEpochOffset;
-            long epoch = knownEpoch;
+            long offsetEpoch = knownEpoch;
             vertx.executeBlocking(() -> batch(resumeAfterConflict(hint, conflict),
-                                              version.equals(held) ? ShardPositions.NONE : queueLog.positionsChangedSince(shardId.shard(), held),
-                                              epochOffset, epoch), false)
+                                              version == held ? ShardPositions.NONE : queueLog.positionsChangedSince(shardId.shard(), held),
+                                              epochOffset, offsetEpoch), false)
                  .onSuccess(this::rememberLastEpoch)
                  .compose(request -> client.replicate(follower, request))
                  .onComplete(reply -> onReply(reply, version, sentMillis));
@@ -202,38 +170,37 @@ final class ShardReplicator {
         }
     }
 
-    private void onReply(AsyncResult<ReplicationResult> reply, PositionsVersion positionsVersion, long sentMillis) {
-        inFlight = false;
-        boolean changed = changedWhileInFlight;
-        changedWhileInFlight = false;
+    private void onReply(AsyncResult<ReplicationResult> reply, long positionsVersion, long sentMillis) {
         if (stopped) {
             return;
         }
         if (reply.failed()) {
             log.debug("Replicating {} to {} failed, retrying", shardId, follower, reply.cause());
-            retryTimer = vertx.setTimer(RETRY_DELAY_MS, t -> {
-                retryTimer = -1;
+            vertx.setTimer(RETRY_DELAY_MS, t -> {
+                inFlight = false;
                 send();
             });
         } else {
+            inFlight = false;
             ReplicationResult result = reply.result();
             lastAnsweredMillis = Math.max(lastAnsweredMillis, sentMillis);
             switch (result.status()) {
                 case ACCEPTED -> {
-                    boolean progressed = positionsVersion.total() > replicatedPositions.total() || result.nextOffset() > matchedOffset;
-                    replicatedPositions = positionsVersion;
+                    boolean progressed = positionsVersion > replicatedPositionsVersion || result.nextOffset() > matchedOffset;
+                    replicatedPositionsVersion = positionsVersion;
                     nextToSend = result.nextOffset();
                     matchedOffset = Math.max(matchedOffset, result.nextOffset());
                     if (progressed) {
                         onProgress.run();
                     }
-                    if (changed || nextToSend < shardLog.nextOffset()) {
+                    // Entries appended or positions changed while the batch was on its way
+                    if (nextToSend < shardLog.nextOffset() || queueLog.positionsVersion(shardId.shard()) > replicatedPositionsVersion) {
                         send();
                     }
                 }
                 case MISMATCH -> {
-                    boolean progressed = positionsVersion.total() > replicatedPositions.total();
-                    replicatedPositions = positionsVersion;
+                    boolean progressed = positionsVersion > replicatedPositionsVersion;
+                    replicatedPositionsVersion = positionsVersion;
                     nextToSend = result.nextOffset();
                     conflictEpoch = result.conflictEpoch();
                     matchedOffset = Math.min(matchedOffset, result.nextOffset());

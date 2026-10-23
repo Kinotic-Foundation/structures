@@ -86,9 +86,9 @@ final class ShardOwner {
     private final QueueLog queueLog;
     private final ShardLog shardLog;
     private final Map<String, ShardReplicator> replicators = new HashMap<>();
-    private final TreeMap<Long, PendingMajority<Long>> pendingAppends = new TreeMap<>();
-    // Keyed by the total of the QueueLog.positionsVersion a majority of copies must hold
-    private final TreeMap<Long, PendingMajority<Void>> pendingOffsetReplications = new TreeMap<>();
+    private final TreeMap<Long, PendingMajority> pendingAppends = new TreeMap<>();
+    // Keyed by the QueueLog.positionsVersion a majority of copies must hold
+    private final TreeMap<Long, PendingMajority> pendingOffsetReplications = new TreeMap<>();
     private final List<PendingFetch> pendingFetches = new ArrayList<>();
     private final Map<String, Future<WorkDispatcher>> dispatchers = new HashMap<>();
     private final Map<Long, ProducerBatch> producerBatches = new HashMap<>();
@@ -103,7 +103,10 @@ final class ShardOwner {
     // counting toward a commit, which a change of placement can leave outside the followers
     private Map<String, String> targets = Map.of();
     private ShardMembership membership;
-    // The node serving the shard while this node's copy catches up
+    /**
+     * The node serving the shard while this node's copy catches up, or null when this node serves it or no node does.
+     */
+    @Getter
     private String actingOwner;
     private long epoch;
     private long epochStartOffset;
@@ -170,24 +173,19 @@ final class ShardOwner {
 
     private Future<List<Long>> appendBatch(AppendRequest request) {
         ProducerBatch last = producerBatches.get(request.producerId());
-        Future<List<Long>> written;
         if (last != null && request.sequence() < last.sequence()) {
-            written = Future.failedFuture(new IllegalArgumentException("Batch " + request.sequence() + " was followed by batch "
-                                                                               + last.sequence() + " from the same producer"));
-        } else {
-            if (last != null && request.sequence() == last.sequence()) {
-                // A failed write of the batch appended none of its records
-                written = last.written().transform(ar -> ar.succeeded() ? writeMissing(request, ar.result())
-                                                                        : writeMissing(request, missing(request.records().size())));
-            } else {
-                written = writeMissing(request, missing(request.records().size()));
-            }
-            producerBatches.put(request.producerId(), new ProducerBatch(request.sequence(), written, System.currentTimeMillis()));
+            return Future.failedFuture(new IllegalArgumentException("Batch " + request.sequence() + " was followed by batch "
+                                                                            + last.sequence() + " from the same producer"));
         }
-        long received = System.nanoTime();
-        // A batch sent again was counted when first written
         boolean resent = last != null && request.sequence() == last.sequence();
+        List<Long> none = missing(request.records().size());
+        // A failed write of the batch appended none of its records
+        Future<List<Long>> written = resent ? last.written().otherwise(none).compose(offsets -> writeMissing(request, offsets))
+                                            : writeMissing(request, none);
+        producerBatches.put(request.producerId(), new ProducerBatch(request.sequence(), written, System.currentTimeMillis()));
+        long received = System.nanoTime();
         return written.compose(this::awaitCommitted).onSuccess(offsets -> {
+            // A batch sent again was counted when first written
             if (!resent) {
                 metrics.recordAppend(shardId.queue(), offsets.size(), Duration.ofNanos(System.nanoTime() - received));
             }
@@ -246,7 +244,7 @@ final class ShardOwner {
         if (last < committedOffset) {
             ret = Future.succeededFuture(offsets);
         } else {
-            ret = awaitMajority(pendingAppends, last).future().map(offsets);
+            ret = awaitMajority(pendingAppends, last).map(offsets);
         }
         return ret;
     }
@@ -264,7 +262,7 @@ final class ShardOwner {
         long to = shardLog.nextOffset();
         while (to > start && scannedBytes < PRODUCER_SCAN_BYTES) {
             long from = Math.max(start, to - PRODUCER_SCAN_CHUNK);
-            List<RecordSlot> chunk = shardLog.readSlots(from, (int) (to - from), Long.MAX_VALUE);
+            List<RecordSlot> chunk = shardLog.readSlots(from, (int) (to - from));
             to = from;
             for (RecordSlot entry : chunk) {
                 scannedBytes += entry.size();
@@ -340,8 +338,9 @@ final class ShardOwner {
         }
         if (dispatcher == null) {
             String groupName = request.groupName();
-            dispatcher = WorkDispatcher.open(vertx, shardId, groupName, shardLog, queueLog.groupOffsets(), () -> committedOffset,
-                                             this::replicateOffsets, entry -> deadLetters.apply(groupName, entry), request.startPosition());
+            dispatcher = new WorkDispatcher(vertx, shardId, groupName, shardLog, queueLog.groupOffsets(), () -> committedOffset,
+                                            this::replicateOffsets, entry -> deadLetters.apply(groupName, entry))
+                    .open(request.startPosition());
             dispatchers.put(request.groupName(), dispatcher);
             // A failed open is dropped, so the group's next request opens the dispatcher again
             Future<WorkDispatcher> opening = dispatcher;
@@ -388,11 +387,11 @@ final class ShardOwner {
     Future<Void> replicateOffsets() {
         Future<Void> ret;
         if (active) {
-            ret = awaitMajority(pendingOffsetReplications, queueLog.positionsVersion(shardId.shard()).total()).future();
+            ret = awaitMajority(pendingOffsetReplications, queueLog.positionsVersion(shardId.shard()));
             replicators.values().forEach(ShardReplicator::notifyChanged);
             completeReplicatedOffsets();
         } else {
-            ret = Future.failedFuture(stopped ? changedOwner(shardId) : recovering());
+            ret = Future.failedFuture(changedOwner(shardId));
         }
         return ret;
     }
@@ -401,7 +400,6 @@ final class ShardOwner {
         if (!this.followers.equals(followers)) {
             this.followers = followers;
             if (active) {
-                membership.place(copies());
                 updateTargets();
                 updateCommittedOffset();
             }
@@ -418,14 +416,6 @@ final class ShardOwner {
         return ret;
     }
 
-    /**
-     * @return the node serving the shard while this node's copy catches up, or null when this node serves it or no
-     * node does
-     */
-    String actingOwner() {
-        return active ? null : actingOwner;
-    }
-
     void stop() {
         if (!stopped) {
             stopped = true;
@@ -436,10 +426,8 @@ final class ShardOwner {
             if (sweepTimer >= 0) {
                 vertx.cancelTimer(sweepTimer);
             }
-            pendingAppends.values().forEach(pending -> pending.promise().tryFail(notOwner));
-            pendingAppends.clear();
-            pendingOffsetReplications.values().forEach(pending -> pending.promise().tryFail(notOwner));
-            pendingOffsetReplications.clear();
+            failAll(pendingAppends, notOwner);
+            failAll(pendingOffsetReplications, notOwner);
             pendingFetches.forEach(pending -> {
                 vertx.cancelTimer(pending.timerId());
                 pending.promise().tryFail(notOwner);
@@ -483,8 +471,7 @@ final class ShardOwner {
         epochStartOffset = markerOffset;
         active = true;
         metrics.recordTakeover(shardId.queue());
-        membership = new ShardMembership(placement, shardLog, this::appendMembership);
-        membership.place(copies());
+        membership = new ShardMembership(placement, shardLog, this::appendMembership, this::copies);
         sweepTimer = vertx.setPeriodic(SWEEP_INTERVAL_MS, t -> sweep());
         producersRecovered = vertx.executeBlocking(this::scanProducerBatches, false)
                                   .recover(e -> {
@@ -611,7 +598,7 @@ final class ShardOwner {
         long majorityOffset = membership.committable(copy -> progress(copy, ownOffset, ShardReplicator::matchedOffset));
         if (majorityOffset > epochStartOffset && majorityOffset > committedOffset) {
             committedOffset = majorityOffset;
-            completeCommittedAppends();
+            completeThrough(pendingAppends, committedOffset - 1);
             answerPendingFetches();
             scheduleStateSave();
             // A dispatcher still opening holds no lease requests yet
@@ -655,13 +642,27 @@ final class ShardOwner {
         return ret;
     }
 
-    // The promise completed once a majority of copies confirms what it is keyed by, failed once COMMIT_TIMEOUT_MS passes
-    private static <T> Promise<T> awaitMajority(TreeMap<Long, PendingMajority<T>> pending, long key) {
-        return pending.computeIfAbsent(key, k -> new PendingMajority<>(Promise.promise(), System.currentTimeMillis() + COMMIT_TIMEOUT_MS))
-                      .promise();
+    // Completes once a majority of copies confirms what it is keyed by, fails once COMMIT_TIMEOUT_MS passes
+    private static Future<Void> awaitMajority(TreeMap<Long, PendingMajority> pending, long key) {
+        return pending.computeIfAbsent(key, k -> new PendingMajority(Promise.promise(), System.currentTimeMillis() + COMMIT_TIMEOUT_MS))
+                      .promise()
+                      .future();
     }
 
-    private static void failExpired(TreeMap<Long, ? extends PendingMajority<?>> pending, long now, LongFunction<String> describe) {
+    // Polled one at a time, since a completion's callbacks may add requests
+    private static void completeThrough(TreeMap<Long, PendingMajority> pending, long lastConfirmed) {
+        while (!pending.isEmpty() && pending.firstKey() <= lastConfirmed) {
+            pending.pollFirstEntry().getValue().promise().complete();
+        }
+    }
+
+    private static void failAll(TreeMap<Long, PendingMajority> pending, Throwable cause) {
+        while (!pending.isEmpty()) {
+            pending.pollFirstEntry().getValue().promise().tryFail(cause);
+        }
+    }
+
+    private static void failExpired(TreeMap<Long, PendingMajority> pending, long now, LongFunction<String> describe) {
         pending.entrySet().removeIf(entry -> {
             boolean expired = entry.getValue().deadline() <= now;
             if (expired) {
@@ -721,22 +722,13 @@ final class ShardOwner {
     }
 
     private void completeReplicatedOffsets() {
-        long majorityVersion = membership.committable(copy -> progress(copy, Long.MAX_VALUE, ShardReplicator::replicatedPositionsVersion));
-        while (!pendingOffsetReplications.isEmpty() && pendingOffsetReplications.firstKey() <= majorityVersion) {
-            pendingOffsetReplications.pollFirstEntry().getValue().promise().complete();
-        }
+        completeThrough(pendingOffsetReplications,
+                        membership.committable(copy -> progress(copy, Long.MAX_VALUE, ShardReplicator::replicatedPositionsVersion)));
     }
 
     // Until a majority holds this epoch's marker, the committed offset is not yet the shard's
     private boolean epochCommitted() {
         return committedOffset > epochStartOffset;
-    }
-
-    private void completeCommittedAppends() {
-        while (!pendingAppends.isEmpty() && pendingAppends.firstKey() < committedOffset) {
-            Map.Entry<Long, PendingMajority<Long>> committed = pendingAppends.pollFirstEntry();
-            committed.getValue().promise().complete(committed.getKey());
-        }
     }
 
     // A fetch from before the shard's start continues at the start, past the entries the retention deleted

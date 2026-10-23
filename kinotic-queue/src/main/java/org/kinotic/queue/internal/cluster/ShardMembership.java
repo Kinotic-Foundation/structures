@@ -1,6 +1,7 @@
 package org.kinotic.queue.internal.cluster;
 
 import io.vertx.core.Future;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.queue.internal.log.Membership;
 import org.kinotic.queue.internal.log.ShardEntry;
@@ -10,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
 /**
@@ -22,6 +24,7 @@ import java.util.function.ToLongFunction;
  * the owner's context.
  */
 @Slf4j
+@RequiredArgsConstructor
 final class ShardMembership {
 
     // How close to the committed offset a majority of the placed copies must be before they vote, so commits never
@@ -30,26 +33,12 @@ final class ShardMembership {
 
     private final ShardPlacement placement;
     private final ShardLog shardLog;
+    // Appends a membership change to the shard as its owner
     private final Function<Membership, Future<Long>> append;
+    // The copies, by storage id, now placed on the cluster: the owner's and its followers'
+    private final Supplier<List<String>> placedCopies;
 
-    private List<String> placed = List.of();
     private boolean appending;
-
-    /**
-     * @param append appends a membership change to the shard as its owner
-     */
-    ShardMembership(ShardPlacement placement, ShardLog shardLog, Function<Membership, Future<Long>> append) {
-        this.placement = placement;
-        this.shardLog = shardLog;
-        this.append = append;
-    }
-
-    /**
-     * Records the copies, by storage id, now placed on the cluster: the owner's and its followers'.
-     */
-    void place(List<String> storageIds) {
-        placed = storageIds;
-    }
 
     /**
      * @param progress how far the copy with a storage id holds the shard; zero for a copy the owner knows nothing of
@@ -60,7 +49,7 @@ final class ShardMembership {
         long ret;
         if (latest == null) {
             // A shard no owner has written a membership for yet counts its placed copies
-            ret = majority(placed, progress);
+            ret = majority(placedCopies.get(), progress);
         } else {
             ret = majority(latest.membership().voting(), progress);
             if (latest.membership().isJoint()) {
@@ -74,6 +63,7 @@ final class ShardMembership {
      * Appends the next membership change toward the placed copies once their progress allows it.
      */
     void advance(long committedOffset, ToLongFunction<String> progress) {
+        List<String> placed = placedCopies.get();
         if (!appending && storable(placed)) {
             ShardEntry latest = shardLog.latestMembership();
             Membership next = null;

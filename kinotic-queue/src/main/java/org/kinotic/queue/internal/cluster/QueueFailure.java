@@ -50,12 +50,6 @@ public enum QueueFailure {
         return ret;
     }
 
-    // The failure with the code, or null for a code no failure has
-    private static QueueFailure fromCode(int code) {
-        QueueFailure[] failures = values();
-        return code >= 1 && code <= failures.length ? failures[code - 1] : null;
-    }
-
     public QueueFailureException exception(String message) {
         return new QueueFailureException(this, message);
     }
@@ -68,7 +62,7 @@ public enum QueueFailure {
         if (cause instanceof QueueFailureException failure) {
             ret = failure.getFailure() == this;
         } else if (cause instanceof ReplyException reply) {
-            ret = reply.failureType() == ReplyFailure.RECIPIENT_FAILURE && fromCode(reply.failureCode()) == this;
+            ret = reply.failureType() == ReplyFailure.RECIPIENT_FAILURE && reply.failureCode() == code();
         }
         return ret;
     }

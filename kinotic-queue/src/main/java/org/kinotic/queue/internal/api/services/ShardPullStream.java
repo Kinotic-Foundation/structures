@@ -176,9 +176,7 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
         } finally {
             delivering = false;
         }
-        if (!closed) {
-            pullAll();
-        }
+        pullAll();
     }
 
     /**
@@ -239,11 +237,10 @@ abstract class ShardPullStream<T, R> implements ReadStream<T> {
     }
 
     private void fail(Throwable t) {
-        if (exceptionHandler != null) {
-            notifyExceptionHandler(t);
-        } else {
+        if (exceptionHandler == null) {
             log.error("{} stopped", description, t);
         }
+        notifyExceptionHandler(t);
         close();
     }
 

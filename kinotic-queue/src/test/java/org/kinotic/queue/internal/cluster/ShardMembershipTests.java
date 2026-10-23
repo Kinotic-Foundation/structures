@@ -45,7 +45,7 @@ public class ShardMembershipTests {
     @Test
     public void aSetLargerThanTheReplicationFactorNeedsAMajorityOfItself() {
         try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b", "c", "d"), List.of()))) {
-            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"), List::of);
 
             // Two of four copies can be disjoint from another two, so they never commit
             assertEquals(0, membership.committable(progress(Map.of("a", 100L, "d", 100L))));
@@ -56,7 +56,7 @@ public class ShardMembershipTests {
     @Test
     public void aSetSmallerThanTheReplicationFactorNeedsAMajorityOfTheReplicationFactor() {
         try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b"), List.of()))) {
-            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"), List::of);
 
             assertEquals(0, membership.committable(progress(Map.of("a", 100L))));
             assertEquals(100, membership.committable(progress(Map.of("a", 100L, "b", 100L))));
@@ -66,7 +66,7 @@ public class ShardMembershipTests {
     @Test
     public void aJointChangeNeedsAMajorityOfBothSets() {
         try (QueueLog queueLog = queueLogCounting(new Membership(List.of("a", "b", "c"), List.of("a", "d", "e", "f")))) {
-            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"));
+            ShardMembership membership = new ShardMembership(node.placement(), queueLog.shard(0), change -> Future.failedFuture("unused"), List::of);
 
             // A majority of the old set, but only two of the four new copies
             assertEquals(0, membership.committable(progress(Map.of("a", 100L, "b", 100L, "d", 100L))));

@@ -1,11 +1,5 @@
 package org.kinotic.queue.internal.log;
 
-import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.DocumentContext;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,9 +10,9 @@ import org.kinotic.queue.api.model.QueueDefinition;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,7 +47,7 @@ public class ShardLogTests {
             assertEquals(6, result.nextOffset());
             assertEquals(6, follower.nextOffset());
             List<ShardEntry> entries = follower.read(0, 10, Long.MAX_VALUE);
-            assertEquals(List.of(1L, 1L, 1L, 3L, 3L, 3L), entries.stream().map(ShardEntry::epoch).toList());
+            assertEquals(List.of(1L, 1L, 1L, 3L, 3L, 3L), epochs(entries));
             assertEquals("key-3", entries.get(3).key());
         }
         // The replaced entries stay replaced after the shard is reopened
@@ -196,7 +190,7 @@ public class ShardLogTests {
             shard.appendMembership(1, new Membership(List.of("a"), List.of()));
         }
         // The listing a crash leaves after listing a change at offset 2 and before writing it
-        Files.writeString(shardDirectory.resolve("memberships"), "1 1 a -\n2 1 a,b -");
+        Files.writeString(shardDirectory.resolve("segments"), "\nmembership 2 1 a,b -", StandardOpenOption.APPEND);
 
         try (ShardLog reopened = new ShardLog(shardDirectory, PROPERTIES)) {
             assertEquals(1, reopened.latestMembership().offset());
@@ -213,7 +207,7 @@ public class ShardLogTests {
             appendAll(shard, 1, 2, 2);
         }
         // The listing a failed write of a change at offset 2 leaves, after a record took the offset
-        Files.writeString(shardDirectory.resolve("memberships"), "1 1 a -\n2 1 a,b -");
+        Files.writeString(shardDirectory.resolve("segments"), "\nmembership 2 1 a,b -", StandardOpenOption.APPEND);
 
         try (ShardLog reopened = new ShardLog(shardDirectory, PROPERTIES)) {
             assertEquals(1, reopened.latestMembership().offset());
@@ -229,11 +223,12 @@ public class ShardLogTests {
         try (ShardLog shard = new ShardLog(shardDirectory, PROPERTIES)) {
             appendAll(shard, 1, 0, 5);
         }
-        String segment = Files.readAllLines(shardDirectory.resolve("segments")).get(1).split(" ")[0];
+        String segment = Files.readAllLines(shardDirectory.resolve("segments")).get(1).split(" ")[1];
         // The manifest a crash leaves when entries 5-7 were sealed into the segment and 8 on written to another one,
         // and none of them reached the disk
         long created = System.currentTimeMillis();
-        Files.writeString(shardDirectory.resolve("segments"), "start 0 -1\n" + segment + " 0 8 " + created + " 0\n8-lost 8 -1 " + created + " 0");
+        Files.writeString(shardDirectory.resolve("segments"),
+                          "start 0 -1\nsegment " + segment + " 0 8 " + created + " 0\nsegment 8-lost 8 -1 " + created + " 0");
 
         try (ShardLog reopened = new ShardLog(shardDirectory, PROPERTIES)) {
             assertEquals(5, reopened.nextOffset());
@@ -246,38 +241,6 @@ public class ShardLogTests {
             assertEquals(List.of(1L, 1L, 1L, 1L, 1L, 2L, 2L), epochs(reopenedAgain.read(0, 10, Long.MAX_VALUE)));
         }
         assertFalse(Files.exists(shardDirectory.resolve("8-lost")));
-    }
-
-    @Test
-    public void aClockSetBackAcrossADayKeepsAppendingAfterTheNewestEntries() throws Exception {
-        Path shardDirectory = directory.resolve("0");
-        Path segmentDirectory = shardDirectory.resolve("0-ahead");
-        // A segment written while the clock was a day ahead, in the layout ShardSegment writes: offset, epoch, type
-        SetTimeProvider aDayAhead = new SetTimeProvider();
-        aDayAhead.currentTimeMillis(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1));
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(segmentDirectory)
-                                                                     .rollCycle(RollCycles.FAST_DAILY)
-                                                                     .timeProvider(aDayAhead)
-                                                                     .build();
-             ExcerptAppender appender = queue.createAppender()) {
-            for (long offset = 0; offset < 3; offset++) {
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().bytes().writeLong(offset).writeLong(1).writeByte((byte) 1);
-                }
-            }
-        }
-        Files.writeString(shardDirectory.resolve("segments"), "start 0 -1\n0-ahead 0 -1 " + System.currentTimeMillis() + " 0");
-
-        try (ShardLog shard = new ShardLog(shardDirectory, PROPERTIES)) {
-            assertEquals(3, shard.nextOffset());
-            shard.appendMarker(2);
-            shard.appendMarker(2);
-            assertEquals(List.of(1L, 1L, 1L, 2L, 2L), epochs(shard.read(0, 10, Long.MAX_VALUE)));
-        }
-        try (ShardLog reopened = new ShardLog(shardDirectory, PROPERTIES)) {
-            assertEquals(5, reopened.nextOffset());
-            assertEquals(List.of(1L, 1L, 1L, 2L, 2L), epochs(reopened.read(0, 10, Long.MAX_VALUE)));
-        }
     }
 
     @Test

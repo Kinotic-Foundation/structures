@@ -75,10 +75,9 @@ public class QueueNode {
     private long reconcileTimer;
     private long metricsTimer;
     private boolean reconciling;
-    // What the last applied assignment was computed from: the placement, the queues and the shards this node served
+    // What the last applied assignment was computed from: the placement and the queues
     private long reconciledPlacement = -1;
     private long reconciledDefinitions = -1;
-    private Set<ShardId> reconciledActing = Set.of();
     private long reconciledAt;
     private volatile boolean stopped;
 
@@ -179,7 +178,8 @@ public class QueueNode {
                 throw QueueFailure.NOT_OWNER.exception("This node does not own " + shardId);
             }, false);
         } else if (owner.actingOwner() != null) {
-            result = client.forward(owner.actingOwner(), action, message.body());
+            // Passed on to the node serving the shard while this node's copy catches up
+            result = client.request(owner.actingOwner(), action, message.body());
         } else {
             result = handler.apply(owner);
         }
@@ -236,12 +236,12 @@ public class QueueNode {
             QueueLog.requireValidName(query.consumerName());
             QueueLog queueLog = localQueues.findQueue(query.shardId());
             long nextOffset = queueLog == null ? 0 : queueLog.consumerOffsets().findNextOffset(query.consumerName(), query.shardId().shard());
-            return OffsetQuery.encodeReply(nextOffset);
+            return Wire.buffer().appendLong(nextOffset);
         }, false));
     }
 
-    // Computes the shards placed on this node again when the placement, the queues or the shards this node serves
-    // changed, an owner stopped, or a while passed
+    // Computes the shards placed on this node again when the placement or the queues changed, an owner stopped, or a
+    // while passed
     private void reconcile() {
         if (!reconciling) {
             reconciling = true;
@@ -256,7 +256,6 @@ public class QueueNode {
             long now = System.currentTimeMillis();
             boolean due = placementVersion != reconciledPlacement
                     || definitionsVersion != reconciledDefinitions
-                    || !acting.equals(reconciledActing)
                     || owners.values().stream().anyMatch(ShardOwner::stopped)
                     || now - reconciledAt >= FULL_RECONCILE_INTERVAL_MS;
             Future<Void> assigned = Future.succeededFuture();
@@ -267,7 +266,6 @@ public class QueueNode {
                         applyAssignments(assignments);
                         reconciledPlacement = placementVersion;
                         reconciledDefinitions = definitionsVersion;
-                        reconciledActing = acting;
                         reconciledAt = now;
                     }
                     return null;
