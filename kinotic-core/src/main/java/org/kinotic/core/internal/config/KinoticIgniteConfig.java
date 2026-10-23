@@ -30,7 +30,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -187,7 +186,9 @@ public class KinoticIgniteConfig {
         return cfg;
     }
 
-    // The SHA-256 of the server's library list, or null when the classpath holds none
+    // The SHA-256 of the server's library list, or null when the classpath holds none or it cannot be
+    // read; the list only serves the Cluster page's vulnerability check, which reports such a node's
+    // build as unchecked, so the node starts either way
     private static String componentsHash() {
         String ret = null;
         try {
@@ -198,7 +199,7 @@ public class KinoticIgniteConfig {
                 ret = HexFormat.of().formatHex(digest);
             }
         } catch (IOException e) {
-            throw new UncheckedIOException("Could not read " + ServerComponentsTask.RESOURCE, e);
+            log.warn("Could not read {}; the node starts without its library list's hash", ServerComponentsTask.RESOURCE, e);
         } catch (NoSuchAlgorithmException e) {
             // every JDK provides SHA-256
             throw new IllegalStateException(e);
