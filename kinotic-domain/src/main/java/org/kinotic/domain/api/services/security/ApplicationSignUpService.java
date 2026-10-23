@@ -2,6 +2,7 @@ package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.UnverifiedEmailException;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.TenantManagement;
@@ -34,6 +35,14 @@ public interface ApplicationSignUpService {
     Future<ApplicationLoginMethods> findLoginMethods(ApplicationKey application, String tenantId);
 
     /**
+     * Whether a new person may sign up with an email and a password at the login of {@code application}, or of its
+     * tenant {@code tenantId}: {@link ApplicationLoginMethods#passwordSignUp()} without the providers.
+     *
+     * @return fails with {@link IllegalArgumentException} when the application does not exist
+     */
+    Future<Boolean> offersPasswordSignUp(ApplicationKey application, String tenantId);
+
+    /**
      * The user of the scope that the identity {@code configuration}'s provider verified signs in as: the user bound to
      * the identity, whichever registration with the provider verified it, so switching a configuration between
      * Kinotic's registration and the organization's own leaves its users as they were. An identity no user is bound
@@ -47,7 +56,9 @@ public interface ApplicationSignUpService {
      *                       and, where the provider gives it, a name
      * @return the user, or {@code null} when no user of the scope is bound to the identity and none is created; fails
      *         with {@link ExistingUserException} when a user would be created under an email the application already
-     *         holds under another sign-in method
+     *         holds under another sign-in method, and with {@link UnverifiedEmailException} when the claims do not
+     *         prove the email belongs to the person (a Microsoft Entra email needs {@code email_verified} or
+     *         {@code xms_edov}, or a personal Microsoft account)
      */
     Future<ApplicationParticipantIdentity> findOrCreateOidcUser(ApplicationKey application,
                                                                 String tenantId,
@@ -61,7 +72,8 @@ public interface ApplicationSignUpService {
      * and the call completes as it does for any other, so it tells nothing about the email.
      *
      * @param application the application, which must offer password sign-up ({@link Application#isPasswordSignUp()})
-     * @param email       the email to verify
+     * @param email       the email to verify, which must contain {@code @}; checked before the call returns, with
+     *                    {@link IllegalArgumentException}
      * @param displayName the name the person gave, or {@code null}
      * @param uiOrigin    the origin of the application's UI the link opens, which the caller has checked is one of the
      *                    application's

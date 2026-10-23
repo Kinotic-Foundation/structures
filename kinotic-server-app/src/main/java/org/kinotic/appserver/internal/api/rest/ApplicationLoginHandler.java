@@ -13,7 +13,6 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.security.ApplicationLoginMethods;
 import org.kinotic.domain.api.model.security.ApplicationLoginProvider;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
-import org.kinotic.domain.api.model.security.ClientRegistrationType;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
@@ -117,7 +116,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                   switch (config) {
                       case null -> ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                       // Kinotic's registration is shared, so its provider returns to the shared host, not to this one
-                      case ApplicationOidcConfiguration managed when managed.getClientRegistrationType() == ClientRegistrationType.MANAGED -> {
+                      case ApplicationOidcConfiguration managed when OidcConfigurationService.isManaged(managed) -> {
                           // the completion at this host is answered only to the browser whose session holds this value,
                           // so the single-use code the shared host hands back signs in no other browser
                           String binding = DomainUtil.generateUrlSafeToken(32);

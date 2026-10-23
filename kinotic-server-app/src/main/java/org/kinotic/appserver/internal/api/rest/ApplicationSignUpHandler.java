@@ -1,5 +1,6 @@
 package org.kinotic.appserver.internal.api.rest;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -40,7 +41,7 @@ public class ApplicationSignUpHandler implements SuppliesGatewayRoutes {
      * {@code /signup/verify?token=…} page of the UI that sent the request, and answers {@code 202} whether or not the
      * email has a user, before anything is sent; an email that has one is sent nothing. {@code 403} from a page that
      * is not one of the application's UIs, from a tenant's site, and while the application does not offer sign-up
-     * with an email and a password; {@code 400} from a request no page sent.
+     * with an email and a password; {@code 400} for an email with no {@code @} and from a request no page sent.
      */
     private void handleSignUp(RoutingContext ctx) {
         String origin = SessionBinding.origin(ctx);
@@ -51,26 +52,32 @@ public class ApplicationSignUpHandler implements SuppliesGatewayRoutes {
         JsonObject body = authEndpointSupport.readJsonBody(ctx);
         String email = body.getString("email");
         String displayName = body.getString("displayName");
-        if (email == null || !email.contains("@")) {
-            authEndpointSupport.respondError(ctx, 400, "A valid email is required");
-            return;
-        }
 
         authEndpointSupport.loginScope(ctx, null)
-              .compose(scope -> signUpService.findLoginMethods(scope.application(), scope.tenantId())
-                                             .map(methods -> {
-                                                 if (scope.tenantId() != null || !methods.passwordSignUp()) {
+              .compose(scope -> signUpService.offersPasswordSignUp(scope.application(), scope.tenantId())
+                                             .map(offered -> {
+                                                 if (!offered) {
                                                      authEndpointSupport.respondError(ctx, 403, "The application does not offer sign-up with an email and a password here");
                                                  } else {
-                                                     // answered before the email is looked up, so neither the answer nor its timing depends on it
-                                                     ctx.response().setStatusCode(202).end();
-                                                     signUpService.initiatePasswordSignUp(scope.application(), email, displayName, origin)
-                                                                  .onFailure(err -> log.warn("Sign-up to {} could not be started: {}",
-                                                                                             HostLabelUtil.label(scope.application()), err.getMessage()));
+                                                     startSignUp(ctx, scope, email, displayName, origin);
                                                  }
                                                  return null;
                                              }))
               .onFailure(err -> authEndpointSupport.fail(ctx, err, "Failed to start sign-up"));
+    }
+
+    private void startSignUp(RoutingContext ctx, LoginScope scope, String email, String displayName, String origin) {
+        Future<Void> started;
+        try {
+            started = signUpService.initiatePasswordSignUp(scope.application(), email, displayName, origin);
+        } catch (IllegalArgumentException e) {
+            authEndpointSupport.respondError(ctx, 400, e.getMessage());
+            return;
+        }
+        // answered once the request is checked and before the email is looked up, so neither the answer nor its timing
+        // depends on whether the email has a user
+        ctx.response().setStatusCode(202).end();
+        started.onFailure(err -> log.warn("Sign-up to {} could not be started: {}", HostLabelUtil.label(scope.application()), err.getMessage()));
     }
 
     /**

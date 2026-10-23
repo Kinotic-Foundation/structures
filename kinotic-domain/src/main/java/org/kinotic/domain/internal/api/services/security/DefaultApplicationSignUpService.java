@@ -2,7 +2,9 @@ package org.kinotic.domain.internal.api.services.security;
 
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.domain.api.exceptions.UnverifiedEmailException;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.TenantManagement;
@@ -47,13 +49,19 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
         return requireApplication(application)
                 .compose(found -> oidcConfigurationService.findEnabledForScope(application.organizationId(), application.applicationId(), tenantId)
                                                           .map(offered -> new ApplicationLoginMethods(
-                                                                  found.isPasswordSignUp() && admitsNewUsers(found, tenantId),
+                                                                  offersPasswordSignUp(found, tenantId),
                                                                   offered.stream()
                                                                          .map(configuration -> new ApplicationLoginProvider(configuration.getId(),
                                                                                                                             configuration.getName(),
                                                                                                                             configuration.getProvider(),
                                                                                                                             signsUp(found, tenantId, configuration)))
                                                                          .toList())));
+    }
+
+    @Override
+    public Future<Boolean> offersPasswordSignUp(ApplicationKey application, String tenantId) {
+        Validate.notNull(application, "application cannot be null");
+        return requireApplication(application).map(found -> offersPasswordSignUp(found, tenantId));
     }
 
     @Override
@@ -89,8 +97,12 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
                                                                   OwnedOidcConfiguration configuration,
                                                                   String subject,
                                                                   Map<String, Object> verifiedClaims) {
+        // an email the provider vouches for may still not be the person's, and a user created under it would hold the
+        // email against its owner
+        if (!OAuth2Util.isEmailProven(verifiedClaims, configuration.getProvider())) {
+            return Future.failedFuture(new UnverifiedEmailException("The provider does not prove the email belongs to the person signing in"));
+        }
         String email = OAuth2Util.stringClaim(verifiedClaims, "email");
-        Validate.notBlank(email, "The verified claims carry no email");
         ApplicationParticipantIdentity user = newUser(application, email, OAuth2Util.firstPresent(verifiedClaims, "name", "preferred_username", "email"));
         // the platform gives a user of the application a tenant of its own; a tenant's login creates the tenant's user
         user.setTenantId(tenantId);
@@ -131,8 +143,9 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
     @Override
     public Future<ApplicationParticipantIdentity> completePasswordSignUp(ApplicationKey application, String token, String password) {
         Validate.notNull(application, "application cannot be null");
-        Validate.notBlank(token, "The verification token is required");
-        Validate.notBlank(password, "A password is required");
+        // isTrue rather than notBlank, which throws NullPointerException for an absent value
+        Validate.isTrue(StringUtils.isNotBlank(token), "The verification token is required");
+        Validate.isTrue(StringUtils.isNotBlank(password), "A password is required");
         return pendingRepository.findValidByToken(token)
                 .compose(pending -> {
                     // a token carried to another application's host signs up no one there
@@ -153,11 +166,15 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
 
     private Future<Application> requirePasswordSignUp(ApplicationKey application) {
         return requireApplication(application).map(found -> {
-            if (!found.isPasswordSignUp() || !admitsNewUsers(found, null)) {
+            if (!offersPasswordSignUp(found, null)) {
                 throw new IllegalStateException("The application does not offer sign-up with an email and a password");
             }
             return found;
         });
+    }
+
+    private static boolean offersPasswordSignUp(Application application, String tenantId) {
+        return application.isPasswordSignUp() && admitsNewUsers(application, tenantId);
     }
 
     // whether a new person signs up through configuration at the login of application, or of its tenant tenantId: a

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.ParticipantConstants;
+import org.kinotic.domain.api.exceptions.UnverifiedEmailException;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.Organization;
@@ -25,6 +26,7 @@ import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ApplicationSignUpService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.internal.api.repositories.PendingApplicationSignUpRepository;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.TenantService;
@@ -48,7 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies how people become users of an application: a user a provider signed up through Kinotic's registration
- * is the same user once the configuration switches to the application's own registration; an application admits new
+ * is the same user once the configuration switches to the application's own registration; a Microsoft email signs up
+ * only when the token proves it; an application admits new
  * people at its own login only while the platform manages its tenants, which gives each a tenant, and a tenant's
  * login admits them into the tenant through the tenant's own providers only; and a sign-up with an email and a
  * password creates the user once the emailed token comes back with a password, at the application it was for.
@@ -56,7 +59,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 public class ApplicationSignUpServiceTests extends KinoticTestBase {
 
-    private static final String ENTRA_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad";
+    // a work directory, whose administrator sets its users' email claims; personal accounts live in Microsoft's own
+    private static final String WORK_DIRECTORY = "4a6c1d2e-8b3f-4c5d-9e7f-0a1b2c3d4e5f";
+    private static final String PERSONAL_ACCOUNTS = "9188040d-6c67-4c5b-b112-36a304b66dad";
 
     @Autowired
     private ApplicationSignUpService signUps;
@@ -78,6 +83,9 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
 
     @Autowired
     private PendingApplicationSignUpRepository pendingSignUps;
+
+    @Autowired
+    private ParticipantIdentityService identities;
 
     private Organization organization;
     private OrganizationParticipant administrator;
@@ -114,7 +122,7 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
         String email = "switch-" + suffix() + "@example.test";
         // Microsoft gives each client registration a sub of its own for the same person
         ApplicationParticipantIdentity signedUp = await(signUps.findOrCreateOidcUser(application, null, managed,
-                                                                                     entraClaims("sub-under-kinotic", objectId, email)));
+                                                                                     entraClaims("sub-under-kinotic", WORK_DIRECTORY, objectId, email, true)));
         assertNotNull(signedUp);
         assertEquals(email, signedUp.getEmail());
         assertNotNull(signedUp.getTenantId(), "a user the platform's tenancy admits gets a tenant of its own");
@@ -124,8 +132,42 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
                .setClientId("switching-entra-client");
         ApplicationOidcConfiguration own = await(asAdministrator(() -> oidcConfigurations.save(managed, "switching-secret")));
         ApplicationParticipantIdentity signedIn = await(signUps.findOrCreateOidcUser(application, null, own,
-                                                                                     entraClaims("sub-under-own", objectId, email)));
+                                                                                     entraClaims("sub-under-own", WORK_DIRECTORY, objectId, email, true)));
         assertEquals(signedUp.getId(), signedIn.getId());
+
+        // switched back to its own registration with no client of its own, it would list a provider that always fails
+        own.setClientRegistrationType(ClientRegistrationType.OWN).setClientId(null);
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> oidcConfigurations.save(own, null)));
+    }
+
+    @Test
+    public void aMicrosoftEmailSignsUpOnlyWhenTheTokenProvesIt() throws Exception {
+        String appId = "signup-app-" + suffix();
+        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Entra application", TenantManagement.PLATFORM)));
+        ApplicationKey application = new ApplicationKey(organization.getId(), appId);
+        ApplicationOidcConfiguration microsoft = new ApplicationOidcConfiguration().setApplicationId(appId)
+                                                                                   .setClientRegistrationType(ClientRegistrationType.MANAGED);
+        microsoft.setOrganizationId(organization.getId())
+                 .setCreateUserOnSignIn(true);
+        microsoft.setName("Microsoft")
+                 .setProvider(OidcProviderType.AZURE_AD)
+                 .setEnabled(true);
+        ApplicationOidcConfiguration managed = await(asAdministrator(() -> oidcConfigurations.save(microsoft, null)));
+
+        // any directory's administrator sets its users' email, so a bare Entra email would hold the address against its owner
+        String claimed = "claimed-" + suffix() + "@example.test";
+        assertInstanceOf(UnverifiedEmailException.class,
+                         failure(() -> signUps.findOrCreateOidcUser(application, null, managed,
+                                                                    entraClaims("sub-" + suffix(), WORK_DIRECTORY, UUID.randomUUID().toString(), claimed, false))));
+        assertNull(await(identities.findApplicationUserByEmail(claimed, organization.getId(), appId)));
+
+        // a personal account's email is Microsoft's to verify, and xms_edov proves a work directory's
+        String personal = "personal-" + suffix() + "@example.test";
+        assertEquals(personal, await(signUps.findOrCreateOidcUser(application, null, managed,
+                                                                  entraClaims("sub-" + suffix(), PERSONAL_ACCOUNTS, UUID.randomUUID().toString(), personal, false))).getEmail());
+        String domainOwned = "owned-" + suffix() + "@example.test";
+        assertEquals(domainOwned, await(signUps.findOrCreateOidcUser(application, null, managed,
+                                                                     entraClaims("sub-" + suffix(), WORK_DIRECTORY, UUID.randomUUID().toString(), domainOwned, true))).getEmail());
     }
 
     @Test
@@ -175,6 +217,8 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
         // a token carried to another application's host signs up no one there
         ApplicationKey other = new ApplicationKey(organization.getId(), "another-app-" + suffix());
         assertInstanceOf(IllegalArgumentException.class, failure(() -> signUps.completePasswordSignUp(other, token, "a-good-password")));
+        // an absent password is refused as an invalid request
+        assertInstanceOf(IllegalArgumentException.class, assertThrows(RuntimeException.class, () -> signUps.completePasswordSignUp(key, token, null)));
 
         ApplicationParticipantIdentity user = await(signUps.completePasswordSignUp(key, token, "a-good-password"));
         assertEquals(email, user.getEmail());
@@ -204,8 +248,8 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
         return configuration;
     }
 
-    private static Map<String, Object> entraClaims(String sub, String objectId, String email) {
-        return Map.of("sub", sub, "tid", ENTRA_TENANT, "oid", objectId, "email", email, "name", "Pat Switch");
+    private static Map<String, Object> entraClaims(String sub, String directory, String objectId, String email, boolean domainOwnerVerified) {
+        return Map.of("sub", sub, "tid", directory, "oid", objectId, "email", email, "name", "Pat Switch", "xms_edov", domainOwnerVerified);
     }
 
     private Map<String, Object> googleClaims(String sub) {

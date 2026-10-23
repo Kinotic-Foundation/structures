@@ -16,6 +16,9 @@ import java.util.Map;
  */
 public final class OAuth2Util {
 
+    /** The directory every personal Microsoft account belongs to, which Microsoft itself runs. */
+    private static final String MICROSOFT_PERSONAL_ACCOUNTS_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad";
+
     private OAuth2Util() {}
 
     /**
@@ -36,6 +39,36 @@ public final class OAuth2Util {
             ret = tid + "/" + oid;
         }
         return ret;
+    }
+
+    /**
+     * Whether {@code claims} prove the email belongs to the person strongly enough to create an account under it, which
+     * {@link #isEmailVerified} does not for Microsoft Entra: the administrator of any directory sets its users' email
+     * claim without verifying it. An Entra email proves itself by an explicit {@code email_verified} or
+     * {@code xms_edov} (email domain owner verified) claim that is true, or by belonging to a personal Microsoft
+     * account, whose directory Microsoft itself runs and which verifies the email at sign-up. Every other provider's
+     * email proves itself as {@link #isEmailVerified} says.
+     *
+     * @param claims   the verified claims of the identity
+     * @param provider the provider kind that verified them
+     * @return {@code true} when an account may be created under the claims' email
+     */
+    public static boolean isEmailProven(Map<String, Object> claims, OidcProviderType provider) {
+        boolean ret;
+        if (provider == OidcProviderType.AZURE_AD) {
+            ret = stringClaim(claims, "email") != null
+                    && (isTrue(claims.get("email_verified"))
+                        || isTrue(claims.get("xms_edov"))
+                        || MICROSOFT_PERSONAL_ACCOUNTS_TENANT.equals(stringClaim(claims, "tid")));
+        } else {
+            ret = isEmailVerified(claims, provider);
+        }
+        return ret;
+    }
+
+    // a boolean claim some providers send as a string, "true" or "1"
+    private static boolean isTrue(Object claim) {
+        return Boolean.TRUE.equals(claim) || "true".equals(claim) || "1".equals(claim);
     }
 
     public static String firstPresent(Map<String, Object> claims, String... names) {

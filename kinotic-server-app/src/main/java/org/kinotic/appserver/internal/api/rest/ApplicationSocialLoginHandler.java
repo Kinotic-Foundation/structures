@@ -26,6 +26,8 @@ import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 
 /**
  * Sign-in to an application through one of its {@link ApplicationOidcConfiguration}s that uses Kinotic's
@@ -93,16 +95,18 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
             authEndpointSupport.respondError(ctx, 400, "The sign-in was not started at the application's API host");
             return;
         }
-        // held through the provider round-trip for the callback to hand on with the identity
-        ctx.session().put(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY, binding);
-        ctx.session().put(CONFIGURATION_SESSION_KEY, configId);
-
         authEndpointSupport.loginScope(applicationKey, origin, ctx.request().getParam("tenantId"))
               .compose(scope -> findManaged(configId, applicationKey, scope.tenantId())
                       .compose(configuration -> managedRegistration(configuration)
                               .compose(registration -> oidcFlowOrchestrator.startFlow(ctx, registration, callbackUrl(registration.getId()),
                                                                                       applicationKey, scope.tenantId(), origin))))
-              .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
+              .onSuccess(url -> {
+                  // held through the provider round-trip for the callback to hand on with the identity; written only once
+                  // this flow has replaced the session's pending one, so a start that fails leaves another tab's intact
+                  ctx.session().put(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY, binding);
+                  ctx.session().put(CONFIGURATION_SESSION_KEY, configId);
+                  ctx.response().setStatusCode(302).putHeader("Location", url).end();
+              })
               .onFailure(err -> {
                   log.warn("Social login authorize failed for {}/{}: {}", HostLabelUtil.label(applicationKey), configId, err.getMessage());
                   // the flow has not started, so the page that asked is still known to send the browser back to
@@ -115,11 +119,10 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     private Future<ApplicationOidcConfiguration> findManaged(String configId, ApplicationKey applicationKey, String tenantId) {
         return oidcConfigurationService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId(), tenantId)
                                        .map(offered -> {
-                                           if (!(offered instanceof ApplicationOidcConfiguration configuration)
-                                                   || configuration.getClientRegistrationType() != ClientRegistrationType.MANAGED) {
+                                           if (!OidcConfigurationService.isManaged(offered)) {
                                                throw new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND);
                                            }
-                                           return configuration;
+                                           return (ApplicationOidcConfiguration) offered;
                                        });
     }
 
@@ -148,17 +151,22 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         // read before the callback consumes the flow: a failed callback still returns to the page that started it
         PendingFlow flow = oidcFlowOrchestrator.pendingFlow(ctx);
         String configId = ctx.session().remove(CONFIGURATION_SESSION_KEY);
+        // the application's configuration the resolver finds, which the hand-off signs the user in through
+        AtomicReference<ApplicationOidcConfiguration> offered = new AtomicReference<>();
 
         oidcFlowOrchestrator.<ApplicationSocialOidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
                 (orgId, applicationId, tenantId) -> configId == null
                         ? Future.succeededFuture()
                         : findManaged(configId, new ApplicationKey(orgId, applicationId), tenantId)
-                                .compose(this::managedRegistration)
+                                .compose(configuration -> {
+                                    offered.set(configuration);
+                                    return managedRegistration(configuration);
+                                })
                                 // the provider returned to the registration the flow started with, or the flow is not this one
                                 .map(registration -> registration.getId().equals(pathConfigId) ? registration : null)
                                 .recover(err -> err instanceof OidcCallbackException ? Future.succeededFuture() : Future.failedFuture(err)))
-                .compose(result -> handOff(ctx, result, configId))
+                .compose(result -> handOff(ctx, result, offered.get()))
                 .onFailure(ex -> {
                     String code = authEndpointSupport.callbackErrorCode(ex);
                     log.warn("Social login callback failed for config {}: {}", pathConfigId, ex.getMessage());
@@ -170,13 +178,12 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
                 });
     }
 
-    private Future<Void> handOff(RoutingContext ctx, CallbackResult<? extends OidcConfiguration> result, String configId) {
+    private Future<Void> handOff(RoutingContext ctx, CallbackResult<? extends OidcConfiguration> result, ApplicationOidcConfiguration configuration) {
         Future<Void> ret = Future.succeededFuture();
         if (authEndpointSupport.verifiedSubject(ctx, result) != null) {
             ApplicationKey applicationKey = new ApplicationKey(result.orgId(), result.applicationId());
             LoginScope scope = new LoginScope(applicationKey, result.tenantId());
-            ret = findManaged(configId, applicationKey, result.tenantId())
-                    .compose(configuration -> authEndpointSupport.findOrCreateUser(scope, configuration, result.claims()))
+            ret = authEndpointSupport.findOrCreateUser(scope, configuration, result.claims())
                     .map(user -> {
                         if (user == null) {
                             authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.NO_USER);

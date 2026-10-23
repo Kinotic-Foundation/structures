@@ -33,6 +33,16 @@ import java.util.Collection;
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
 
+    /**
+     * Whether {@code configuration} signs in through one of the platform's registrations rather than a client of the
+     * organization's own: an {@link ApplicationOidcConfiguration} using {@link ClientRegistrationType#MANAGED}, which
+     * signs in through the {@link ApplicationSocialOidcConfiguration} of its provider kind.
+     */
+    static boolean isManaged(OidcConfiguration configuration) {
+        return configuration instanceof ApplicationOidcConfiguration forApplication
+                && forApplication.getClientRegistrationType() == ClientRegistrationType.MANAGED;
+    }
+
     /** The configurations among {@code ids} that exist, of any kind, in one read. */
     Future<List<OidcConfiguration>> findAllById(Collection<String> ids);
 
@@ -94,7 +104,8 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     /**
      * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
      * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
-     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, or at an
+     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, one using
+     * {@link ClientRegistrationType#MANAGED} while the platform holds an enabled registration of its kind, or at an
      * organization's own login any {@link OrgSignupOidcConfiguration}, which every organization's login offers. A tenant's login
      * offers what the application's offers as well as the tenant's own. Checks no participant.
      *

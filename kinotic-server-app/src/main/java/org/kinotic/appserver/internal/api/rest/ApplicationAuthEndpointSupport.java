@@ -19,6 +19,7 @@ import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.UnverifiedEmailException;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
@@ -192,14 +193,18 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
      * sign-in where the configuration signs people up and the scope admits them (see
      * {@link ApplicationSignUpService#findOrCreateOidcUser}), or {@code null} when there is none. A user that would be
      * created under an email the application holds under another method fails with an {@link OidcCallbackException}
-     * carrying {@link OidcErrorCodes#USER_EXISTS}.
+     * carrying {@link OidcErrorCodes#USER_EXISTS}, and one under an email the claims do not prove is the person's with
+     * {@link OidcErrorCodes#EMAIL_NOT_VERIFIED}.
      *
      * @param claims the claims the provider verified, which {@link #verifiedSubject} has accepted
      */
     public Future<ApplicationParticipantIdentity> findOrCreateUser(LoginScope scope, OwnedOidcConfiguration configuration, Map<String, Object> claims) {
         return signUpService.findOrCreateOidcUser(scope.application(), scope.tenantId(), configuration, claims)
-                            .recover(err -> Future.failedFuture(err instanceof ExistingUserException
-                                    ? new OidcCallbackException(OidcErrorCodes.USER_EXISTS) : err));
+                            .recover(err -> Future.failedFuture(switch (err) {
+                                case ExistingUserException _ -> new OidcCallbackException(OidcErrorCodes.USER_EXISTS);
+                                case UnverifiedEmailException _ -> new OidcCallbackException(OidcErrorCodes.EMAIL_NOT_VERIFIED);
+                                default -> err;
+                            }));
     }
 
     /**
