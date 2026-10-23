@@ -277,9 +277,10 @@ uploaded them.
 
 ## Day 2
 
-- **A new build** is `../with-dev-server-secrets.sh ./redeploy.sh`, which deploys only what changed: the servers' and the
-  migration's containers when the images at `kinotic_version` have a new digest on Docker Hub
-  (the migration runs again), Summit 42's container likewise at `summit42_version`, the portal
+- **A new build** is `../with-dev-server-secrets.sh ./redeploy.sh`, which deploys only what changed: each server's
+  container and the migration's whose image at `kinotic_version` has a new digest on Docker Hub,
+  and no other (a replaced migration runs again), Summit 42's container likewise at
+  `summit42_version`, the portal
   and the console when `kinotic-frontend` differs from what the sites account serves, Summit 42's
   UI when the summit-42 repository's `main` differs from what it serves, and the vm-manager on each node in `vm_nodes` when the
   version `vm_manager_version` resolves to on npm is not the one installed. `--dry-run` prints

@@ -19,6 +19,8 @@ KEYCHAIN="${KINOTIC_KEYCHAIN:-$HOME/Library/Keychains/kinotic.keychain-db}"
 
 # show-keychain-info fails on a locked keychain, and a read from one fails rather than prompting
 if ! security show-keychain-info "$KEYCHAIN" >/dev/null 2>&1; then
+  # unlock-keychain prompts on the controlling terminal, which waits forever when no one is at it
+  [[ -t 0 ]] || { echo "$KEYCHAIN is locked; unlock it with: security unlock-keychain $KEYCHAIN" >&2; exit 1; }
   security unlock-keychain "$KEYCHAIN"
 fi
 

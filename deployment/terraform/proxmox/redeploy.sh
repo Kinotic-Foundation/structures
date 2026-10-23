@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Deploys what changed since the last run, and nothing else:
 #
-#   - the servers' images and kinotic-migration's, Summit 42's among them when it runs, when a tag
-#     has a new digest on Docker Hub: their containers are replaced (a republished SNAPSHOT keeps its
-#     tag, so a plain apply never notices), the migration runs again, and the applier restores
-#     the settings the provider drops
+#   - each of the servers' images and kinotic-migration's, Summit 42's among them when it runs,
+#     whose tag has a new digest on Docker Hub: only those containers are replaced (a republished
+#     SNAPSHOT keeps its tag, so a plain apply never notices), a replaced migration runs again, and
+#     the applier restores the settings the provider drops
 #   - the portal and the system console, when kinotic-frontend differs from what the sites
 #     Worker serves (deploy-ui.sh records the tree it built in each app's version.json)
 #   - Summit 42's UI, when it runs and the summit-42 repository's main differs from the commit its
@@ -42,28 +42,44 @@ hub_digest() {   # <repository>:<tag>
 }
 
 # ---- the servers and kinotic-migration ----------------------------------------------------
-wanted_images="$(while read -r name _ image; do printf '%s=%s ' "$name" "$(hub_digest "$image")"; done <<<"$SERVERS")migration=$(hub_digest "kinoticai/kinotic-migration:$VERSION")"
+# The marker holds one "name=digest" word per image; only a container whose digest differs is replaced
 deployed_images="$(ssh "root@$HOST" "cat '$MARKER' 2>/dev/null || true")"
-if [[ "$wanted_images" == "$deployed_images" ]]; then
+deployed_digest() { tr ' ' '\n' <<<"$deployed_images" | sed -n "s/^$1=//p"; }
+migration_digest="$(hub_digest "kinoticai/kinotic-migration:$VERSION")"
+wanted_images="migration=$migration_digest"
+changed=() changed_hosts=() replace=()
+# the migration goes first, so the applier runs it before the servers it migrates for
+if [[ "$migration_digest" != "$(deployed_digest migration)" ]]; then
+  changed+=(kinotic-migration)
+  replace+=(-replace=proxmox_oci_image.kinotic_migration -replace='proxmox_virtual_environment_container.fleet["kinotic-migration"]')
+fi
+while read -r name hostname image; do
+  digest="$(hub_digest "$image")"
+  wanted_images="$wanted_images $name=$digest"
+  if [[ "$digest" != "$(deployed_digest "$name")" ]]; then
+    changed+=("$name")
+    changed_hosts+=("$hostname")
+    replace+=(-replace="proxmox_oci_image.server[\"$name\"]" -replace="proxmox_virtual_environment_container.fleet[\"$name\"]")
+  fi
+done <<<"$SERVERS"
+if (( ${#changed[@]} == 0 )); then
   echo "==> Images: the servers and kinotic-migration are what the host runs"
 elif $DRY_RUN; then
-  echo "==> Images: a new digest on Docker Hub; would replace the servers' and the migration's containers and re-run the migration"
+  echo "==> Images: a new digest on Docker Hub for ${changed[*]}; would replace their containers"
 else
-  echo "==> Images: a new digest on Docker Hub; replacing the servers' and the migration's containers"
-  migration_vmid="$(terraform -chdir="$HERE" output -json containers | python3 -c 'import sys, json; print(json.load(sys.stdin)["kinotic-migration"])')"
-  replace=(-replace=proxmox_oci_image.kinotic_migration -replace='proxmox_virtual_environment_container.fleet["kinotic-migration"]')
-  while read -r name _; do
-    replace+=(-replace="proxmox_oci_image.server[\"$name\"]" -replace="proxmox_virtual_environment_container.fleet[\"$name\"]")
-  done <<<"$SERVERS"
+  echo "==> Images: a new digest on Docker Hub for ${changed[*]}; replacing their containers"
   plan="$(mktemp)"
   terraform -chdir="$HERE" plan -input=false -out="$plan" "${replace[@]}" >/dev/null
-  # the marker is per vmid, so a replaced migration container would otherwise not run
-  ssh "root@$HOST" "rm -f '$STATE/$migration_vmid.ran'"
+  if [[ "${changed[0]}" == kinotic-migration ]]; then
+    # the marker is per vmid, so a replaced migration container would otherwise not run
+    migration_vmid="$(terraform -chdir="$HERE" output -json containers | python3 -c 'import sys, json; print(json.load(sys.stdin)["kinotic-migration"])')"
+    ssh "root@$HOST" "rm -f '$STATE/$migration_vmid.ran'"
+  fi
   terraform -chdir="$HERE" apply -input=false "$plan"
   rm -f "$plan"
   # A replaced container keeps its vmid, which the apply step does not treat as a change
-  ssh "root@$HOST" "python3 '$SNIPPETS/kinotic-apply-container.py' '$SNIPPETS'/kinotic-*.manifest.json"
-  while read -r _ hostname _; do
+  ssh "root@$HOST" "python3 '$SNIPPETS/kinotic-apply-container.py' $(printf "'$SNIPPETS/kinotic-%s.manifest.json' " "${changed[@]}")"
+  for hostname in ${changed_hosts[@]+"${changed_hosts[@]}"}; do
     echo "==> Waiting for https://$hostname"
     for _ in $(seq 1 60); do
       # any HTTP status means the server's TLS listener is up behind the edge
@@ -72,7 +88,7 @@ else
       fi
       sleep 5
     done
-  done <<<"$SERVERS"
+  done
   ssh "root@$HOST" "echo '$wanted_images' > '$MARKER'"
 fi
 
