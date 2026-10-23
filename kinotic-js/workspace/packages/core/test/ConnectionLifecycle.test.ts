@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { firstValueFrom, toArray } from 'rxjs'
-import { ConnectedInfo, Event, EventConstants, type IEvent, type ConnectOptions, type IWebSocket } from '../src'
+import { ConnectedInfo, Event, EventConstants, type IEvent, type ConnectOptions, type CredentialsResolver, type IWebSocket } from '../src'
 import { EventBus } from '../src/api/event/EventBus'
 import { FakeStompServer, type FakeFrame, type FakeSocket } from './FakeStompServer'
 
@@ -20,6 +20,11 @@ function echo(frame: FakeFrame, socket: FakeSocket): void {
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/** Settles with the operation, or fails naming it when it is still pending after the given time. */
+function within<T>(ms: number, what: string, operation: Promise<T>): Promise<T> {
+    return Promise.race([operation, sleep(ms).then(() => { throw new Error(`${what} still pending after ${ms} ms`) })])
+}
 
 /** Collects the reason of every connection end that carried one, so an orderly end is not counted. */
 function failures(bus: EventBus): Error[] {
@@ -361,6 +366,39 @@ describe('connection lifecycle', () => {
         server.current.drop()
         await sleep(10)
         await expect(bus.request(new Event(SERVICE))).rejects.toThrow('not connected')
+        await bus.disconnect()
+    })
+
+    it('disconnects and connects again after the session check refused a cookie connect', async () => {
+        // a browser that is not signed in: the session check answers 401, then the user signs in
+        vi.stubGlobal('fetch', async () => new Response(null, { status: 401 }))
+        try {
+            const cookie: CredentialsResolver = { name: 'cookie', resolve: async () => ({}) }
+            const bus = new EventBus()
+            await expect(bus.connect({ server: { host: 'fake', useSSL: false }, credentials: cookie }))
+                .rejects.toThrow('Authentication required')
+
+            await within(2000, 'disconnect()', bus.disconnect())
+            const server = new FakeStompServer()
+            const connected = await within(2000, 'connect()', bus.connect(options(server)))
+            expect(connected.replyToId).toBe('reply-1')
+            await bus.disconnect()
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('disconnects and connects again after the socket factory failed the first attempt', async () => {
+        const server = new FakeStompServer()
+        const bus = new EventBus()
+        const failingFactory = async (): Promise<IWebSocket> => {
+            throw new Error('refresh failed')
+        }
+        await expect(bus.connect(options(server, { webSocketFactory: failingFactory }))).rejects.toThrow('WebSocket factory failed')
+
+        await within(2000, 'disconnect()', bus.disconnect())
+        await within(2000, 'connect()', bus.connect(options(server)))
+        expect(bus.isConnected()).toBe(true)
         await bus.disconnect()
     })
 })
