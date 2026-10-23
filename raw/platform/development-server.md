@@ -372,6 +372,36 @@ allocation watermark, and the Proxmox drive's largest tenant is the stores' rete
   <tr>
     <td>
       <code>
+        summit-42
+      </code>
+      
+      , when the dev-server root's <code>
+        summit42_enabled
+      </code>
+      
+       is set
+    </td>
+    
+    <td>
+      container
+    </td>
+    
+    <td>
+      4
+    </td>
+    
+    <td>
+      4 GB
+    </td>
+    
+    <td>
+      private
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         edge
       </code>
     </td>
@@ -480,7 +510,8 @@ allocation watermark, and the Proxmox drive's largest tenant is the stores' rete
 The stores have static addresses on `vmbr0`; the edge's LAN interface takes its address by
 DHCP under a fixed MAC, because the ISP's router forwards by device and reserves the
 device's address when the forward is saved. The private network is `10.10.0.0/24` with the
-host at `.1`, the edge at `.10`, and the org, system and app servers at `.20`, `.22` and `.23`.
+host at `.1`, the edge at `.10`, the org, system and app servers at `.20`, `.22` and `.23`, and
+Summit 42 at `.24`.
 Only the edge is reachable from the internet, on one forwarded port, 443.
 
 Proxmox itself is installed by hand, and `host/prepare-host.sh` runs once on it: the three ZFS
@@ -996,15 +1027,19 @@ What differs between the three:
     </td>
     
     <td>
-      the portal and the UIs built on Kinotic that the dev-server root's <code>
+      the portal, the UIs built on Kinotic that the dev-server root's <code>
         trusted_ui_hostnames
       </code>
       
-       names (<code>
+       names, and <code>
         dev-summit42.kinotic.ai
       </code>
       
-      )
+       when <code>
+        summit42_enabled
+      </code>
+      
+       is set
     </td>
     
     <td>
@@ -1537,6 +1572,22 @@ What the three share:
 </tbody>
 </table>
 
+### Summit 42
+
+With `summit42_enabled = true` in the dev-server root, [Summit 42](https://github.com/kinotic-ai/summit-42)
+runs beside the servers. Its UI is a platform UI like the portal: the sites Worker serves it at
+`dev-summit42.kinotic.ai` from `sites/dev-summit42.kinotic.ai/`, which the proxmox root's
+`redeploy.sh` builds from the repository's `main` and uploads, and the management server's CORS
+pattern admits it. The server is a fourth container, `summit-42`, from `kinoticai/summit-42` at the
+proxmox root's `summit42_version`, at `dev-summit42-api.kinotic.ai` behind the edge, where the UI's
+email sign-up posts. It joins the Ignite cluster and runs the management server's modules in
+process, so it mounts the management server's secrets directory at `/etc/kinotic` and takes the
+management server's environment. Its image carries no `dev-server` profile, so the proxmox root
+sets what that profile would: the `secrets.yml` import, the JWT key set's path, the `AZURE` secret
+storage backend, and one shard and one replica. It serves `8080` with TLS (`summit42.ssl`), with a
+certificate of its own mounted from `/etc/kinotic/secrets/summit-42/certs`. The platform LLM
+configuration named `summit-42`, which the system console adds, holds the model and its API key.
+
 ### Loki, Tempo, Mimir, Grafana
 
 Four containers on the LAN, running the config files from `deployment/docker-compose` with
@@ -1550,7 +1601,8 @@ newer image keeps it.
 
 certbot on the host with the `dns-cloudflare` plugin and the DNS token the servers hold, which
 holds DNS edit on both zones. A certificate per server, for its hostnames: `dev-api.kinotic.ai`,
-`dev-system-api.kinotic.ai`, and `apps-api.dev.kinotic.io` with `*.apps-api.dev.kinotic.io`.
+`dev-system-api.kinotic.ai`, and `apps-api.dev.kinotic.io` with `*.apps-api.dev.kinotic.io`,
+and `dev-summit42-api.kinotic.ai` for the Summit 42 server.
 Each certificate's deploy hook
 installs the PEMs into the secrets directory that server's container mounts and reboots the
 container, which is the whole of what Reloader does in the cluster. The edge holds none of
@@ -1862,11 +1914,19 @@ vault, and the service principal — and adds what a server peers depend on need
         dev-console.<zone>
       </code>
       
+       and, when <code>
+        summit42_enabled
+      </code>
+      
+      , <code>
+        dev-summit42.<zone>
+      </code>
+      
        in the platform zone
     </td>
     
     <td>
-      The portal and the system console, served from <code>
+      The portal, the system console and Summit 42's UI, served from <code>
         sites/<hostname>/
       </code>
       
@@ -1896,15 +1956,23 @@ vault, and the service principal — and adds what a server peers depend on need
         dev-api
       </code>
       
-       and <code>
+      , <code>
         dev-system-api
+      </code>
+      
+       and, when <code>
+        summit42_enabled
+      </code>
+      
+      , <code>
+        dev-summit42-api
       </code>
       
        in the platform zone
     </td>
     
     <td>
-      The host's public address, unproxied, for the management server and the system server; <code>
+      The host's public address, unproxied, for the management server, the system server and the Summit 42 server; <code>
         kinotic-dyndns.timer
       </code>
       
