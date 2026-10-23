@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * A grind job the platform's operators can start on demand, as the console lists it.
+ * A grind job system users can start on demand, as the console lists it.
  */
 @Data
 @Accessors(chain = true)
