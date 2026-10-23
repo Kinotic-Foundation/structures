@@ -19,25 +19,13 @@ import java.time.Duration;
 public class EmailProperties {
 
     /**
-     * When {@code false}, no email is sent and each link a person must open is logged.
+     * When {@code false}, no email is sent: each link a person must open is logged and returned to the UI that asked
+     * for it, which shows it: the verification link to the one signing up, an invitation's accept link to the inviter
+     * and the login links of the organizations an address belongs to, as a demonstration server does. Nothing then
+     * proves an address belongs to the person using it, so email is never disabled on a server reachable by anyone
+     * but the people trying it.
      */
     private boolean enabled = true;
-
-    /**
-     * When {@code true} and {@link #enabled} is {@code false}, each link a person must open is returned to the UI that
-     * asked for it, which shows it: the verification link to the one signing up and an invitation's accept link to the
-     * inviter, as a demonstration server does. Nothing then proves an address belongs to the person using it, so this
-     * is never set on a server reachable by anyone but the people trying it.
-     */
-    private boolean showLinksInUI = false;
-
-    /**
-     * Whether the links a person must open are returned for the UI to show, because no email carries them:
-     * {@link #enabled} is {@code false} and {@link #showLinksInUI} is {@code true}.
-     */
-    public boolean showsLinksInUI() {
-        return !enabled && showLinksInUI;
-    }
 
     /**
      * ACS endpoint URL, e.g. {@code https://my-acs-resource.communication.azure.com}.

@@ -276,8 +276,7 @@ curl -s -H 'X-Scope-OrgID: kinotic-system' 'http://localhost:3100/loki/api/v1/la
 
 The management server's `application-development.yml` currently has `kinotic.domain.email.enabled: true`, pointed at
 the real ACS endpoint. Set it to `false` to have `EmailService` skip the send and log the
-verification URL to the IntelliJ console, and also set `kinotic.domain.email.showLinksInUI: true` to have
-the portal show the links as the demonstration server does
+verification URL to the IntelliJ console; the portal then shows the links as the demonstration server does
 ([Demonstration server](../../website/content/02.platform/03.configuration.md)).
 
 If you also run the Vite frontend (`pnpm dev` on `:5173`), it calls the server directly at

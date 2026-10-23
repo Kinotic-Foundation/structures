@@ -63,9 +63,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
      * pending sign-up, and emails a verification link with the default verification email template.
-     * The org name and password are collected later, at {@link #handleLocalComplete}. When the platform shows links
-     * in the UI instead of emailing them ({@code kinotic.domain.email.showLinksInUI}) the response carries the verification
-     * link as {@code verificationUrl}, for the UI to open at once. Refused with 403 unless
+     * The org name and password are collected later, at {@link #handleLocalComplete}. When email is disabled
+     * ({@code kinotic.domain.email.enabled} is {@code false}) the response carries the verification link as {@code verificationUrl}, for the UI to open at once. Refused with 403 unless
      * {@code kinotic.managementServer.passwordSignUp} is set.
      */
     private void handleLocalSignUp(RoutingContext ctx) {

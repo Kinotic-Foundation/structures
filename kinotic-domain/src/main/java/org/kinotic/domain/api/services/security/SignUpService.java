@@ -22,8 +22,7 @@ public interface SignUpService {
      * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet, and when
      * a sign-up is already pending for the email. A pending sign-up that has expired is replaced.
      * <p>
-     * When {@code kinotic.domain.email.enabled} is {@code false} and {@code kinotic.domain.email.showLinksInUI} is
-     * {@code true}, no email is sent and the verification link is returned for the caller to open, so the address is
+     * When {@code kinotic.domain.email.enabled} is {@code false}, no email is sent and the verification link is returned for the caller to open, so the address is
      * never proven to be the caller's; an email/password sign-up already pending for the email then returns its link
      * again.
      *

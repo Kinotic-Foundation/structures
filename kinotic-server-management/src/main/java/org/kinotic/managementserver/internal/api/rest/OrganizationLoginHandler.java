@@ -187,7 +187,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      */
     private void handleFindChallenge(RoutingContext ctx) {
         TurnstileProperties turnstile = properties.getTurnstile();
-        JsonObject challenge = new JsonObject().put("showLinksInUI", domainProperties.getDomain().getEmail().showsLinksInUI());
+        JsonObject challenge = new JsonObject().put("showLinksInUI", !domainProperties.getDomain().getEmail().isEnabled());
         if (turnstile.isEnabled()) {
             challenge.put("turnstileSiteKey", turnstile.getSiteKey());
         }
@@ -198,8 +198,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * {@code POST /api/auth/org/login/find {email, turnstileToken}} — emails the address the organizations it may
      * sign in to, each with a link to its login. Always {@code 204} once the token verifies, whether or not the
      * address belongs to any organization, so the response reveals nothing about it; {@code 400} for a token that
-     * is missing or refused, since the route is open to anyone and would otherwise send mail on demand. Where
-     * {@code kinotic.domain.email.showLinksInUI} applies, answers {@code 200} with the organizations instead,
+     * is missing or refused, since the route is open to anyone and would otherwise send mail on demand. Where email is
+     * disabled, answers {@code 200} with the organizations instead,
      * {@code {organizations: [{name, loginUrl}]}}, which reveals them to anyone who asks.
      */
     private void handleFind(RoutingContext ctx) {

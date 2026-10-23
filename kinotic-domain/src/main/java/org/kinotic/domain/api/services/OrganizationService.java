@@ -18,7 +18,7 @@ public interface OrganizationService extends IdentifiableCrudService<Organizatio
      * sent whether or not the address is a member of any organization, so the caller learns nothing
      * about the address.
      * <p>
-     * When {@code kinotic.domain.email.showLinksInUI} applies, no email is sent and the links are returned for
+     * When {@code kinotic.domain.email.enabled} is {@code false}, no email is sent and the links are returned for
      * the UI to show, so anyone who asks learns which organizations the address is a member of.
      *
      * @param email the address to send to

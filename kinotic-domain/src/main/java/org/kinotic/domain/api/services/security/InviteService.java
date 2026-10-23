@@ -94,8 +94,7 @@ public interface InviteService {
 
     /**
      * The accept link of the live invitation of {@code email} into the scope, for the inviter to hand over when no
-     * invitation email reaches the invitee: {@code kinotic.domain.email.enabled} is {@code false} and
-     * {@code kinotic.domain.email.showLinksInUI} is {@code true}. Anyone holding the link can accept the invitation as
+     * invitation email reaches the invitee: {@code kinotic.domain.email.enabled} is {@code false}. Anyone holding the link can accept the invitation as
      * the invited address.
      *
      * @param email          the invited address

@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
-import org.kinotic.management.api.config.GiteaProperties;
-import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.ProjectRepoToken;
 import org.kinotic.management.api.repositories.ProjectRepository;
@@ -37,22 +35,23 @@ import java.util.HexFormat;
 public class GiteaProjectRepoService implements ProjectRepoTokenProvider, ProjectRepoCredentialService {
 
     private static final Duration TOKEN_LIFETIME = Duration.ofHours(1);
+    // Gitea as a deployment's sync workload reaches it from its micro VM, through the host alias of a BOXLITE guest
+    private static final String WORKLOAD_BASE_URL = "http://192.168.127.254:3001";
 
     private final GiteaClient giteaClient;
     private final ProjectRepository projectRepository;
     private final SecurityContext securityContext;
-    private final KinoticManagementApiProperties properties;
 
     @Override
     public Future<ProjectRepoToken> issueRepoToken(String organizationId, String projectId) {
-        return issue(organizationId, projectId, GiteaRepoAccess.READ, gitea().getWorkloadBaseUrl());
+        return issue(organizationId, projectId, GiteaRepoAccess.READ, WORKLOAD_BASE_URL);
     }
 
     @Override
     public Future<ProjectRepoToken> issueWriteToken(String projectId) {
         Validate.notBlank(projectId, "projectId is required");
         OrganizationParticipant participant = securityContext.requireParticipant(OrganizationParticipant.class);
-        return issue(participant.getOrganizationId(), projectId, GiteaRepoAccess.WRITE, gitea().getWebBaseUrl());
+        return issue(participant.getOrganizationId(), projectId, GiteaRepoAccess.WRITE, GiteaClient.WEB_BASE_URL);
     }
 
     // Callers pass the organization they act for, issueWriteToken its caller's, so authorization is the org-scoped
@@ -88,18 +87,14 @@ public class GiteaProjectRepoService implements ProjectRepoTokenProvider, Projec
 
     // Derived from the administrator's password, so the server can sign in as the account whenever it issues a token
     // without storing anything
-    private String accountPassword(String username) {
+    private static String accountPassword(String username) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(gitea().getAdminPassword().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            mac.init(new SecretKeySpec(GiteaClient.ADMIN_PASSWORD.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(username.getBytes(StandardCharsets.UTF_8)));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("HmacSHA256 is unavailable", e);
         }
-    }
-
-    private GiteaProperties gitea() {
-        return properties.getManagementApi().getGitea();
     }
 
 }

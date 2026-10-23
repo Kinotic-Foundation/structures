@@ -71,7 +71,7 @@ public class DefaultSignUpService implements SignUpService {
                         ret = cleared.compose(v -> requireNoOrganizationUser(pending))
                                      .compose(v -> pendingSignUpRepository.saveSync(pending))
                                      .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplate));
-                    } else if (existing.getAuthType() == AuthType.PASSWORD && domainProperties.getDomain().getEmail().showsLinksInUI()) {
+                    } else if (existing.getAuthType() == AuthType.PASSWORD && !domainProperties.getDomain().getEmail().isEnabled()) {
                         // no email carries the link, so asking again is the only way back to it
                         ret = emailService.sendVerificationEmail(existing.getEmail(), existing.getDisplayName(),
                                                                  existing.getVerificationToken(), emailTemplate);

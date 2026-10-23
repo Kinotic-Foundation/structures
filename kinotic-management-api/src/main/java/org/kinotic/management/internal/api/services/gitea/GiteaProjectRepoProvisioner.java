@@ -41,6 +41,9 @@ import java.util.Set;
 @ConditionalOnProperty(value = "kinotic.managementApi.repoHost", havingValue = "GITEA")
 public class GiteaProjectRepoProvisioner implements ProjectRepoProvisioner {
 
+    // The management server as Gitea reaches it on the compose network
+    private static final String WEBHOOK_URL = "http://kinotic-server-management:58503" + GitHubWebhookProcessor.WEBHOOK_PATH;
+
     private final Vertx vertx;
     private final GiteaClient giteaClient;
     private final ProjectTemplateRenderer templateRenderer;
@@ -78,7 +81,7 @@ public class GiteaProjectRepoProvisioner implements ProjectRepoProvisioner {
 
     @Override
     public RepositoryHost repositoryHost() {
-        return new RepositoryHost(RepoHostType.GITEA, properties.getManagementApi().getGitea().getWebBaseUrl());
+        return new RepositoryHost(RepoHostType.GITEA, GiteaClient.WEB_BASE_URL);
     }
 
     // synchronized: two provisionings on different event loops must share one import, since a second would delete the
@@ -108,9 +111,7 @@ public class GiteaProjectRepoProvisioner implements ProjectRepoProvisioner {
                           .compose(changes -> changes.isEmpty()
                                   ? Future.succeededFuture()
                                   : giteaClient.changeFiles(fullName, branch, "Initialize " + project.getName(), changes).mapEmpty())
-                          .compose(v -> giteaClient.ensurePushWebhook(fullName,
-                                                                      properties.getManagementApi().getGitea().getWebhookBaseUrl()
-                                                                              + GitHubWebhookProcessor.WEBHOOK_PATH,
+                          .compose(v -> giteaClient.ensurePushWebhook(fullName, WEBHOOK_URL,
                                                                       properties.getManagementApi().getGithub().getWebhookSecret()))
                           .map(v -> {
                               project.setRepoConnectionStatus(RepositoryConnectionStatus.CONNECTED);

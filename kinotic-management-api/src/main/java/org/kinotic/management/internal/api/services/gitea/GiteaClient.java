@@ -13,9 +13,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.Validate;
-import org.kinotic.management.api.config.GiteaProperties;
-import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.management.internal.api.services.github.client.CreatedRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -28,8 +25,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The calls the platform makes to the Gitea server projects' repositories are hosted on, through its {@code /api/v1}
- * API as the configured administrator, or as one of the accounts a repository is read and written through. Each
+ * The calls the platform makes to the Gitea server projects' repositories are hosted on, the {@code kinotic-gitea} of
+ * {@code deployment/docker-compose/compose.gitea.yml}, through its {@code /api/v1} API as the administrator that
+ * compose file creates, or as one of the accounts a repository is read and written through. Each
  * call that creates something succeeds when the thing already exists, so a repeated or retried call is harmless.
  */
 @Slf4j
@@ -38,23 +36,29 @@ import java.util.UUID;
 @ConditionalOnProperty(value = "kinotic.managementApi.repoHost", havingValue = "GITEA")
 public class GiteaClient {
 
+    /**
+     * Gitea as a person's browser and Git client reach it, its {@code ROOT_URL}: the base of a write token's clone URL
+     * and of the portal's repository links.
+     */
+    static final String WEB_BASE_URL = "http://localhost:3001";
+    /**
+     * The password of the administrator {@code compose.gitea.yml} creates, which is also the key the passwords of the
+     * accounts each repository is read and written through are derived from.
+     */
+    static final String ADMIN_PASSWORD = "kinotic-gitea-admin";
+
+    // Gitea as the servers reach it on the compose network
+    private static final String API_URL = "http://kinotic-gitea:3000";
+    private static final String ADMIN_USERNAME = "kinotic_admin";
     /** Gitea's limit on the entries one page of a repository tree lists. */
     private static final int TREE_PAGE_SIZE = 1000;
     private static final String TOKEN_NAME_PREFIX = "kinotic-";
 
     private final Vertx vertx;
-    private final KinoticManagementApiProperties properties;
     private WebClient webClient;
 
     @PostConstruct
     public void start() {
-        GiteaProperties gitea = gitea();
-        Validate.notBlank(gitea.getApiUrl(), "kinotic.managementApi.gitea.apiUrl is required when Gitea hosts the repositories");
-        Validate.notBlank(gitea.getWebBaseUrl(), "kinotic.managementApi.gitea.webBaseUrl is required when Gitea hosts the repositories");
-        Validate.notBlank(gitea.getWorkloadBaseUrl(), "kinotic.managementApi.gitea.workloadBaseUrl is required when Gitea hosts the repositories");
-        Validate.notBlank(gitea.getWebhookBaseUrl(), "kinotic.managementApi.gitea.webhookBaseUrl is required when Gitea hosts the repositories");
-        Validate.notBlank(gitea.getAdminUsername(), "kinotic.managementApi.gitea.adminUsername is required when Gitea hosts the repositories");
-        Validate.notBlank(gitea.getAdminPassword(), "kinotic.managementApi.gitea.adminPassword is required when Gitea hosts the repositories");
         webClient = WebClient.create(vertx);
     }
 
@@ -63,11 +67,6 @@ public class GiteaClient {
         if (webClient != null) {
             webClient.close();
         }
-    }
-
-    /** The administrator every repository and organization this client creates is administered by. */
-    public String adminUsername() {
-        return gitea().getAdminUsername();
     }
 
     /** Creates the organization {@code name}, private, when it doesn't exist. */
@@ -83,7 +82,7 @@ public class GiteaClient {
      * @return a future emitting the template's full name
      */
     public Future<String> ensureTemplate(String name, String cloneUrl) {
-        String fullName = adminUsername() + "/" + name;
+        String fullName = ADMIN_USERNAME + "/" + name;
         return send(asAdmin(HttpMethod.GET, "/repos/" + fullName), null).compose(found -> {
             Future<Void> imported;
             if (found.statusCode() == 404) {
@@ -103,10 +102,10 @@ public class GiteaClient {
     }
 
     private Future<Void> importRepository(String name, String cloneUrl) {
-        log.info("Importing the project template {} into Gitea as {}/{}", cloneUrl, adminUsername(), name);
+        log.info("Importing the project template {} into Gitea as {}/{}", cloneUrl, ADMIN_USERNAME, name);
         JsonObject body = new JsonObject().put("clone_addr", cloneUrl)
                                           .put("repo_name", name)
-                                          .put("repo_owner", adminUsername())
+                                          .put("repo_owner", ADMIN_USERNAME)
                                           .put("private", true)
                                           .put("service", "git");
         return send(asAdmin(HttpMethod.POST, "/repos/migrate"), body)
@@ -262,11 +261,11 @@ public class GiteaClient {
     }
 
     private HttpRequest<Buffer> asAdmin(HttpMethod method, String uri) {
-        return asUser(method, uri, gitea().getAdminUsername(), gitea().getAdminPassword());
+        return asUser(method, uri, ADMIN_USERNAME, ADMIN_PASSWORD);
     }
 
     private HttpRequest<Buffer> asUser(HttpMethod method, String uri, String username, String password) {
-        return webClient.requestAbs(method, gitea().getApiUrl() + "/api/v1" + uri)
+        return webClient.requestAbs(method, API_URL + "/api/v1" + uri)
                         .basicAuthentication(username, password);
     }
 
@@ -283,10 +282,6 @@ public class GiteaClient {
                                                                 + " when asked to " + operation + ": " + response.bodyAsString()));
         }
         return ret;
-    }
-
-    private GiteaProperties gitea() {
-        return properties.getManagementApi().getGitea();
     }
 
 }

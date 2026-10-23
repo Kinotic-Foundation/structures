@@ -12,7 +12,6 @@ x-kinotic-server-e2e-environment: &kinotic-server-e2e-environment
   SPRING_PROFILES_ACTIVE: test,e2e-tests,compose
   KINOTIC_DOMAIN_EMAIL_ENABLED: "false"
   # The links no email carries come back in the responses for the UI to show, which the sign-up and member suites follow
-  KINOTIC_DOMAIN_EMAIL_SHOWLINKSINUI: "true"
   # SecretNameDeriver requires a master key at startup. The key lives in the `development`
   # profile (application-development.yml), which e2e deliberately drops in favor of
   # `test,e2e-tests,compose`, so supply the dummy test key here. Matches kinotic-test's

@@ -27,11 +27,6 @@ public class ManagementApiProperties {
     @Valid
     private GithubProperties github = new GithubProperties();
 
-    /**
-     * The Gitea server projects' repositories are hosted on when {@link #repoHost} is {@link RepoHostType#GITEA}.
-     */
-    private GiteaProperties gitea = new GiteaProperties();
-
     @Valid
     private EntityDefinitionProperties entityDefinition = new EntityDefinitionProperties();
 

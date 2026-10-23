@@ -13,9 +13,8 @@ services:
       GITEA__database__DB_TYPE: sqlite3
       # Push webhooks go to the management server on the compose network
       GITEA__webhook__ALLOWED_HOST_LIST: private,loopback
-      # The account the servers administer Gitea with: Gitea's well-known demonstration administrator, matching
-      # KINOTIC_MANAGEMENTAPI_GITEA_ADMIN* in compose.kinotic-servers.yml. Gitea answers only on this machine's
-      # loopback.
+      # The account the servers administer Gitea with, the well-known demonstration administrator GiteaClient signs
+      # in as. Gitea answers only on this machine's loopback.
       KINOTIC_GITEA_ADMIN_USERNAME: kinotic_admin
       KINOTIC_GITEA_ADMIN_PASSWORD: kinotic-gitea-admin
     # The image's entrypoint writes app.ini from the environment, then runs this: the database is migrated and the
