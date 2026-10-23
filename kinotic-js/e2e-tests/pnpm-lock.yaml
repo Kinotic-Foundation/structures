@@ -16,13 +16,13 @@ importers:
     dependencies:
       '@kinotic-ai/core':
         specifier: ^5.0.0-beta.27
-        version: 5.0.0-beta.26(supports-color@8.1.1)
+        version: 5.0.0-beta.27(supports-color@8.1.1)
       '@kinotic-ai/management-api':
         specifier: ^5.0.0-beta.64
-        version: 5.0.0-beta.64(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))
+        version: 5.0.0-beta.64(@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1))
       '@kinotic-ai/persistence':
         specifier: ^5.0.0-beta.17
-        version: 5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))
+        version: 5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1))
       vue:
         specifier: ^3.5.41
         version: 3.5.41(typescript@5.9.3)
@@ -32,9 +32,9 @@ importers:
         version: 10.5.0
       '@kinotic-ai/idl':
         specifier: ^5.0.0-beta.1
-        version: 5.0.0-beta.1
+        version: 5.0.0-beta.5
       '@kinotic-ai/kinotic-cli':
-        specifier: ^5.2.0-beta.33
+        specifier: ^5.2.0-beta.34
         version: 5.2.0-beta.33(@types/node@25.9.5)(magicast@0.5.4)(supports-color@8.1.1)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
@@ -454,6 +454,9 @@ packages:
   '@kinotic-ai/core@5.0.0-beta.26':
     resolution: {integrity: sha512-9qOidfQP2iTqHFro58OhgNBdXQimrtntkYt2jL8ko/lFiAo4GWViVu8lecP/WhGvpq6cn3MFxXglqQTNjDlnHA==}
 
+  '@kinotic-ai/core@5.0.0-beta.27':
+    resolution: {integrity: sha512-nodR6ollEX9wmK/IX5EvlX4v/wqa3ThabdqJi5iy7J5dCOg7krkOhcLtLyAuNMPkUnLcMfS9hHTKWt5P9RVCFw==}
+
   '@kinotic-ai/idl@5.0.0-beta.1':
     resolution: {integrity: sha512-zM4NGbHQ5JMKYMh+SU/+Q4GL3UPZsJ5oQWbPAlzRvD9SiLzbnD9mVJpukRVbWnu7zxuk3Z6o3WNQ/7YAokEbDg==}
 
@@ -816,6 +819,11 @@ packages:
 
   '@volar/typescript@2.4.28':
     resolution: {integrity: sha512-Ja6yvWrbis2QtN4ClAKreeUZPVYMARDYZl9LMEv1iQ1QdepB6wn0jTRxA9MftYmYa4DQ4k/DaSZpFPUfxl8giw==}
+    peerDependencies:
+      typescript: '*'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@vue/compiler-core@3.5.41':
     resolution: {integrity: sha512-q0Xtv/F9w2YO/7htQhtiL+Ev2WCJbe5N2hc+XfgyKkEKqWpSxknmT8QOuGdEKNdjPq0c3F7rNpFkTo3Kfrm7pg==}
@@ -2567,6 +2575,24 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1)':
+    dependencies:
+      '@kinotic-ai/idl': 5.0.0-beta.5
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/semantic-conventions': 1.43.0
+      '@stomp/rx-stomp': 2.4.0(@stomp/stompjs@7.3.0)(rxjs@7.8.2)(uuid@13.0.2)
+      '@stomp/stompjs': 7.3.0
+      debug: 4.4.3(supports-color@8.1.1)
+      p-tap: 4.0.0
+      rxjs: 7.8.2
+      typescript-optional: 3.0.0-alpha.3
+      uuid: 13.0.2
+      ws: 8.21.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   '@kinotic-ai/idl@5.0.0-beta.1': {}
 
   '@kinotic-ai/idl@5.0.0-beta.5': {}
@@ -2602,11 +2628,11 @@ snapshots:
       '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))
       rxjs: 7.8.2
 
-  '@kinotic-ai/management-api@5.0.0-beta.64(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))':
+  '@kinotic-ai/management-api@5.0.0-beta.64(@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1))':
     dependencies:
-      '@kinotic-ai/core': 5.0.0-beta.26(supports-color@8.1.1)
+      '@kinotic-ai/core': 5.0.0-beta.27(supports-color@8.1.1)
       '@kinotic-ai/idl': 5.0.0-beta.5
-      '@kinotic-ai/persistence': 5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))
+      '@kinotic-ai/persistence': 5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1))
       rxjs: 7.8.2
 
   '@kinotic-ai/persistence@5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))':
@@ -2621,9 +2647,9 @@ snapshots:
       '@kinotic-ai/idl': 5.0.0-beta.5
       rxjs: 7.8.2
 
-  '@kinotic-ai/persistence@5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.26(supports-color@8.1.1))':
+  '@kinotic-ai/persistence@5.0.0-beta.17(@kinotic-ai/core@5.0.0-beta.27(supports-color@8.1.1))':
     dependencies:
-      '@kinotic-ai/core': 5.0.0-beta.26(supports-color@8.1.1)
+      '@kinotic-ai/core': 5.0.0-beta.27(supports-color@8.1.1)
       '@kinotic-ai/idl': 5.0.0-beta.5
       rxjs: 7.8.2
 
@@ -2937,11 +2963,13 @@ snapshots:
 
   '@volar/source-map@2.4.28': {}
 
-  '@volar/typescript@2.4.28':
+  '@volar/typescript@2.4.28(typescript@5.9.3)':
     dependencies:
       '@volar/language-core': 2.4.28
       path-browserify: 1.0.1
       vscode-uri: 3.1.0
+    optionalDependencies:
+      typescript: 5.9.3
 
   '@vue/compiler-core@3.5.41':
     dependencies:
@@ -4388,7 +4416,7 @@ snapshots:
 
   vue-tsc@3.3.9(typescript@5.9.3):
     dependencies:
-      '@volar/typescript': 2.4.28
+      '@volar/typescript': 2.4.28(typescript@5.9.3)
       '@vue/language-core': 3.3.9
       typescript: 5.9.3
 
