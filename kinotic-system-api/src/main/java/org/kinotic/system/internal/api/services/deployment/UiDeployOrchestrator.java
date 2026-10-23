@@ -16,7 +16,6 @@ import org.kinotic.management.api.model.workload.WorkloadStatus;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.config.SiteStorageType;
 import org.kinotic.system.api.services.deployment.SiteStorageService;
 import org.kinotic.system.api.services.deployment.UiDeploymentProvisioner;
 import org.kinotic.system.api.services.workload.WorkloadOrchestrationService;
@@ -117,8 +116,7 @@ public class UiDeployOrchestrator implements Reconciler<UiDeployment> {
         return projectDeploymentRepository.findById(current.getProjectId(), current.getOrganizationId())
                 .compose(project -> {
                     Future<Void> ret;
-                    if (project == null || project.getNodeId() == null
-                            || properties.getSystemApi().getUiDeployment().getSiteStorage() == SiteStorageType.DISABLED) {
+                    if (project == null || project.getNodeId() == null || !properties.getSystemApi().getUiDeployment().storesSites()) {
                         ret = Future.succeededFuture();
                     } else {
                         ret = siteStorageService.issueRemovalUrl(domainProperties.getDomain().getPublishedSites().resolveHostname(current.getId()), REMOVAL_URL_TTL)

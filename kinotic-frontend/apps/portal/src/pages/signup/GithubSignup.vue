@@ -24,24 +24,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { apiUrl } from '@kinotic-ai/frontend-common'
 import { AuthPageShell } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import loginArt from '@/assets/login-background.svg'
-
-const router = useRouter()
-
-// A server that offers signing up with an email and a password, as a demonstration server does, signs up there
-onMounted(async () => {
-  try {
-    const res = await fetch(apiUrl('/api/auth/org/signup/methods'), { credentials: 'same-origin' })
-    if (res.ok && (await res.json()).password === true) {
-      await router.replace('/signup/email')
-    }
-  } catch {
-    // the GitHub sign-up stays on offer
-  }
-})
 </script>

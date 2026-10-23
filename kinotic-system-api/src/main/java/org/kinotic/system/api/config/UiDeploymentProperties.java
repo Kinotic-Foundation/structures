@@ -38,6 +38,13 @@ public class UiDeploymentProperties {
     private String sitesStorageEndpoint;
 
     /**
+     * Whether published UIs' files are stored, so a deployment uploads them and a removed UI's files are deleted.
+     */
+    public boolean storesSites() {
+        return siteStorage != SiteStorageType.DISABLED;
+    }
+
+    /**
      * The directory of the site with the given hostname in the sites storage account, the URL a workload
      * appends each file's path to.
      */

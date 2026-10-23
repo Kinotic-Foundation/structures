@@ -398,16 +398,11 @@ async function submitMember() {
   }
 }
 
-async function sendInvitationTo(item: MemberRow) {
-  try {
+function sendInvitationTo(item: MemberRow) {
+  run(async () => {
     await Kinotic.members.sendInvitation(item.email)
-    if (!(await showInvitationLink(item.email))) {
-      toast.add({ severity: 'success', summary: 'Invitation sent', life: 4000 })
-    }
-    refreshTable()
-  } catch (err) {
-    showErrorToast(toast, 'Failed to send invitation', err, { life: 8000 })
-  }
+    await showInvitationLink(item.email)
+  }, 'Invitation sent', 'Failed to send invitation')
 }
 
 // A server that shows links in the UI in place of email returns the invitation's link; shows it and resolves true when it

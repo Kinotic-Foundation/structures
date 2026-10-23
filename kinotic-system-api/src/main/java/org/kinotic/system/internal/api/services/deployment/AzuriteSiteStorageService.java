@@ -1,22 +1,15 @@
 package org.kinotic.system.internal.api.services.deployment;
 
 import com.azure.storage.common.StorageSharedKeyCredential;
-import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
 import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
-import com.azure.storage.file.datalake.sas.PathSasPermission;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.Validate;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
 import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.system.api.services.deployment.SiteStorageService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 
 /**
  * {@link SiteStorageService} of the Azurite emulator a machine runs as its sites storage account, reached through
@@ -29,7 +22,7 @@ import java.time.ZoneOffset;
 @RequiredArgsConstructor
 // Active for DISABLED too, where nothing calls it, so the services that take a SiteStorageService wire in every mode
 @ConditionalOnExpression("'${kinotic.systemApi.uiDeployment.siteStorage:AZURE}'.toUpperCase() != 'AZURE'")
-public class AzuriteSiteStorageService implements SiteStorageService {
+public class AzuriteSiteStorageService extends DirectorySasSiteStorageService {
 
     // Azurite's well-known development account, the same on every machine; it signs only for the emulator
     private static final String ACCOUNT_NAME = "devstoreaccount1";
@@ -38,33 +31,20 @@ public class AzuriteSiteStorageService implements SiteStorageService {
     private final KinoticSystemApiProperties kinoticProperties;
 
     @Override
-    public Future<String> issueUploadUrl(String hostname, Duration ttl) {
-        // list and delete within the directory let the workload clear the files of other commits
-        return issue(hostname, ttl, new PathSasPermission().setCreatePermission(true)
-                                                           .setWritePermission(true)
-                                                           .setListPermission(true)
-                                                           .setDeletePermission(true));
+    protected Future<String> signDirectorySas(String hostname, DataLakeServiceSasSignatureValues values) {
+        // signing is local, so the client never connects
+        String token = new DataLakeServiceClientBuilder().endpoint(uiDeploymentProperties().getSitesStorageEndpoint())
+                                                         .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
+                                                         .buildClient()
+                                                         .getFileSystemClient(UiDeploymentProperties.SITES_CONTAINER)
+                                                         .getDirectoryClient(hostname)
+                                                         .generateSas(values);
+        return Future.succeededFuture(token);
     }
 
     @Override
-    public Future<String> issueRemovalUrl(String hostname, Duration ttl) {
-        return issue(hostname, ttl, new PathSasPermission().setListPermission(true).setDeletePermission(true));
-    }
-
-    private Future<String> issue(String hostname, Duration ttl, PathSasPermission permission) {
-        Validate.notBlank(hostname, "hostname cannot be blank");
-        Validate.notNull(ttl, "ttl is required");
-        UiDeploymentProperties properties = kinoticProperties.getSystemApi().getUiDeployment();
-        // signing is local, so the client never connects
-        DataLakeServiceClient account = new DataLakeServiceClientBuilder()
-                .endpoint(properties.getSitesStorageEndpoint())
-                .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
-                .buildClient();
-        String token = account.getFileSystemClient(UiDeploymentProperties.SITES_CONTAINER)
-                              .getDirectoryClient(hostname)
-                              .generateSas(new DataLakeServiceSasSignatureValues(OffsetDateTime.now(ZoneOffset.UTC).plus(ttl),
-                                                                                 permission));
-        return Future.succeededFuture(properties.resolveSiteDirectoryUrl(hostname) + "?" + token);
+    protected UiDeploymentProperties uiDeploymentProperties() {
+        return kinoticProperties.getSystemApi().getUiDeployment();
     }
 
 }
