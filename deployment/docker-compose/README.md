@@ -191,9 +191,20 @@ nothing. The rules that matter:
   `http.server.request.duration` → `http_server_request_duration_seconds_bucket`) because
   `mimir.yml` sets `otel_metric_suffixes_enabled: true`. Mimir defaults that off, which stores
   bare `jvm_memory_used` and leaves every stock dashboard empty.
-- **Vert.x metrics** (`vertx_http_server_active_connections`, `vertx_http_server_active_ws_connections`,
-  `vertx_eventbus_*`, `vertx_pool_*`) arrive through Micrometer's global registry, which the agent
-  bridges onto the OTLP exporter — so they are only exported when the agent is attached.
+- **Vert.x metrics** arrive through Micrometer's global registry, which the agent bridges onto the
+  OTLP exporter when `OTEL_INSTRUMENTATION_MICROMETER_ENABLED` is `true` — so they are only exported
+  with the agent attached and that flag set. What reaches Mimir is the gauges and the failure counters:
+  `vertx_{http,net}_{server,client}_active_connections`, `vertx_http_{server,client}_active_requests`,
+  `vertx_http_{server,client}_active_ws_connections`, `vertx_eventbus_pending`,
+  `vertx_eventbus_handlers`, `vertx_pool_in_use`, `vertx_pool_queue_pending`, `vertx_pool_ratio`,
+  `vertx_eventbus_reply_failures_total`, `vertx_{http,net}_{server,client}_errors_total` and
+  `vertx_http_server_request_resets_total`. `vertx_http_server_active_ws_connections` counts
+  the STOMP connections on `/api/v1`, the servers' only WebSocket endpoint. `KinoticVertxConfig`
+  denies Vert.x's request counters and response timers, whose requests the agent records as
+  `http_server_request_duration_seconds_*` and `http_client_request_duration_seconds_*`, and the
+  meters that record on every socket read and write, event bus message, request or worker task: the
+  byte counters and size histograms, the per-message event bus counters, and the pool timers and
+  completed-task counter.
 - **Tempo's metrics-generator** writes its own series to Mimir — `traces_spanmetrics_calls_total`
   and `traces_spanmetrics_latency_bucket`, labelled `service`, `span_name`, `span_kind`,
   `status_code`, and `peer_service` on HTTP client spans to a named backend. These only exist

@@ -4,10 +4,9 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.authz.api.model.AuthzModel;
-import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
-import org.kinotic.core.api.directory.ServiceDirectory;
+import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.model.AuthzModelRevision;
 import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.Requeue;
@@ -31,8 +30,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AuthzStoreReconciler implements Reconciler<AuthzStore> {
 
-    private final ServiceDirectory directory;
-    private final AuthzModelGenerator generator;
+    private final AuthzModelService models;
     private final AuthzStoreService storeService;
     private final RelationshipService relationships;
     private final AuthzStoreRepository stores;
@@ -52,11 +50,9 @@ public class AuthzStoreReconciler implements Reconciler<AuthzStore> {
     private Future<AuthzModel> modelOf(AuthzStore store) {
         Future<AuthzModel> ret;
         if (store.getApplicationId() == null) {
-            ret = directory.findSystemDefinitions().map(generator::systemModel);
+            ret = models.findSystemModel();
         } else {
-            ret = directory.findSystemDefinitions()
-                           .compose(system -> directory.findApplicationDefinitions(store.getOrganizationId(), store.getApplicationId())
-                                                         .map(services -> generator.applicationModel(system, services)));
+            ret = models.findApplicationModel(store.getOrganizationId(), store.getApplicationId());
         }
         return ret;
     }

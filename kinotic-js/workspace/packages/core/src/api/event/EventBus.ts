@@ -110,6 +110,10 @@ export class EventBus implements IEventBus {
         return this.stompConnectionManager.connectionEstablished
     }
 
+    public get connectionAttemptFailed(): Observable<void> {
+        return this.stompConnectionManager.connectionAttemptFailed
+    }
+
     public isConnectionActive(): boolean{
         return this.stompConnectionManager.active
     }

@@ -3,6 +3,7 @@ package org.kinotic.domain.api.utils;
 import com.github.slugify.Slugify;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
@@ -304,6 +305,16 @@ public class DomainUtil {
             subject = new Subject(SubjectType.USER, identityOf(subject.id()));
         }
         return new Grant(grant.id(), grant.roleId(), subject, new Resource(resource.type(), localId(resource.type(), resource.id())));
+    }
+
+    /**
+     * An access explanation read from the authorization stores, its grants named as {@link #localGrant} names them.
+     *
+     * @param explanation the explanation as the stores answer it
+     * @return the explanation with local ids
+     */
+    public static AccessExplanation localExplanation(AccessExplanation explanation) {
+        return new AccessExplanation(explanation.allowed(), explanation.through().stream().map(DomainUtil::localGrant).toList());
     }
 
     /**

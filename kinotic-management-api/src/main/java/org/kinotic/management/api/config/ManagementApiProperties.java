@@ -52,6 +52,10 @@ public class ManagementApiProperties {
     @NotBlank
     private String mimirUrl = "http://localhost:9009";
 
-
+    /**
+     * Leaves out the MCP server on {@code POST /mcp}, for a server that runs management-api's services without an
+     * API gateway.
+     */
+    private boolean disableMcpServer = false;
 
 }

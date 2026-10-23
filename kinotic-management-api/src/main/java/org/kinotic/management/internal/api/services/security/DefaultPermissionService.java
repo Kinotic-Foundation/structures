@@ -12,13 +12,11 @@ import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectType;
-import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
-import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.Group;
 import org.kinotic.domain.api.model.security.Role;
@@ -29,6 +27,7 @@ import org.kinotic.domain.api.model.security.participant.OrganizationParticipant
 import org.kinotic.domain.api.repositories.GroupRepository;
 import org.kinotic.domain.api.repositories.RoleRepository;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
+import org.kinotic.domain.api.services.security.AuthzModelService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzConstants;
@@ -57,8 +56,7 @@ public class DefaultPermissionService implements PermissionService {
     private static final String ORGANIZATION = AuthzConstants.ORGANIZATION_TYPE;
 
     private final SecurityContext securityContext;
-    private final ServiceDirectory directory;
-    private final AuthzModelGenerator generator;
+    private final AuthzModelService models;
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final RoleRepository roles;
@@ -301,8 +299,7 @@ public class DefaultPermissionService implements PermissionService {
         RelationshipTuple everywhere = new RelationshipTuple(DomainUtil.authzUser(participant),
                                                              AuthzUtil.permissionName(type, permission),
                                                              AuthzUtil.object(ORGANIZATION, participant.getOrganizationId()));
-        // the engine lists a bounded number of objects, so a caller holding the permission throughout the
-        // organization is answered without a listing
+        // a caller holding the permission throughout the organization is answered with one check, without a listing
         return stores.modelId(SYSTEM)
                      .compose(modelId -> relationships.check(SYSTEM, modelId, everywhere, Consistency.MINIMIZE_LATENCY))
                      .compose(held -> held ? Future.succeededFuture(null) : listAccessible(type, permission));
@@ -317,23 +314,11 @@ public class DefaultPermissionService implements PermissionService {
         String name = AuthzUtil.permissionName(resource.type(), permission);
         return requireSubject(subject, organizationId).compose(stored -> requireInOrganization(resource, organizationId)
                 .compose(this::grantsOn)
-                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> {
-                    String user = userOf(stored);
-                    // an admin asks after changing access, so the answer must not predate the change
-                    Future<Boolean> allowed = relationships.check(SYSTEM, modelId,
-                                                                  new RelationshipTuple(user, name, DomainUtil.authzObject(organizationId, resource)),
-                                                                  Consistency.HIGHER_CONSISTENCY);
-                    List<Future<Boolean>> explains = grants.stream().map(grant -> relationships.explains(SYSTEM, modelId, grant, stored, name)).toList();
-                    return Future.all(explains).compose(results -> allowed.map(held -> {
-                        List<Grant> through = new ArrayList<>();
-                        for (int i = 0; i < grants.size(); i++) {
-                            if (results.<Boolean>resultAt(i)) {
-                                through.add(DomainUtil.localGrant(grants.get(i)));
-                            }
-                        }
-                        return new AccessExplanation(held, through);
-                    }));
-                })));
+                .compose(grants -> stores.modelId(SYSTEM).compose(modelId -> relationships.explain(
+                        SYSTEM, modelId, stored,
+                        new RelationshipTuple(userOf(stored), name, DomainUtil.authzObject(organizationId, resource)),
+                        List.of(), grants)))
+                .map(DomainUtil::localExplanation));
     }
 
     // The grants made on each resource of a lineage, the resource's own first
@@ -492,7 +477,7 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     private Future<AuthzModel> model() {
-        return directory.findSystemDefinitions().map(generator::systemModel);
+        return models.findSystemModel();
     }
 
     private OrganizationParticipant requireOrgParticipant() {

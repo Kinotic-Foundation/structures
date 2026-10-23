@@ -6,16 +6,15 @@ import dev.openfga.sdk.api.model.CheckResponse;
 import dev.openfga.sdk.api.model.ConsistencyPreference;
 import dev.openfga.sdk.api.model.ContextualTupleKeys;
 import dev.openfga.sdk.api.model.ListObjectsRequest;
-import dev.openfga.sdk.api.model.ListObjectsResponse;
 import dev.openfga.sdk.api.model.ReadRequestTupleKey;
 import dev.openfga.sdk.api.model.Tuple;
 import dev.openfga.sdk.api.model.TupleKey;
 import dev.openfga.sdk.api.model.TupleKeyWithoutCondition;
-import dev.openfga.sdk.errors.FgaApiValidationError;
 import dev.openfga.sdk.errors.ApiException;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
@@ -292,6 +291,29 @@ public class DefaultRelationshipService implements RelationshipService {
     }
 
     @Override
+    public Future<AccessExplanation> explain(String store,
+                                             String modelId,
+                                             Subject subject,
+                                             RelationshipTuple holds,
+                                             List<RelationshipTuple> context,
+                                             List<Grant> grants) {
+        // an administrator asks after changing access, so the answer must not predate the change
+        Future<Boolean> allowed = check(store, modelId, holds, Consistency.HIGHER_CONSISTENCY, context);
+        List<Future<Boolean>> explains = grants.stream()
+                                               .map(grant -> explains(store, modelId, grant, subject, holds.relation()))
+                                               .toList();
+        return Future.all(explains).compose(results -> allowed.map(held -> {
+            List<Grant> through = new ArrayList<>();
+            for (int i = 0; i < grants.size(); i++) {
+                if (results.<Boolean>resultAt(i)) {
+                    through.add(grants.get(i));
+                }
+            }
+            return new AccessExplanation(held, through);
+        }));
+    }
+
+    @Override
     public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
         // the role's relation also holds every permission a bundled one implies, which only a check evaluates
         Future<Boolean> bundled = check(store, modelId, new RelationshipTuple(AuthzConstants.EVERYONE, permission,
@@ -336,14 +358,14 @@ public class DefaultRelationshipService implements RelationshipService {
                                         T heldByNone,
                                         Object asked) {
         Future<T> ret;
-        if (refusal instanceof FgaApiValidationError) {
+        if (isValidationError(refusal)) {
             ret = stores.refreshModelId(store)
                         .compose(newest -> newest.equals(modelId) ? Future.failedFuture(refusal) : request.apply(newest))
                         // a relation or type the newest version lacks is held by no one: a permission of a type
                         // another store models, or of a service whose model the reconciler has yet to write
                         .recover(refused -> {
                             Future<T> held;
-                            if (refused instanceof FgaApiValidationError) {
+                            if (isValidationError(refused)) {
                                 log.warn("The model of store {} cannot answer {}: {}", store, asked, refused.getMessage());
                                 held = Future.succeededFuture(heldByNone);
                             } else {
@@ -355,6 +377,12 @@ public class DefaultRelationshipService implements RelationshipService {
             ret = Future.failedFuture(refusal);
         }
         return ret;
+    }
+
+    // A request the engine refused as invalid: the SDK's FgaApiValidationError, or the bare 400 or 422 a streamed
+    // request fails with
+    private static boolean isValidationError(Throwable e) {
+        return e instanceof ApiException api && (api.getStatusCode() == 400 || api.getStatusCode() == 422);
     }
 
     private Future<Boolean> check(String store, String modelId, CheckRequestTupleKey key, List<TupleKey> contextual, Consistency consistency) {
@@ -380,7 +408,7 @@ public class DefaultRelationshipService implements RelationshipService {
                 .user(user)
                 .relation(relation)
                 .type(type);
-        return stores.storeIdOf(store).compose(id -> fga.listObjects(id, request)).map(ListObjectsResponse::getObjects);
+        return stores.storeIdOf(store).compose(id -> fga.listObjects(id, request));
     }
 
     private static ConsistencyPreference preference(Consistency consistency) {

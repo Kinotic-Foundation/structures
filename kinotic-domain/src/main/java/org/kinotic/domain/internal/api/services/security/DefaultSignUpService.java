@@ -6,9 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.PendingMemberException;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
@@ -44,14 +44,12 @@ public class DefaultSignUpService implements SignUpService {
     private final EmailService emailService;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
     private final RelationshipService relationships;
-    private final KinoticDomainProperties domainProperties;
 
     @Override
-    public Future<Void> initiateLocalSignUp(String email, String displayName, String origin) {
+    public Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate) {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
-        // the origin can come from a Referer the requester chose, so only an allowed UI's origin may host the link
-        String linkOrigin = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
+        emailService.validateTemplate(emailTemplate);
 
         String token = UUID.randomUUID().toString();
         Date now = new Date();
@@ -72,7 +70,7 @@ public class DefaultSignUpService implements SignUpService {
                     return requireNoOrganizationUser(pending);
                 })
                 .compose(v -> pendingSignUpRepository.save(pending))
-                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, linkOrigin));
+                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, emailTemplate));
     }
 
     @Override

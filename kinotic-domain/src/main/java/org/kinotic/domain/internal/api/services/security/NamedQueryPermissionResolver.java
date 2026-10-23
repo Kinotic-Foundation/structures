@@ -74,6 +74,11 @@ public class NamedQueryPermissionResolver implements RequestPermissionResolver {
         String organizationId = participant.getScope().organizationId();
         String entityDefinitionId = arguments.get(0);
         String queryName = arguments.get(1);
+        // a system user or machine has no organization, so no entity definition of its own
+        if (organizationId == null) {
+            return Future.failedFuture(new IllegalArgumentException("The caller's scope names no organization holding entity definition "
+                                                                            + entityDefinitionId));
+        }
         return KinoticUtil.toFuture(permissions.get(organizationId + "|" + entityDefinitionId,
                                                     (key, executor) -> load(organizationId, entityDefinitionId).toCompletionStage()
                                                                                                                 .toCompletableFuture()))

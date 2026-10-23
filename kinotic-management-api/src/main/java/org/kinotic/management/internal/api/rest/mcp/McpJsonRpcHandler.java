@@ -22,6 +22,7 @@ import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.rest.OAuthServerHandler;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.management.internal.api.rest.mcp.model.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.databind.json.JsonMapper;
@@ -41,6 +42,7 @@ import java.util.Set;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "kinotic.managementApi.disableMcpServer", havingValue = "false", matchIfMissing = true)
 public class McpJsonRpcHandler implements SuppliesGatewayRoutes {
 
     private static final String MCP_ROUTE = "/mcp";

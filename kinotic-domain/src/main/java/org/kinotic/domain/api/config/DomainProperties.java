@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
@@ -83,6 +84,19 @@ public class DomainProperties {
     private String elasticUsername = null;
 
     private String elasticPassword = null;
+
+    /**
+     * The origin of the portal's pages, the scheme and authority of {@link #getPortalBaseUrl()}, or {@code null} when
+     * no portal is set.
+     */
+    public String portalOrigin() {
+        String ret = null;
+        if (portalBaseUrl != null) {
+            URI portal = URI.create(portalBaseUrl);
+            ret = portal.getScheme() + "://" + portal.getAuthority();
+        }
+        return ret;
+    }
 
     public boolean hasElasticUsernameAndPassword(){
         return elasticUsername != null && !elasticUsername.isBlank() && elasticPassword != null && !elasticPassword.isBlank();

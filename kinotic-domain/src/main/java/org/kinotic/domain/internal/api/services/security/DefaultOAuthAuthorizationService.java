@@ -232,6 +232,7 @@ public class DefaultOAuthAuthorizationService implements OAuthAuthorizationServi
         StringBuilder url = new StringBuilder(grant.getRedirectUri());
         url.append(grant.getRedirectUri().contains("?") ? '&' : '?')
            .append(parameter).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+        url.append("&iss=").append(URLEncoder.encode(grant.getIssuer(), StandardCharsets.UTF_8));
         if (grant.getState() != null) {
             url.append("&state=").append(URLEncoder.encode(grant.getState(), StandardCharsets.UTF_8));
         }

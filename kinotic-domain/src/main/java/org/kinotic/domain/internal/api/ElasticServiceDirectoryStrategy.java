@@ -37,13 +37,13 @@ public class ElasticServiceDirectoryStrategy implements ServiceDirectoryStrategy
     private final AuthzStoreRepository authzStores;
 
     @Override
-    public Future<Void> upsertEntry(ServiceDirectoryEntry entry) {
+    public Future<Set<String>> upsertEntry(ServiceDirectoryEntry entry) {
         return upsertEntries(List.of(entry));
     }
 
     @Override
-    public Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
-        return repository.upsertEntries(entries).onSuccess(changed -> renewStoresOf(entries, changed)).mapEmpty();
+    public Future<Set<String>> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
+        return repository.upsertEntries(entries).onSuccess(changed -> renewStoresOf(entries, changed));
     }
 
     // The entries are stored whether or not the store's renewal lands; a store left behind is regenerated when
