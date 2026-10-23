@@ -133,7 +133,7 @@ public class KinoticUtil {
     }
 
     /**
-     * The 128-bit XXHash of the text's characters, its high 64 bits first: equal texts share it, and a changed
+     * The 128-bit XXHash of the text's characters, its low 64 bits first: equal texts share it, and a changed
      * text differs in it.
      *
      * @param text the text to hash

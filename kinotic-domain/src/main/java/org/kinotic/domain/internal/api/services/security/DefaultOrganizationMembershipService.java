@@ -191,7 +191,6 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
         return relationships.remove(AuthzStoreService.SYSTEM, List.of(AuthzGraphUtil.organizationMember(organizationUserId, organizationId)));
     }
 
-
     private Future<OrganizationMembership> requireMembership(String organizationUserId, String organizationId) {
         return findMembership(organizationUserId, organizationId).map(membership -> {
             Validate.isTrue(membership != null, "Member not found.");

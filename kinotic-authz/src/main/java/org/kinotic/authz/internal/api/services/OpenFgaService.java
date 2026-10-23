@@ -162,9 +162,19 @@ public class OpenFgaService {
         } catch (Exception e) {
             streamed = Future.failedFuture(e);
         }
-        return streamed.compose(v -> streamError.get() == null
-                ? Future.succeededFuture(objects)
-                : Future.failedFuture(streamError.get()));
+        // a refused request fails the future with the engine's ApiException wrapped in a RuntimeException, after
+        // handing the ApiException itself to the error consumer, so the consumer's error is the one reported
+        return streamed.transform(result -> {
+            Future<List<String>> ret;
+            if (streamError.get() != null) {
+                ret = Future.failedFuture(streamError.get());
+            } else if (result.failed()) {
+                ret = Future.failedFuture(result.cause());
+            } else {
+                ret = Future.succeededFuture(objects);
+            }
+            return ret;
+        });
     }
 
     private static <T> Future<T> call(Callable<CompletableFuture<ApiResponse<T>>> call) {
