@@ -1,13 +1,12 @@
 import { Direction, Kinotic, Order, Pageable, Sort } from '@kinotic-ai/core'
 import type { ExecutionStatus, JobRun } from '@kinotic-ai/management-api'
 import DatetimeUtil from '../../util/DatetimeUtil'
+import { JobRunOwnerType } from './JobRunOwnerType'
 
-/**
- * Which job runs a scan keeps. An unset field matches every run; {@code organizationId} set
- * to null keeps the runs that belong to no organization, the platform's own.
- */
+/** Which job runs a scan keeps. An unset field matches every run. */
 export interface JobRunFilter {
-  organizationId?: string | null
+  organizationId?: string
+  ownerType?: JobRunOwnerType
   applicationId?: string
   projectId?: string
   status?: ExecutionStatus
@@ -23,10 +22,16 @@ const SCAN_PAGE_SIZE = 100
 /** Whether the run is one the filter keeps. */
 export function matchesJobRunFilter(run: JobRun, filter: JobRunFilter): boolean {
   return (filter.organizationId === undefined || run.organizationId === filter.organizationId)
+      && (filter.ownerType === undefined || ownerTypeOf(run) === filter.ownerType)
       && (filter.applicationId === undefined || run.applicationId === filter.applicationId)
       && (filter.projectId === undefined || run.projectId === filter.projectId)
       && (filter.status === undefined || run.status === filter.status)
       && (filter.since === undefined || (DatetimeUtil.toEpochMillis(run.started) ?? 0) >= filter.since)
+}
+
+/** Who owns the run. */
+export function ownerTypeOf(run: JobRun): JobRunOwnerType {
+  return run.organizationId ? JobRunOwnerType.ORGANIZATION : JobRunOwnerType.PLATFORM
 }
 
 /**

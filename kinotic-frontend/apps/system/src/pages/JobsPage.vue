@@ -3,6 +3,7 @@
     <PageHeader title="Jobs" :description="description">
       <template #actions>
         <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refresh" />
+        <Button v-if="platformScope" label="Run system job" icon="pi pi-play" @click="runDrawerVisible = true" />
       </template>
     </PageHeader>
 
@@ -32,18 +33,24 @@
       </div>
     </section>
 
-    <StatusChips v-model="statusFilter" :chips="chips" class="mb-4" />
+    <div class="mb-4 flex flex-wrap gap-3">
+      <StatusChips v-if="platformScope" v-model="ownerFilter" :chips="ownerChips" />
+      <StatusChips v-model="statusFilter" :chips="chips" />
+    </div>
 
     <JobRunsTable ref="jobRunsTable"
                   :organization-id="scope.organizationId"
                   :application-id="scope.applicationId"
                   :project-id="scope.projectId"
+                  :owner-type="ownerFilter"
                   :status="statusFilter"
                   :run-route="runRoute">
       <template #run="{ jobRunId }">
         <JobRunDetail :job-run-id="jobRunId" :organization-id="scope.organizationId" />
       </template>
     </JobRunsTable>
+
+    <RunSystemJobDrawer v-if="platformScope" v-model:visible="runDrawerVisible" @started="openStartedRun" />
   </div>
 </template>
 
@@ -54,15 +61,19 @@ import Button from 'primevue/button'
 import { LaptopMinimalCheck } from '@lucide/vue'
 
 import { ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
-import { JobRunsTable, PageHeader, executionStatusSeverity, scanJobRuns, StatusChips, type StatusChip } from '@kinotic-ai/frontend-common'
+import { JobRunOwnerType, JobRunsTable, PageHeader, executionStatusSeverity, ownerTypeOf, scanJobRuns, StatusChips,
+         type StatusChip } from '@kinotic-ai/frontend-common'
 
 import JobRunDetail from '@/components/JobRunDetail.vue'
+import RunSystemJobDrawer from '@/components/RunSystemJobDrawer.vue'
 import { scopeName, scopePath, scopeTint, type Scope } from '@/util/scope'
 
 /**
  * The job runs of the scope the route names: every run on the platform, or the deployments of
  * an organization, an application or a project. State chips carry the counts
- * and live in the URL so a tile can link to the failed runs.
+ * and live in the URL so a tile can link to the failed runs. On the platform's own scope, owner
+ * chips narrow the runs to the organizations' or the platform's, and Run system job starts one of
+ * the platform's system jobs and opens its run.
  */
 const props = defineProps<{
   organizationId?: string
@@ -86,7 +97,34 @@ const description = computed(() => scope.value.organizationId
     ? `Job runs executed for ${scopeName(scope.value)}: its deployments.`
     : 'Grind job runs across the platform: deployments and system jobs, step by step.')
 
-const counted = ref<JobRun[]>([])
+const OWNER_CHIPS = [
+  { label: 'Organizations', value: JobRunOwnerType.ORGANIZATION },
+  { label: 'Platform', value: JobRunOwnerType.PLATFORM }
+]
+
+/** The platform's own scope, where every run is listed and system jobs are started. */
+const platformScope = computed(() => !scope.value.organizationId)
+
+const runDrawerVisible = ref(false)
+
+const scanned = ref<JobRun[]>([])
+
+const ownerFilter = computed<JobRunOwnerType | null>({
+  get: () => platformScope.value && OWNER_CHIPS.some(chip => chip.value === route.query.owner)
+      ? route.query.owner as JobRunOwnerType
+      : null,
+  set: value => { router.replace({ query: { ...route.query, owner: value ?? undefined } }) }
+})
+
+const ownerChips = computed<StatusChip[]>(() => [
+  { label: 'All owners', value: null, count: scanned.value.length },
+  ...OWNER_CHIPS.map(chip => ({ ...chip, count: scanned.value.filter(run => ownerTypeOf(run) === chip.value).length }))
+])
+
+/** The scanned runs of the chosen owner, which the outcome and the status chips count. */
+const counted = computed<JobRun[]>(() => ownerFilter.value
+    ? scanned.value.filter(run => ownerTypeOf(run) === ownerFilter.value)
+    : scanned.value)
 
 /** The runs by outcome, in the status colours the tags use, each with its share of all the runs. */
 const outcome = computed(() => {
@@ -126,7 +164,7 @@ const chips = computed<StatusChip[]>(() => [
 // The chips count from a scan of the scope's runs; the table pages the runs itself
 async function count() {
   try {
-    counted.value = await scanJobRuns({
+    scanned.value = await scanJobRuns({
       organizationId: scope.value.organizationId,
       applicationId: scope.value.applicationId,
       projectId: scope.value.projectId
@@ -139,6 +177,10 @@ async function count() {
 function refresh() {
   jobRunsTable.value?.refresh()
   count()
+}
+
+function openStartedRun(jobRunId: string): void {
+  void router.push(runRoute(jobRunId))
 }
 
 function runRoute(jobRunId: string): string {
