@@ -41,6 +41,12 @@ x-kinotic-server-environment: &kinotic-server-environment
   # The servers find each other over this static address list and form one Ignite cluster
   KINOTIC_IGNITE_DISCOVERYTYPE: LOCAL
   KINOTIC_IGNITE_LOCALADDRESSES: kinotic-server-management:47500,kinotic-server-system:47500,kinotic-server-app:47500
+  # The Gitea of compose.gitea.yml, where the demonstration profile hosts projects' repositories, and the
+  # administrator created there; Gitea delivers push webhooks back to the management server on this network
+  KINOTIC_MANAGEMENTAPI_GITEA_APIURL: http://kinotic-gitea:3000
+  KINOTIC_MANAGEMENTAPI_GITEA_WEBHOOKBASEURL: http://kinotic-server-management:58503
+  KINOTIC_MANAGEMENTAPI_GITEA_ADMINUSERNAME: kinotic_admin
+  KINOTIC_MANAGEMENTAPI_GITEA_ADMINPASSWORD: kinotic-gitea-admin
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
   OTEL_TRACES_EXPORTER: otlp

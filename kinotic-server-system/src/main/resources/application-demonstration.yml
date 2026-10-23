@@ -1,9 +1,19 @@
 # The demonstration server: the whole platform on one machine from deployment/docker-compose
-# (compose.yml), to try Kinotic with no Azure and no mail service. compose.kinotic-servers.yml runs
-# every server with this profile, and supplies the container addresses: Elasticsearch, the Ignite
-# cluster and the observability stack. application-single-machine.yml holds what it shares with the
+# (compose.yml), to try Kinotic with no Azure, no GitHub and no mail service. compose.kinotic-servers.yml
+# runs every server with this profile, and supplies the container addresses: Elasticsearch, the Ignite
+# cluster, Gitea and the observability stack. application-single-machine.yml holds what it shares with the
 # development profile.
 kinotic:
+  managementApi:
+    # Projects' repositories are hosted on the Gitea compose.gitea.yml runs, so a project needs no GitHub; compose
+    # supplies Gitea's container address and administrator
+    repoHost: GITEA
+    gitea:
+      # Gitea as a person's browser and Git client reach it, where compose publishes its port
+      webBaseUrl: http://localhost:3001
+      # Gitea as a deployment's workloads reach it: the host alias of a BOXLITE guest, completed over this
+      # machine's loopback
+      workloadBaseUrl: http://192.168.127.254:3001
   domain:
     # The portal the management server serves on 9090, where invitations are accepted
     portalBaseUrl: http://localhost:9090

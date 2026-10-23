@@ -1,4 +1,4 @@
-package org.kinotic.management.internal.api.services.github;
+package org.kinotic.management.internal.api.services.template;
 
 /**
  * One regular file extracted from a repository tarball by

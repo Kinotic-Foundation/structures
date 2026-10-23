@@ -2,7 +2,9 @@ package org.kinotic.management.internal.api.services;
 
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.management.api.config.RepoHostType;
 import org.kinotic.management.api.model.Project;
+import org.kinotic.management.api.model.RepositoryHost;
 import org.kinotic.management.api.model.RepositoryConnectionStatus;
 import org.kinotic.management.api.services.ProjectRepoProvisioner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,5 +41,11 @@ public class MockProjectRepoProvisioner implements ProjectRepoProvisioner {
     public Future<Project> reinitialize(Project project) {
         project.setRepoConnectionStatus(RepositoryConnectionStatus.CONNECTED);
         return Future.succeededFuture(project);
+    }
+
+    // the fake repositories stand in for GitHub's, which a disabled provisioner replaces
+    @Override
+    public RepositoryHost repositoryHost() {
+        return new RepositoryHost(RepoHostType.GITHUB, "https://github.com");
     }
 }

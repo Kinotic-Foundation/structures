@@ -34,6 +34,7 @@ the commit under test rather than whatever the published tag currently holds.
 | `compose-otel.yml` | OpenTelemetry collector + Grafana + Tempo + Loki + Mimir | `grafana:3000`, `loki:3100`, `tempo:3200`, `mimir:9009` |
 | `compose.gen-schemas.yml` | Load-generator container that pre-populates schemas | One-shot when `compose.yml` brings up the full stack |
 | `compose.sites.yml` | Where published UIs are stored and served: the Azurite emulator, and the local edge, the `kinotic-sites-edge` image built from `sites-edge.Dockerfile`, which runs the Cloudflare sites Worker (`../cloudflare/sites-worker/worker.js`) over it through `sites-edge.ts` and is the storage gateway workloads upload through. `docker compose up --build` builds it from the working tree | `kinotic-sites-edge:8088`, `kinotic-sites-edge:8089` |
+| `compose.gitea.yml` | The Gitea server the demonstration server hosts projects' repositories on, in place of GitHub: it creates the `kinotic_admin` administrator the servers act as on first start | `kinotic-gitea:3000` |
 | `compose.keycloak.yml` | Local Keycloak as a social sign-in OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |
 | `compose.kinotic-test.yml` | Minimal: ES + migration only, no server | Backing services for the `kinotic-test` suite, which runs the server in-process |
 | `compose.kinotic-e2e-test.yml` | Elasticsearch + migration + the servers, on the `test,e2e-tests,compose` profiles | Used by e2e tests in CI |
@@ -75,6 +76,7 @@ docker compose down -v && docker compose up -d
 | Kibana | <http://localhost:5601> | |
 | A published UI | `http://<app>--<ui>.<org>.sites.localhost:8088` | Served by `kinotic-sites-edge` from Azurite; the project's deployment page links it. Chrome, Edge and Firefox resolve `*.localhost` to this machine |
 | Storage gateway | <http://localhost:8089/devstoreaccount1> | Azurite's `devstoreaccount1` development account as the publish and removal workloads reach it; admits a request only to the site directory its SAS was signed for. Azurite itself publishes no port |
+| Gitea | <http://localhost:3001> | Every project's repository, in the Gitea organization named by its Kinotic organization's id. Sign in as `kinotic_admin` / `kinotic-gitea-admin` to browse them |
 | Grafana | <http://localhost:3000> | When `compose-otel.yml` is included. Anonymous auth with the Admin role — no login |
 | Keycloak | <http://keycloak:8888> | When `compose.keycloak.yml` is included; requires `127.0.0.1 keycloak` in `/etc/hosts` per `KEYCLOAK_HOSTS_SETUP.md` |
 
@@ -101,6 +103,10 @@ open http://localhost:9090
 2. Name your organization and set a password; you are signed in.
 3. On **Members**, add someone with an invitation: a dialog shows the invitation's link to send them,
    or to open yourself.
+4. Create an application and a project in it, or have a coding agent do both: the project's repository
+   is created on the stack's Gitea from the project template, which Gitea imports from GitHub the first
+   time, so that first project needs an internet connection. A push to its default branch deploys it,
+   on a vm-manager node running beside the stack.
 
 To connect a coding agent, install the Kinotic plugin from `kinotic-ai/agent-plugin` (see the
 [quick start](../../website/content/01.apps/02.quick-start.md)), whose own MCP server is Kinotic Cloud's,
