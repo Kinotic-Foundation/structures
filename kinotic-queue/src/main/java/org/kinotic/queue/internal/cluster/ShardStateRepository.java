@@ -2,11 +2,6 @@ package org.kinotic.queue.internal.cluster;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.util.AttributeNodeFilter;
 import org.kinotic.queue.internal.cluster.message.ShardId;
 import org.springframework.stereotype.Component;
 
@@ -28,12 +23,7 @@ public class ShardStateRepository {
     private final IgniteCache<String, Long> cache;
 
     public ShardStateRepository(Ignite ignite) {
-        CacheConfiguration<String, Long> configuration = new CacheConfiguration<>(STATE_CACHE);
-        configuration.setCacheMode(CacheMode.REPLICATED);
-        configuration.setAtomicityMode(CacheAtomicityMode.ATOMIC);
-        configuration.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        configuration.setNodeFilter(new AttributeNodeFilter(ShardPlacement.QUEUE_NODE_ATTRIBUTE, Boolean.TRUE));
-        this.cache = ignite.getOrCreateCache(configuration);
+        this.cache = ignite.getOrCreateCache(ShardPlacement.<Long>queueNodeCache(STATE_CACHE));
     }
 
     /**

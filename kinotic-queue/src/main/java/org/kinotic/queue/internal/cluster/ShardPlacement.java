@@ -3,7 +3,9 @@ package org.kinotic.queue.internal.cluster;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -69,6 +71,19 @@ public class ShardPlacement {
         }
         this.affinity = ((IgniteEx) ignite).cachex(PLACEMENT_CACHE).context().affinity();
         this.snapshot = takeSnapshot(affinity.affinityTopologyVersion(), 0);
+    }
+
+    /**
+     * @return the configuration of a cache every queue node holds in full, and no other node holds: an atomic cache
+     * whose writes complete once every queue node has them
+     */
+    public static <V> CacheConfiguration<String, V> queueNodeCache(String name) {
+        CacheConfiguration<String, V> ret = new CacheConfiguration<>(name);
+        ret.setCacheMode(CacheMode.REPLICATED);
+        ret.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+        ret.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ret.setNodeFilter(new AttributeNodeFilter(QUEUE_NODE_ATTRIBUTE, Boolean.TRUE));
+        return ret;
     }
 
     /**
