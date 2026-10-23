@@ -228,6 +228,33 @@ describe('connection lifecycle', () => {
         expect(failed).toEqual([])
     }, 15_000)
 
+    it('closes an attempt the server never answers after the connection timeout, and connects on the retry', async () => {
+        const server = new FakeStompServer()
+        server.silent = true
+        const bus = new EventBus()
+        const failed = failures(bus)
+        let attemptsFailed = 0
+        bus.connectionAttemptFailed.subscribe(() => attemptsFailed++)
+        const started = Date.now()
+        const connecting = bus.connect(options(server))
+
+        const deadline = Date.now() + 15_000
+        while (attemptsFailed === 0 && Date.now() < deadline) {
+            await sleep(50)
+        }
+        expect(attemptsFailed).toBe(1)
+        expect(Date.now() - started).toBeGreaterThanOrEqual(10_000)
+        expect(server.sockets[0]!.closedByClient).toBe(true)
+        expect(bus.isConnectionActive()).toBe(true)
+
+        // rx-stomp retries after its reconnect delay, and the server answers that attempt
+        server.silent = false
+        const connected = await connecting
+        expect(connected.replyToId).toBe('reply-2')
+        await bus.disconnect()
+        expect(failed).toEqual([])
+    }, 30_000)
+
     it('reports the attempt that exhausts the budget as the end of the connection', async () => {
         const server = new FakeStompServer()
         server.unreachable = true

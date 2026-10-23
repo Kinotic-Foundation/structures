@@ -49,6 +49,7 @@ export class StompConnectionManager {
     private readonly INITIAL_RECONNECT_DELAY: number = 2000
     private readonly JITTER_MAX: number = 5000
     private readonly MAX_RECONNECT_DELAY: number = 120000 // 2 mins
+    private readonly CONNECTION_TIMEOUT: number = 10000
     private connectionAttempts: number = 0
     private debugLogger = debug('kinotic:stomp')
     private readonly connectionEstablishedSubject: Subject<ConnectedInfo> = new Subject<ConnectedInfo>()
@@ -92,7 +93,8 @@ export class StompConnectionManager {
 
     /**
      * Emits each time an attempt to connect fails before the server accepts the connection and the client
-     * will try again: the server could not be reached, or it closed the socket before answering CONNECT. An
+     * will try again: the server could not be reached, it closed the socket before answering CONNECT, or it
+     * had not answered within the connection timeout. An
      * attempt that ends the connection for good is reported to {@link connectionEndedHandler} instead.
      */
     public get connectionAttemptFailed(): Observable<void> {
@@ -178,6 +180,9 @@ export class StompConnectionManager {
                 // applies to a client
                 heartbeatIncoming: 30000,
                 heartbeatOutgoing: 30000,
+                // stompjs waits forever on an attempt by default; this closes one whose socket or CONNECTED frame
+                // has not arrived in time, and the close is a failed attempt that is retried like any other
+                connectionTimeout: this.CONNECTION_TIMEOUT,
                 reconnectDelay: this.INITIAL_RECONNECT_DELAY,
                 maxReconnectDelay: this.MAX_RECONNECT_DELAY,
                 reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
