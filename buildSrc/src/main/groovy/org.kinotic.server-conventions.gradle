@@ -1,7 +1,7 @@
 // A deployable Kinotic server: a Spring Boot application whose jar embeds the OpenTelemetry Java
 // agent as BOOT-INF/classes/opentelemetry-javaagent.jar, the path the docker-compose -javaagent
-// arguments point at, and lists the libraries it runs in META-INF/kinotic/components.txt, which the
-// system console checks against the vulnerability advisories (ServerComponentsTask reads it).
+// arguments point at, and lists the libraries it runs in META-INF/kinotic/components.txt, which each
+// node stores as its SBOM when it starts (ServerSbomRecorder) for the system console's vulnerability check.
 plugins {
     id 'org.kinotic.java-application-conventions'
 }

@@ -105,6 +105,16 @@ CREATE TABLE IF NOT EXISTS kinotic_project_dependencies (
     edges JSON NOT INDEXED
 );
 
+-- The libraries each Kinotic server node runs, recorded when the node starts, one row per node; id
+-- is the node's Ignite id. packages, the package URL of each library, is read whole and never searched.
+CREATE TABLE IF NOT EXISTS kinotic_server_sbom (
+    id KEYWORD,
+    serverName KEYWORD,
+    version KEYWORD,
+    packages KEYWORD NOT INDEXED,
+    started DATE
+);
+
 -- Vulnerability advisories read from OSV, one row per advisory, shared by every organization.
 -- packages lists the package URL, without a version, of every package the advisory affects, so
 -- the advisories of an SBOM's packages are one terms query; affected holds which versions of each,
