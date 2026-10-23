@@ -72,9 +72,6 @@ public class CrudServiceTemplate {
     // Ids one search of findAllByIds asks for
     private static final int IDS_PER_SEARCH = 1_000;
 
-    // How long each shard may take to list the values of termsEnum
-    private static final String TERMS_ENUM_TIMEOUT = "30s";
-
     private static final Logger log = LoggerFactory.getLogger(CrudServiceTemplate.class);
 
     private final ElasticsearchAsyncClient esAsyncClient;
@@ -1045,38 +1042,6 @@ public class CrudServiceTemplate {
     /** Builds a {@code term} query for {@code field} equal to {@code value}. */
     public Query termFilter(String field, double value) {
         return TermQuery.of(t -> t.field(field).value(value))._toQuery();
-    }
-
-    /**
-     * Lists, in ascending order, the distinct values of a keyword field that start with a prefix, as
-     * the index's term dictionary holds them. A value whose documents were all deleted can be listed
-     * until their segments merge.
-     *
-     * @param indexName   name of the index
-     * @param field       the keyword field
-     * @param prefix      the start every value listed has
-     * @param searchAfter the value to list after, or null to list from the first
-     * @param size        the most values to list
-     * @return a {@link Future} that will complete with the values, fewer than {@code size} only once no more follow
-     */
-    public Future<List<String>> termsEnum(String indexName, String field, String prefix, String searchAfter, int size) {
-        return KinoticUtil.toFuture(esAsyncClient.termsEnum(b -> {
-                                                     b.index(indexName)
-                                                      .field(field)
-                                                      .string(prefix)
-                                                      .size(size)
-                                                      // Elasticsearch's default of one second fails the listing of a large index under load
-                                                      .timeout(t -> t.time(TERMS_ENUM_TIMEOUT));
-                                                     if (searchAfter != null) {
-                                                         b.searchAfter(searchAfter);
-                                                     }
-                                                     return b;
-                                                 }))
-                          .compose(response -> response.complete()
-                                  ? Future.succeededFuture(response.terms())
-                                  // a shard that timed out leaves the list short, which would read as the end
-                                  : Future.failedFuture(new IllegalStateException("Listing the values of " + field + " in "
-                                                                                          + indexName + " timed out")));
     }
 
     public Future<Void> updateIndexMapping(String indexName,
