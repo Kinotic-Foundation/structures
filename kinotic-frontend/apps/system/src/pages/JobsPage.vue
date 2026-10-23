@@ -61,7 +61,7 @@ import Button from 'primevue/button'
 import { LaptopMinimalCheck } from '@lucide/vue'
 
 import { ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
-import { JobRunOwnerType, JobRunsTable, PageHeader, executionStatusSeverity, ownerTypeOf, scanJobRuns, StatusChips,
+import { JobRunOwnerType, JobRunsTable, PageHeader, executionStatusSeverity, matchesJobRunFilter, scanJobRuns, StatusChips,
          type StatusChip } from '@kinotic-ai/frontend-common'
 
 import JobRunDetail from '@/components/JobRunDetail.vue'
@@ -118,13 +118,14 @@ const ownerFilter = computed<JobRunOwnerType | null>({
 
 const ownerChips = computed<StatusChip[]>(() => [
   { label: 'All owners', value: null, count: scanned.value.length },
-  ...OWNER_CHIPS.map(chip => ({ ...chip, count: scanned.value.filter(run => ownerTypeOf(run) === chip.value).length }))
+  ...OWNER_CHIPS.map(chip => ({ ...chip, count: scanned.value.filter(run => matchesJobRunFilter(run, { ownerType: chip.value })).length }))
 ])
 
 /** The scanned runs of the chosen owner, which the outcome and the status chips count. */
-const counted = computed<JobRun[]>(() => ownerFilter.value
-    ? scanned.value.filter(run => ownerTypeOf(run) === ownerFilter.value)
-    : scanned.value)
+const counted = computed<JobRun[]>(() => {
+  const ownerType = ownerFilter.value
+  return ownerType ? scanned.value.filter(run => matchesJobRunFilter(run, { ownerType })) : scanned.value
+})
 
 /** The runs by outcome, in the status colours the tags use, each with its share of all the runs. */
 const outcome = computed(() => {

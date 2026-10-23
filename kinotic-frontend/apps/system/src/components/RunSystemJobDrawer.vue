@@ -61,6 +61,10 @@ const error = ref<string | null>(null)
 
 watch(() => props.visible, visible => {
   if (visible) {
+    // the last opening's list, choice and error go at once, so nothing stale can be picked while the jobs reload
+    jobs.value = []
+    selected.value = null
+    error.value = null
     void loadJobs()
   }
 })
@@ -69,7 +73,6 @@ async function loadJobs(): Promise<void> {
   loading.value = true
   try {
     jobs.value = await Kinotic.systemJobs.findSystemJobs()
-    error.value = null
     // a single job is the only choice there is
     selected.value = jobs.value.length === 1 ? jobs.value[0].name : null
   } catch (err) {
