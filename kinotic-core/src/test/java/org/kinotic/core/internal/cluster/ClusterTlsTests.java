@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +44,8 @@ public class ClusterTlsTests {
     private Path directory;
 
     private final List<Process> processes = new ArrayList<>();
+    // The thin client ports the started nodes took; another Ignite node in this JVM may hold the default one
+    private final List<Integer> clientPorts = new CopyOnWriteArrayList<>();
 
     @AfterEach
     public void tearDown() {
@@ -110,6 +113,8 @@ public class ClusterTlsTests {
                 while ((line = reader.readLine()) != null) {
                     if (line.startsWith("servers=")) {
                         ret.set(Integer.parseInt(line.substring("servers=".length())));
+                    } else if (line.startsWith("clientPort=")) {
+                        clientPorts.add(Integer.parseInt(line.substring("clientPort=".length())));
                     }
                 }
             } catch (IOException e) {
@@ -129,10 +134,11 @@ public class ClusterTlsTests {
                                         .setSslTrustCertificateKeyStorePassword(PASSWORD);
     }
 
-    // Whether a thin client with the configuration can read the cache names from one of the nodes' client ports
-    private static boolean connects(ClientConfiguration configuration) {
+    // Whether a thin client with the configuration can read the cache names from one of the started nodes' client ports
+    private boolean connects(ClientConfiguration configuration) {
+        String[] addresses = clientPorts.stream().map(port -> "127.0.0.1:" + port).toArray(String[]::new);
         boolean ret;
-        try (IgniteClient client = Ignition.startClient(configuration.setAddresses("127.0.0.1:10800..10810").setTimeout(5_000))) {
+        try (IgniteClient client = Ignition.startClient(configuration.setAddresses(addresses).setTimeout(5_000))) {
             client.cacheNames();
             ret = true;
         } catch (Exception e) {
