@@ -246,8 +246,6 @@ locals {
         SUMMIT42_SSL_ENABLED                                    = "true"
         SUMMIT42_SSL_CERTPATH                                   = "/etc/summit-42/certs/fullchain.pem"
         SUMMIT42_SSL_KEYPATH                                    = "/etc/summit-42/certs/privkey.pem"
-        # The image carries no OpenTelemetry agent, and its build appends the --add-opens Ignite needs
-        JAVA_TOOL_OPTIONS = "-XX:MaxDirectMemorySize=512m"
       })
   } })
 
