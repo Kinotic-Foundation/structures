@@ -8,11 +8,6 @@ kinotic:
       # green and lets a developer publish far more definitions before hitting the cap.
       numberOfShards: 1
       numberOfReplicas: 0
-    # A developer's GitHub App replaces both from ~/.kinotic/dev-environment/kinotic-server-system/application.yml,
-    # which the development profile imports and compose mounts as ./config/application.yml
-    github:
-      webhookSecret: "-"
-      appPrivateKey: "-"
   systemApi:
     uiDeployment:
       # Published UIs go to the Azurite emulator compose.sites.yml runs, and its local edge serves

@@ -8,11 +8,6 @@ kinotic:
       # green and lets a developer publish far more definitions before hitting the cap.
       numberOfShards: 1
       numberOfReplicas: 0
-    # A developer's GitHub App replaces both from ~/.kinotic/dev-environment/kinotic-server-management/application.yml,
-    # which the development profile imports and compose mounts as ./config/application.yml
-    github:
-      webhookSecret: "-"
-      appPrivateKey: "-"
   domain:
     # The app server on this machine: the host of an application's or a tenant's OIDC callback
     appApiBaseUrl: http://localhost:58505

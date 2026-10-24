@@ -67,7 +67,7 @@ public class ProjectTemplateRenderer {
 
     /**
      * The name a project's repository is created with: the project name's slug, slugified as {@code DefaultProjectService}
-     * derives the project id, so a name that passes the platform's id-uniqueness check produces an identically-shaped
+     * derives the project id, so a name that passes its id-uniqueness check produces an identically-shaped
      * repository name, truncated to the length a repository host accepts.
      */
     public String repoName(Project project) {

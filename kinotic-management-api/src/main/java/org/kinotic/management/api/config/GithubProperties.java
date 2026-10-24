@@ -63,7 +63,7 @@ public class GithubProperties {
      * {@code owner/repo} of the GitHub Repository Template used to seed every
      * new project's backing repo. The App must have access to this template
      * (typically by being installed on the owning account/org). When Gitea hosts the
-     * repositories, Gitea imports it from GitHub as its own template.
+     * repositories, each holds one commit of it, downloaded from GitHub without a token, so it must be public.
      */
     @NotBlank
     private String repoTemplate;

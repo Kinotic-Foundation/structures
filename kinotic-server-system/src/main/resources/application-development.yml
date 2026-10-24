@@ -2,6 +2,12 @@
 # A developer's machine; application-single-machine.yml holds what it shares with the demonstration profile.
 kinotic:
   debug: true
+  managementApi:
+    # Placeholders the GitHub App the import below writes replaces. An import outranks only the file that declares
+    # it, and application-single-machine.yml outranks this file, so the placeholders live here
+    github:
+      webhookSecret: "-"
+      appPrivateKey: "-"
   traceLog:
     excludes:
       - "srv://system-api~org.kinotic.system.api.services.workload.VmNodeOrchestrationService/heartbeat"

@@ -23,8 +23,8 @@ import java.util.HexFormat;
 /**
  * Issues the credentials of projects' repositories on the Gitea server the system administers. Each repository is
  * read through one Gitea account that is a read-only collaborator of it alone, and written through another that may
- * write it alone, so a token reaches exactly one repository with exactly the access asked for. A token is good for an
- * hour, after which the next token issued for the same account deletes it.
+ * write it alone, so a token reaches exactly one repository with exactly the access asked for. A token is deleted an
+ * hour after it is issued.
  */
 @Component
 @RequiredArgsConstructor

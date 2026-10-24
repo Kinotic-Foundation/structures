@@ -9,6 +9,11 @@ kinotic:
     # ~/.kinotic/dev-environment/kinotic-server-management/application.yml, imported below, so SPA links,
     # OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP surface all share the tunnel's one origin.
     apiBaseUrl: http://localhost:5173
+    # Placeholders the GitHub App the import below writes replaces. An import outranks only the file that declares
+    # it, and application-single-machine.yml outranks this file, so the placeholders live here
+    github:
+      webhookSecret: "-"
+      appPrivateKey: "-"
   managementServer:
     turnstile:
       # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every

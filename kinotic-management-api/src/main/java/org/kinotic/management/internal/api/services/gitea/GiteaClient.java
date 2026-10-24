@@ -12,6 +12,7 @@ import io.vertx.ext.web.client.WebClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.kinotic.management.internal.api.services.github.client.CreatedRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The calls the system makes to the Gitea server projects' repositories are hosted on, the {@code kinotic-gitea} of
@@ -26,6 +28,7 @@ import java.util.UUID;
  * compose file creates, or as one of the accounts a repository is read and written through. Each {@code ensure}
  * call succeeds when the thing already exists, so a repeated or retried call is harmless.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(value = "kinotic.managementApi.repoHost", havingValue = "GITEA")
@@ -61,8 +64,20 @@ public class GiteaClient {
 
     /** Creates the organization {@code name}, private, when it doesn't exist. */
     public Future<Void> ensureOrganization(String name) {
-        return send(asAdmin(HttpMethod.POST, "/orgs"), new JsonObject().put("username", name).put("visibility", "private"))
-                .compose(response -> expect(response, "create the organization " + name, 201, 422));
+        JsonObject body = new JsonObject().put("username", name).put("visibility", "private");
+        return send(asAdmin(HttpMethod.POST, "/orgs"), body).compose(created -> {
+            Future<Void> ret;
+            if (created.statusCode() == 422) {
+                // Gitea answers 422 for an organization that exists and for a name it refuses, so the lookup decides
+                ret = send(asAdmin(HttpMethod.GET, "/orgs/" + name), null)
+                        .compose(found -> found.statusCode() == 200
+                                ? Future.<Void>succeededFuture()
+                                : expect(created, "create the organization " + name, 201));
+            } else {
+                ret = expect(created, "create the organization " + name, 201);
+            }
+            return ret;
+        });
     }
 
     /** Creates the empty repository {@code owner/name}, whose default branch is created by its first commit. */
@@ -139,8 +154,8 @@ public class GiteaClient {
     }
 
     /**
-     * Creates an access token of {@code username} with the given scope, and deletes the tokens this client created
-     * for the account more than {@code lifetime} ago.
+     * Creates an access token of {@code username} with the given scope, which is deleted once {@code lifetime} has
+     * passed, and deletes the tokens this client created for the account more than {@code lifetime} ago.
      *
      * @return a future emitting the token
      */
@@ -158,7 +173,18 @@ public class GiteaClient {
                                    new JsonObject().put("name", TOKEN_NAME_PREFIX + now + "-" + UUID.randomUUID())
                                                    .put("scopes", new JsonArray().add(scope))))
                 .compose(created -> expect(created, "create a token of " + username, 201)
-                        .map(v -> created.bodyAsJsonObject().getString("sha1")));
+                        .map(v -> {
+                            JsonObject token = created.bodyAsJsonObject();
+                            deleteAfter(lifetime, userUri + "/" + token.getLong("id"), username, password);
+                            return token.getString("sha1");
+                        }));
+    }
+
+    // Gitea tokens have no expiry of their own; one a restart leaves undeleted goes with the account's next token
+    private void deleteAfter(Duration lifetime, String tokenUri, String username, String password) {
+        vertx.timer(lifetime.toMillis(), TimeUnit.MILLISECONDS)
+             .compose(v -> send(asUser(HttpMethod.DELETE, tokenUri, username, password), null))
+             .onFailure(err -> log.warn("Deleting the Gitea token {} of {} failed", tokenUri, username, err));
     }
 
     // A token this client created is named kinotic-<creation time in milliseconds>-<uuid>
