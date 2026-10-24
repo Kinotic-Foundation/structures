@@ -34,7 +34,7 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
     Future<Project> createProjectIfNotExist(Project project);
 
     /**
-     * Where projects' repositories are hosted: GitHub, which an organization links by installing the platform's GitHub
+     * Where projects' repositories are hosted: GitHub, which an organization links by installing the system's GitHub
      * App before it creates a project, or the Gitea server a demonstration server runs, which needs no linking. Also
      * gives the base URL of a repository's web page.
      */

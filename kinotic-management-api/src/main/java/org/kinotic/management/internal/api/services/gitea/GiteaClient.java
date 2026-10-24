@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The calls the platform makes to the Gitea server projects' repositories are hosted on, the {@code kinotic-gitea} of
+ * The calls the system makes to the Gitea server projects' repositories are hosted on, the {@code kinotic-gitea} of
  * {@code deployment/docker-compose/compose.gitea.yml}, through its {@code /api/v1} API as the administrator that
  * compose file creates, or as one of the accounts a repository is read and written through. Each {@code ensure}
  * call succeeds when the thing already exists, so a repeated or retried call is harmless.

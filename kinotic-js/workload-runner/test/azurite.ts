@@ -23,7 +23,7 @@ function containerSas(permissions: string, expiry: Date = new Date(Date.now() + 
     return new URLSearchParams({ sv: SAS_VERSION, se, sr: 'c', sp: permissions, sig: sign(stringToSign) }).toString()
 }
 
-/** The URL of a site's directory with a SAS, the shape of the upload and removal URLs the platform issues. */
+/** The URL of a site's directory with a SAS, the shape of the upload and removal URLs the system issues. */
 export function siteUrl(directory: string, permissions: string = 'cwdl', expiry?: Date): string {
     return `${ENDPOINT}/${CONTAINER}/${directory}?${containerSas(permissions, expiry)}`
 }

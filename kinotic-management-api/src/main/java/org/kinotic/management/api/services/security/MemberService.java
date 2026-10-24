@@ -112,8 +112,8 @@ public interface MemberService {
      * @param email         the invited address
      * @param applicationId the application invited into, one of the caller's organization's, or {@code null} for an
      *                      invitation into the organization
-     * @return the link, or {@code null} when the platform does not show links in the UI or no invitation into the scope is
-     *         pending for the address
+     * @return the link, or {@code null} when email is enabled or no invitation into the scope is pending for the
+     *         address
      */
     Future<String> findInvitationLink(String email, String applicationId);
 }

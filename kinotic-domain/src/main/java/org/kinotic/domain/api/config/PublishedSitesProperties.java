@@ -10,7 +10,7 @@ import org.apache.commons.lang3.Validate;
 /**
  * Where organizations' published sites are hosted, bound under {@code kinotic.domain.publishedSites.*}: the
  * domain every site is under, {@code <app>--<ui>.<org>.<domain>}, the scheme and port a browser reaches the sites
- * on, and the Cloudflare DNS zone of that domain, in which the platform creates the record each organization's
+ * on, and the Cloudflare DNS zone of that domain, in which the system creates the record each organization's
  * sites resolve by.
  */
 @Getter

@@ -25,8 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Provisions a new {@link Project}'s repository on the Gitea server the platform administers: in the Gitea
- * organization named by the project's organization id, holding one commit of the platform's project template
+ * Provisions a new {@link Project}'s repository on the Gitea server the system administers: in the Gitea
+ * organization named by the project's organization id, holding one commit of the system's project template
  * ({@code kinotic.managementApi.github.repoTemplate}, downloaded from GitHub) rendered for the project
  * ({@link ProjectTemplateRenderer}). The repository is named {@link ProjectTemplateRenderer#repoName}, and given a
  * push webhook to the management server, signed with {@code kinotic.managementApi.github.webhookSecret}, once its

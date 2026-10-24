@@ -70,7 +70,7 @@ export interface IProjectService extends ICrudServiceProxy<Project> {
     findDependencies(projectId: string): Promise<ProjectDependencies | null>
 
     /**
-     * Where projects' repositories are hosted: GitHub, which an organization links by installing the platform's GitHub
+     * Where projects' repositories are hosted: GitHub, which an organization links by installing the system's GitHub
      * App before it creates a project, or the Gitea server a demonstration server runs, which needs no linking. Also
      * gives the base URL of a repository's web page.
      */
