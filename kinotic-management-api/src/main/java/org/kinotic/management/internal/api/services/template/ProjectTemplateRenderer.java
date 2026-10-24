@@ -33,9 +33,11 @@ public class ProjectTemplateRenderer {
     /** The longest repository name GitHub and Gitea accept. */
     private static final int REPO_NAME_MAX = 100;
     private static final String NPM_PACKAGE_VERSIONS_RESOURCE = "/spawn/npm-package-versions.properties";
-    private static final Map<String, Object> NPM_PACKAGE_VERSIONS = loadNpmPackageVersions();
 
     private final GraalJsSpawnRenderer spawnRenderer;
+    // Loaded on first render: the npmPackageVersions build task generates the resource, which a partial build
+    // lacks, and such a build must still start a Spring context
+    private volatile Map<String, Object> npmPackageVersions;
 
     /**
      * Renders the template a gzipped tarball holds, as a repository host's archive of a repository serves it,
@@ -81,7 +83,7 @@ public class ProjectTemplateRenderer {
     private Map<String, Object> contextFor(Project project) {
         // The package versions seed the context, so a template that also declares them as
         // spawn.json globals gets this server's values instead of its own defaults.
-        Map<String, Object> ret = new LinkedHashMap<>(NPM_PACKAGE_VERSIONS);
+        Map<String, Object> ret = new LinkedHashMap<>(npmPackageVersions());
         // projectName is the human-facing name; projectSlug is its slug, for template
         // values that must be npm identifiers (e.g. the package.json name), which the
         // raw name is not. It is not truncated to a repository host's name length limit:
@@ -91,6 +93,16 @@ public class ProjectTemplateRenderer {
         ret.put("organizationId", project.getOrganizationId());
         ret.put("applicationId", project.getApplicationId());
         ret.put("projectId", project.getId());
+        return ret;
+    }
+
+    // Two first renders racing both load the same immutable map, so no lock is needed
+    private Map<String, Object> npmPackageVersions() {
+        Map<String, Object> ret = npmPackageVersions;
+        if (ret == null) {
+            ret = loadNpmPackageVersions();
+            npmPackageVersions = ret;
+        }
         return ret;
     }
 
