@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS kinotic_vulnerability_advisory (
     id KEYWORD,
     aliases KEYWORD,
     summary TEXT,
-    kind KEYWORD,
+    type KEYWORD,
     severity KEYWORD,
     modified DATE,
     withdrawn DATE,
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS kinotic_vulnerability_alert (
         advisoryId KEYWORD,
         aliases KEYWORD,
         summary TEXT,
-        kind KEYWORD,
+        type KEYWORD,
         severity KEYWORD,
         packages JSON NOT INDEXED
     ),

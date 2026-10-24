@@ -69,9 +69,6 @@ public class CrudServiceTemplate {
     // its reindex, so consuming all 5 would take sustained pathological contention on one document
     public static final int UPDATE_CONFLICT_RETRIES = 5;
 
-    // Ids one search of findAllByIds asks for
-    private static final int IDS_PER_SEARCH = 1_000;
-
     private static final Logger log = LoggerFactory.getLogger(CrudServiceTemplate.class);
 
     private final ElasticsearchAsyncClient esAsyncClient;
@@ -906,36 +903,6 @@ public class CrudServiceTemplate {
             }
             builder.refresh(Refresh.WaitFor);
         });
-    }
-
-    /**
-     * Finds the documents with the given ids, each holding only the named fields of its source.
-     *
-     * @param indexName    name of the index to search
-     * @param type         of the documents to return
-     * @param documentIds  the Elasticsearch {@code _id} of each document to find
-     * @param sourceFields the fields each document returned holds
-     * @return a {@link Future} that will complete with the documents found, in no particular order
-     */
-    public <T> Future<List<T>> findAllByIds(String indexName, Class<T> type, List<String> documentIds, String... sourceFields) {
-        List<Future<Page<T>>> searches = new ArrayList<>();
-        for (int start = 0; start < documentIds.size(); start += IDS_PER_SEARCH) {
-            List<String> chunk = documentIds.subList(start, Math.min(start + IDS_PER_SEARCH, documentIds.size()));
-            searches.add(search(indexName,
-                                Pageable.ofSize(chunk.size()),
-                                type,
-                                b -> b.query(q -> q.ids(i -> i.values(chunk)))
-                                      .source(src -> src.filter(f -> f.includes(List.of(sourceFields))))));
-        }
-        return Future.all(searches)
-                     .map(found -> {
-                         List<T> ret = new ArrayList<>();
-                         for (int i = 0; i < found.size(); i++) {
-                             Page<T> page = found.resultAt(i);
-                             ret.addAll(page.getContent());
-                         }
-                         return ret;
-                     });
     }
 
     /**

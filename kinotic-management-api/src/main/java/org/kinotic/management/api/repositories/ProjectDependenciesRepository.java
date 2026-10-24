@@ -1,6 +1,7 @@
 package org.kinotic.management.api.repositories;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.CursorPageable;
@@ -24,6 +25,9 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
 
     private static final String PACKAGES_FIELD = "packages";
 
+    // The fields a scan of a tree reads
+    private static final List<String> SCANNED_FIELDS = List.of("id", "organizationId", "applicationId", PACKAGES_FIELD);
+
     public ProjectDependenciesRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_project_dependencies", ProjectDependencies.class, crudServiceTemplate);
     }
@@ -36,21 +40,29 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
      *                 names one project only within its organization
      */
     public Future<Page<ProjectDependencies>> findAllOfEveryOrganization(CursorPageable pageable) {
-        return findAll(pageable, b -> b.source(s -> s.filter(f -> f.includes("id", "organizationId", "applicationId", PACKAGES_FIELD))));
+        return findAll(pageable, b -> b.source(s -> s.filter(f -> f.includes(SCANNED_FIELDS))));
     }
 
     /**
-     * Finds which of the projects, of any organization, have a tree. Each tree found carries only its
-     * id and organization.
+     * Finds the trees of the projects, of any organization, that have one, each carrying its id,
+     * organization, application and package URLs; its positions in the package list are empty.
      *
      * @param projectIdsByOrganization the ids of the projects to look for, by organization id
      * @return a future emitting the trees found, in no particular order
      */
     public Future<List<ProjectDependencies>> findAllExisting(Map<String, ? extends Collection<String>> projectIdsByOrganization) {
         Validate.notNull(projectIdsByOrganization, "projectIdsByOrganization cannot be null");
-        List<String> documentIds = new ArrayList<>();
-        projectIdsByOrganization.forEach((orgId, ids) -> ids.forEach(id -> documentIds.add(composeDocumentId(id, orgId))));
-        return crudServiceTemplate.findAllByIds(indexName, type, documentIds, "id", "organizationId");
+        List<MultiGetOperation> operations = new ArrayList<>();
+        projectIdsByOrganization.forEach((orgId, ids) -> ids.forEach(id -> operations.add(MultiGetOperation.of(op -> op.index(indexName)
+                                                                                                                        .id(composeDocumentId(id, orgId))
+                                                                                                                        .routing(orgId)))));
+        Future<List<ProjectDependencies>> ret;
+        if (operations.isEmpty()) {
+            ret = Future.succeededFuture(List.of());
+        } else {
+            ret = crudServiceTemplate.multiGet(operations, type, b -> b.sourceIncludes(SCANNED_FIELDS), null);
+        }
+        return ret;
     }
 
     /**
@@ -68,7 +80,7 @@ public class ProjectDependenciesRepository extends AbstractApplicationScopedRepo
                                       .map(purl -> Query.of(q -> q.prefix(p -> p.field(PACKAGES_FIELD).value(purl + "@"))))
                                       .toList();
         return findAll(pageable, b -> b.query(q -> q.bool(bool -> bool.should(versionsOf).minimumShouldMatch("1")))
-                                       .source(s -> s.filter(f -> f.includes("id", "organizationId", "applicationId", PACKAGES_FIELD))));
+                                       .source(s -> s.filter(f -> f.includes(SCANNED_FIELDS))));
     }
 
 }
