@@ -7,7 +7,7 @@
       "dependencies": {
         "@kinotic-ai/core": "^5.0.0-beta.28",
         "@kinotic-ai/kinotic-cli": "5.2.0-beta.27",
-        "@kinotic-ai/management-api": "5.0.0-beta.65",
+        "@kinotic-ai/management-api": "5.0.0-beta.66",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-node": "^0.221.0",
       },
@@ -62,7 +62,7 @@
 
     "@kinotic-ai/kinotic-cli": ["@kinotic-ai/kinotic-cli@5.2.0-beta.27", "", { "dependencies": { "@inquirer/prompts": "^8.5.2", "@kinotic-ai/core": "5.0.0-beta.24", "@kinotic-ai/idl": "5.0.0-beta.1", "@kinotic-ai/management-api": "5.0.0-beta.42", "@kinotic-ai/persistence": "5.0.0-beta.12", "@kinotic-ai/spawn": "5.0.0-beta.1", "@oclif/core": "^4.13.3", "c12": "^3.3.4", "chalk": "^5.6.2", "liquidjs": "10.28.0", "open": "^11.0.0", "p-timeout": "^7.0.1", "radash": "^12.1.1", "simple-git": "3.36.0", "ts-morph": "^27.0.2" }, "bin": { "kinotic": "./bin/run.js" } }, "sha512-PLmSkUUlDEaVYSzmVhBPa9O51iyENyp7JjB8swaqh5Op5PnqYRhJcwnnDbI14eVuIq86q2y1aYf+7oCD5Fy6Vw=="],
 
-    "@kinotic-ai/management-api": ["@kinotic-ai/management-api@5.0.0-beta.65", "", { "dependencies": { "@kinotic-ai/idl": "5.0.0-beta.5", "@kinotic-ai/persistence": "5.0.0-beta.18", "rxjs": "^7.8.2" }, "peerDependencies": { "@kinotic-ai/core": "^5.0.0-beta.28" } }, "sha512-gnX3VG2QmK/Zjof5I1j6JvsSZ7BkpbQEEmY9VjS23VeSGJJDTjADQA12DL4+If1Nx9wQDpLHnmyAbslZCumtxg=="],
+    "@kinotic-ai/management-api": ["@kinotic-ai/management-api@5.0.0-beta.66", "", { "dependencies": { "@kinotic-ai/idl": "5.0.0-beta.5", "@kinotic-ai/persistence": "5.0.0-beta.18", "rxjs": "^7.8.2" }, "peerDependencies": { "@kinotic-ai/core": "^5.0.0-beta.28" } }, "sha512-ukIqj7Lz/9bLXwPN1fgEcGsISy7vvj6aBMBvMwvg9yCIME0+zPc3s0gy1QEZvvj1PupvEjZQm5MtrfdAGCQdEw=="],
 
     "@kinotic-ai/persistence": ["@kinotic-ai/persistence@5.0.0-beta.12", "", { "dependencies": { "@kinotic-ai/idl": "5.0.0-beta.1", "rxjs": "^7.8.2" }, "peerDependencies": { "@kinotic-ai/core": "^5.0.0-beta.17" } }, "sha512-F3dzUtFt1oGu58yPWrfPydLKu6gU90LS5Uwbz5uWqQqGYjJF6I7WmdYyBOaqBTLxD6YKIoKbpudovy5C6vEELQ=="],
 

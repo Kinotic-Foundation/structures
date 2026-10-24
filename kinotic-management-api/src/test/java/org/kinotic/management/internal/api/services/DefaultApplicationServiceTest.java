@@ -78,7 +78,7 @@ class DefaultApplicationServiceTest {
     }
 
     @Test
-    void allowsNamesMatchingTheOtherPlatformZones() {
+    void allowsNamesMatchingTheOtherZones() {
         // an id only ever lands after the app zone prefix, so these cannot collide with a zone
         for (String name : List.of("App API", "OS API", "App")) {
             assertDoesNotThrow(() -> service.beforeSave(new Application(name, "desc")),

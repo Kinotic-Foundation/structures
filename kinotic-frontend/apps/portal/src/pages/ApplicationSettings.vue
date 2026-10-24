@@ -50,7 +50,7 @@
                 <div :class="ROW_CLASS">
                   <div>
                     <label for="app-tenancy" :class="LABEL_CLASS">Tenants</label>
-                    <p :class="HELP_CLASS">Who creates and administers the application's tenants. The platform gives every user a tenant of their own at creation; otherwise a customer signing up, or you, creates a tenant and its administrator decides who joins. Applies to users created from then on.</p>
+                    <p :class="HELP_CLASS">Who creates and administers the application's tenants. The system gives every user a tenant of their own at creation; otherwise a customer signing up, or you, creates a tenant and its administrator decides who joins. Applies to users created from then on.</p>
                   </div>
                   <SelectButton input-id="app-tenancy" v-model="tenantManagement" :options="TENANT_MANAGEMENT_OPTIONS"
                                 option-label="label" option-value="value" :allow-empty="false" size="small" />
@@ -135,7 +135,7 @@ const appDescription = ref('')
 const tenantManagement = ref<TenantManagement>(TenantManagement.TENANT_ADMINISTRATORS)
 const TENANT_MANAGEMENT_OPTIONS = [
   { label: 'Tenant administrators', value: TenantManagement.TENANT_ADMINISTRATORS },
-  { label: 'Platform, one per user', value: TenantManagement.PLATFORM }
+  { label: 'System, one per user', value: TenantManagement.SYSTEM }
 ]
 const primaryUiId = ref<string | null>(null)
 const publishedUiNames = ref<string[]>([])

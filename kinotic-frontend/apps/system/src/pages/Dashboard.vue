@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Dashboard" description="The platform at a glance, and what needs a system user.">
+    <PageHeader title="Dashboard" description="The system at a glance, and what needs a system user.">
       <template #actions>
         <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading" @click="load" />
       </template>
@@ -8,7 +8,7 @@
 
     <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
 
-    <!-- The page reads in order of what a system user acts on: what needs me, the platform's vital
+    <!-- The page reads in order of what a system user acts on: what needs me, the system's vital
          signs, how healthy it has been, then what happened -->
     <div class="flex flex-col gap-4">
       <AttentionList :items="attention" />
@@ -26,7 +26,7 @@
       </div>
 
       <div class="grid gap-4 lg:grid-cols-3">
-        <WorkloadStateCard :tint="TINTS.ink" :workloads="workloads" description="Every workload on the platform." view-all-to="/workloads" />
+        <WorkloadStateCard :tint="TINTS.ink" :workloads="workloads" description="Every workload in the system." view-all-to="/workloads" />
 
         <JobRunsByDayChart :tint="TINTS.ink" :runs="runs" view-all-to="/jobs" />
 
@@ -72,7 +72,7 @@ import CapacityRows from '@/components/CapacityRows.vue'
 import JobRunsByDayChart from '@/components/JobRunsByDayChart.vue'
 import RecentRunsTable from '@/components/RecentRunsTable.vue'
 import WorkloadStateCard from '@/components/WorkloadStateCard.vue'
-import { platformAttention } from '@/util/attention'
+import { systemAttention } from '@/util/attention'
 import { NodeHealth, capacityOf, clusterHeartbeat as clusterHeartbeatOf, loadNodes, nodeHealth } from '@/util/nodes'
 import { scanWorkloads } from '@/util/workloads'
 
@@ -90,7 +90,7 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 // A workload can only be placed on a node in its desired state, so the free capacity of a node
-// that is draining or unreachable is not the platform's to hand out — counting it reports headroom
+// that is draining or unreachable is not the system's to hand out — counting it reports headroom
 // no placement can actually use.
 const placeableNodes = computed(() => nodes.value.filter(node => node.state.reconciled))
 const capacity = computed(() => capacityOf(placeableNodes.value))
@@ -105,7 +105,7 @@ const nodeStates = computed(() => {
   ]
 })
 
-const attention = computed(() => platformAttention(cluster.value, nodes.value, workloads.value, runs.value))
+const attention = computed(() => systemAttention(cluster.value, nodes.value, workloads.value, runs.value))
 
 const recentRuns = computed(() => runs.value.slice(0, RECENT_RUN_COUNT))
 
@@ -171,7 +171,7 @@ const stats = computed<Stat[]>(() => {
     {
       label: 'Organizations',
       value: organizationCount.value?.toString() ?? '—',
-      detail: 'registered on the platform',
+      detail: 'registered in the system',
       to: '/organizations',
       icon: markRaw(Building2),
       tint: TINTS.ink

@@ -202,8 +202,6 @@ interface ProfileDetail {
 /** How long the copy button shows its confirmation before returning to the copy icon. */
 const COPIED_FEEDBACK_MILLIS = 2000
 
-/** The platform registrations a user may connect as a sign-in method; any other provider offered is omitted. */
-
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()

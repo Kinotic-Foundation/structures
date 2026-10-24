@@ -13,7 +13,7 @@ import java.util.Date;
  * the identity a provider asserts for the person, the {@code sub} claim under one OIDC configuration, bound to the
  * user it signs in. A user may hold any number of bindings beside its password. A provider identity is bound to at
  * most one organization user, and to at most one user of each application, so a person signs in to several
- * applications with the same Google identity while the platform's registration for Google is one configuration for
+ * applications with the same Google identity while the system's registration for Google is one configuration for
  * all of them. A system user signs in with a password alone and holds no binding.
  *
  * <p>The id is derived from the configuration, the subject and the user's scope ({@link #idOf}), so a

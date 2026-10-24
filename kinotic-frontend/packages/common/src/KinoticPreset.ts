@@ -6,39 +6,40 @@ import KinoticTheme from './theme'
  */
 export const KinoticPreset = definePreset(KinoticTheme, {
     primitive:{
-        brand: {
-            50:  "#FFF0F4",
-            100: "#FFD9E3",
-            200: "#FFB1C5",
-            300: "#FF7D9E",
-            400: "#F84C77",
-            500: "#EC1F52",
-            600: "#D31346",
-            700: "#AE123C",
-            800: "#901437",
-            900: "#7A1634",
-            950: "#450818"
-        },
         teal: {
             400: "#28FEB4",
         },
     },
     semantic: {
+        // Selected and checked controls read near-black like the primary buttons, white in dark mode
         primary    : {
-            50 : '{brand.50}',
-            100: '{brand.100}',
-            200: '{brand.200}',
-            300: '{brand.300}',
-            400: '{brand.400}',
-            500: '{brand.500}',
-            600: '{brand.600}',
-            700: '{brand.700}',
-            800: '{brand.800}',
-            900: '{brand.900}',
-            950: '{brand.950}'
+            50 : '{surface.50}',
+            100: '{surface.100}',
+            200: '{surface.200}',
+            300: '{surface.300}',
+            400: '{surface.400}',
+            500: '{surface.500}',
+            600: '{surface.600}',
+            700: '{surface.700}',
+            800: '{surface.800}',
+            900: '{surface.900}',
+            950: '{surface.950}'
         },
         colorScheme: {
             light: {
+                primary: {
+                    color: '{surface.950}',
+                    contrastColor: '{surface.0}',
+                    hoverColor: '{surface.800}',
+                    activeColor: '{surface.700}'
+                },
+                // A highlighted option reads as the selected table row's grey
+                highlight: {
+                    background: '{surface.100}',
+                    focusBackground: '{surface.200}',
+                    color: '{surface.950}',
+                    focusColor: '{surface.950}'
+                },
                 // Keyboard focus is sky everywhere: rings, focused field borders and focused labels
                 focusRing: {
                     color: '{sky.500}'
@@ -82,6 +83,18 @@ export const KinoticPreset = definePreset(KinoticTheme, {
                 }
             },
             dark : {
+                primary: {
+                    color: '{surface.0}',
+                    contrastColor: '{surface.950}',
+                    hoverColor: '{surface.200}',
+                    activeColor: '{surface.300}'
+                },
+                highlight: {
+                    background: '{surface.800}',
+                    focusBackground: '{surface.700}',
+                    color: '{surface.0}',
+                    focusColor: '{surface.0}'
+                },
                 focusRing: {
                     color: '{sky.400}'
                 },

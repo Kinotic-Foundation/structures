@@ -147,7 +147,7 @@ export * from '@/api/services/IGitHubAppInstallationService'
 
 // Plugin
 export * from '@/api/ManagementApiPlugin'
-export * from '@/api/PlatformZones'
+export * from '@/api/Zones'
 
 import type { IManagementApiExtension } from '@/api/ManagementApiPlugin'
 

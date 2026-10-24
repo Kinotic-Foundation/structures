@@ -254,8 +254,8 @@ const stats = computed<Stat[]>(() => {
     ownerTo = organizationPath(w.organizationId)
     ownerIcon = Building2
   } else {
-    ownerName = 'platform'
-    ownerDetail = 'runs for the platform itself'
+    ownerName = 'system'
+    ownerDetail = 'runs for the system itself'
     ownerTo = '/cluster'
     ownerIcon = Shield
   }

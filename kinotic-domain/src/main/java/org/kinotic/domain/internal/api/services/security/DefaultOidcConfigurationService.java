@@ -112,7 +112,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     /**
      * Requires the bound participant to be the owner of {@code configuration}'s kind: a system participant
-     * for a managed registration, since that row names a secret of the platform's and is offered to
+     * for a managed registration, since that row names a secret of the system's and is offered to
      * every organization; a participant of the named organization for an organization's.
      *
      * @throws IllegalStateException  if no participant is bound to the current context
@@ -183,7 +183,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                                                        .map(owned -> owned);
         Future<List<OidcConfiguration>> ret;
         if (applicationId == null) {
-            // an organization's login offers the platform's org sign-up registrations before its own
+            // an organization's login offers the system's org sign-up registrations before its own
             ret = concat(oidcRepository.findEnabledOrgSignup().map(signup -> signup), own);
         } else if (tenantId == null) {
             ret = concat(own, findEnabledSocial(organizationId, applicationId).map(social -> social));
@@ -203,7 +203,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         });
     }
 
-    // the enabled platform social registrations the application names, in the application's order
+    // the enabled system social registrations the application names, in the application's order
     private Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocial(String organizationId, String applicationId) {
         return applicationRepository.findById(applicationId, organizationId)
                                     .compose(application -> application == null || application.getSocialProviders().isEmpty()
@@ -235,7 +235,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                              applicationRepository.findById(applicationId, organizationId)
                                                                   .map(application -> application != null
                                                                                       && application.getSocialProviders().contains(social.getProvider()));
-                                     // every organization's own login offers the platform's org sign-up registrations
+                                     // every organization's own login offers the system's org sign-up registrations
                                      case OrgSignupOidcConfiguration signup -> Future.succeededFuture(applicationId == null);
                                      case null, default -> Future.succeededFuture(false);
                                  };

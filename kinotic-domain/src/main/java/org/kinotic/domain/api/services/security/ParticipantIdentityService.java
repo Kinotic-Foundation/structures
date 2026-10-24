@@ -127,7 +127,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * application's users one per application: the id minted for the user is derived from its kind, its scope and
      * its email, and a creation under an email already held fails with
      * {@link org.kinotic.domain.api.exceptions.ExistingUserException}, two at once included.
-     * For APPLICATION-scope users whose application's tenants are {@code TenantManagement.PLATFORM} managed, a
+     * For APPLICATION-scope users whose application's tenants are {@code TenantManagement.SYSTEM} managed, a
      * unique {@code tenantId} is auto-generated unless one was supplied.
      *
      * @param user     the unsaved user carrying email, scope, and optional display name
@@ -151,7 +151,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * scope. A disabled identity acts nowhere.
      *
      * @param identityId     the identity, as a session or token names it
-     * @param organizationId the organization of the scope, or null for the platform
+     * @param organizationId the organization of the scope, or null for the system
      * @param applicationId  the application of the scope, or null
      */
     Future<Participant> resolveParticipant(String identityId, String organizationId, String applicationId);
