@@ -221,7 +221,7 @@ const health = computed(() => {
 const facts = computed(() => [
   { label: 'Name', icon: markRaw(TagIcon), value: application.value?.name ?? '—', mono: false },
   { label: 'Zone', icon: markRaw(Waypoints), value: `app.${organizationId.value}.${props.applicationId}`, mono: true },
-  { label: 'Tenants', icon: markRaw(Users), value: application.value?.tenantManagement === TenantManagement.PLATFORM ? 'Platform, one per user' : 'Tenant administrators', mono: false },
+  { label: 'Tenants', icon: markRaw(Users), value: application.value?.tenantManagement === TenantManagement.SYSTEM ? 'System, one per user' : 'Tenant administrators', mono: false },
   { label: 'Primary UI', icon: markRaw(Globe), value: application.value?.primaryUiId ?? 'Not set', mono: false },
   { label: 'Updated', icon: markRaw(CalendarClock),
     value: application.value?.updated ? DatetimeUtil.formatRelativeDate(application.value.updated) : null, mono: false }

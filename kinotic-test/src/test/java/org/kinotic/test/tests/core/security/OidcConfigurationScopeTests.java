@@ -168,7 +168,7 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
     public void anApplicationsManagedConfigurationSignsInThroughKinoticsRegistration() throws Exception {
         String appId = "oidc-scope-app-" + suffix();
         await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Managed application", null)));
-        // the platform's registration is never offered on its own, only through an application's configuration
+        // the system's registration is never offered on its own, only through an application's configuration
         assertNull(await(oidcConfigurations.findOffered("google-platform", organization.getId(), appId)));
         ApplicationSocialOidcConfiguration registration = await(oidcConfigurations.findEnabledAppSocialByProvider(OidcProviderType.GOOGLE));
         assertEquals("google-platform", registration.getId());

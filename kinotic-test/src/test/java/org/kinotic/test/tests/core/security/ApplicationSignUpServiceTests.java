@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies how people become users of an application: a user a provider signed up through Kinotic's registration
  * is the same user once the configuration switches to the application's own registration; a Microsoft email signs up
  * only when the token proves it; an application admits new
- * people at its own login only while the platform manages its tenants, which gives each a tenant, and a tenant's
+ * people at its own login only while the system manages its tenants, which gives each a tenant, and a tenant's
  * login admits them into the tenant through the tenant's own providers only; and a sign-up with an email and a
  * password creates the user once the emailed token comes back with a password, at the application it was for.
  */
@@ -107,7 +107,7 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
     @Test
     public void aUserSignedUpThroughKinoticsRegistrationSignsInThroughTheApplicationsOwn() throws Exception {
         String appId = "signup-app-" + suffix();
-        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Switching application", TenantManagement.PLATFORM)));
+        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Switching application", TenantManagement.SYSTEM)));
         ApplicationKey application = new ApplicationKey(organization.getId(), appId);
         ApplicationOidcConfiguration microsoft = new ApplicationOidcConfiguration().setApplicationId(appId)
                                                                                    .setClientRegistrationType(ClientRegistrationType.MANAGED);
@@ -125,7 +125,7 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
                                                                                      entraClaims("sub-under-kinotic", WORK_DIRECTORY, objectId, email, true)));
         assertNotNull(signedUp);
         assertEquals(email, signedUp.getEmail());
-        assertNotNull(signedUp.getTenantId(), "a user the platform's tenancy admits gets a tenant of its own");
+        assertNotNull(signedUp.getTenantId(), "a user the system's tenancy admits gets a tenant of its own");
 
         managed.setClientRegistrationType(ClientRegistrationType.OWN)
                .setProviderAccount("common")
@@ -143,7 +143,7 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
     @Test
     public void aMicrosoftEmailSignsUpOnlyWhenTheTokenProvesIt() throws Exception {
         String appId = "signup-app-" + suffix();
-        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Entra application", TenantManagement.PLATFORM)));
+        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Entra application", TenantManagement.SYSTEM)));
         ApplicationKey application = new ApplicationKey(organization.getId(), appId);
         ApplicationOidcConfiguration microsoft = new ApplicationOidcConfiguration().setApplicationId(appId)
                                                                                    .setClientRegistrationType(ClientRegistrationType.MANAGED);
@@ -202,7 +202,7 @@ public class ApplicationSignUpServiceTests extends KinoticTestBase {
     @Test
     public void aPasswordSignUpCreatesTheUserOnceTheEmailIsVerified() throws Exception {
         String appId = "signup-app-" + suffix();
-        Application application = await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Password application", TenantManagement.PLATFORM)));
+        Application application = await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Password application", TenantManagement.SYSTEM)));
         ApplicationKey key = new ApplicationKey(organization.getId(), appId);
         String email = "password-" + suffix() + "@example.test";
         assertInstanceOf(IllegalStateException.class, failure(() -> signUps.initiatePasswordSignUp(key, email, "Pat", "https://ui.example.test")));

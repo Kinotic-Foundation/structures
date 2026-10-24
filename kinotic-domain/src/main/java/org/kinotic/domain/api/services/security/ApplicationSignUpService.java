@@ -16,8 +16,8 @@ import java.util.Map;
  * How people become and sign in as users of an application at its login, or at one of its tenants': what the login
  * offers, the user a provider's verified identity signs in as, created on its first sign-in where the scope admits
  * new people, and sign-up with an email and a password. Every user created here has a valid tenant: the application's
- * login admits new people only while the platform manages the application's tenants
- * ({@link TenantManagement#PLATFORM}), which gives each a tenant of its own, and a tenant's login admits them into
+ * login admits new people only while the system manages the application's tenants
+ * ({@link TenantManagement#SYSTEM}), which gives each a tenant of its own, and a tenant's login admits them into
  * that tenant through the tenant's own providers only. Nothing here tells a caller whether an email has a user
  * before the person proves the email is theirs. Checks no participant: these serve the sign-in and sign-up flows,
  * which run before one is bound.

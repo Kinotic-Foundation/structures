@@ -50,7 +50,7 @@
                 <div :class="ROW_CLASS">
                   <div>
                     <label for="app-tenancy" :class="LABEL_CLASS">Tenants</label>
-                    <p :class="HELP_CLASS">Who creates and administers the application's tenants. The platform gives every user a tenant of their own at creation; otherwise a customer signing up, or you, creates a tenant and its administrator decides who joins. Applies to users created from then on.</p>
+                    <p :class="HELP_CLASS">Who creates and administers the application's tenants. The system gives every user a tenant of their own at creation; otherwise a customer signing up, or you, creates a tenant and its administrator decides who joins. Applies to users created from then on.</p>
                   </div>
                   <SelectButton input-id="app-tenancy" v-model="tenantManagement" :options="TENANT_MANAGEMENT_OPTIONS"
                                 option-label="label" option-value="value" :allow-empty="false" size="small" />
@@ -59,11 +59,11 @@
                 <div :class="ROW_CLASS">
                   <div>
                     <label for="app-password-sign-up" :class="LABEL_CLASS">Email and password sign-up</label>
-                    <p :class="HELP_CLASS">Lets new people create an account from the application's own UIs with an email and a password, after confirming the email through a link sent to it. Needs the platform to manage tenants, so each new user gets a tenant of their own. Each sign-in provider says whether it signs people up as well.</p>
+                    <p :class="HELP_CLASS">Lets new people create an account from the application's own UIs with an email and a password, after confirming the email through a link sent to it. Needs the system to manage tenants, so each new user gets a tenant of their own. Each sign-in provider says whether it signs people up as well.</p>
                   </div>
                   <div>
-                    <ToggleSwitch input-id="app-password-sign-up" v-model="passwordSignUp" :disabled="tenantManagement !== TenantManagement.PLATFORM" />
-                    <p v-if="tenantManagement !== TenantManagement.PLATFORM" class="mt-1.5 text-[0.8125rem] text-muted-color">
+                    <ToggleSwitch input-id="app-password-sign-up" v-model="passwordSignUp" :disabled="tenantManagement !== TenantManagement.SYSTEM" />
+                    <p v-if="tenantManagement !== TenantManagement.SYSTEM" class="mt-1.5 text-[0.8125rem] text-muted-color">
                       Under tenant administrators, people join a tenant by invitation or through the tenant's own sign-in providers.
                     </p>
                   </div>
@@ -149,7 +149,7 @@ const appDescription = ref('')
 const tenantManagement = ref<TenantManagement>(TenantManagement.TENANT_ADMINISTRATORS)
 const TENANT_MANAGEMENT_OPTIONS = [
   { label: 'Tenant administrators', value: TenantManagement.TENANT_ADMINISTRATORS },
-  { label: 'Platform, one per user', value: TenantManagement.PLATFORM }
+  { label: 'System, one per user', value: TenantManagement.SYSTEM }
 ]
 const passwordSignUp = ref(false)
 const primaryUiId = ref<string | null>(null)
@@ -183,9 +183,9 @@ watch(() => APPLICATION_STATE.currentApplication, (newApp) => {
   }
 }, { immediate: true })
 
-// sign-up gives each new user a tenant of its own, which only the platform's tenancy does
+// sign-up gives each new user a tenant of its own, which only the system's tenancy does
 watch(tenantManagement, management => {
-  if (management !== TenantManagement.PLATFORM) {
+  if (management !== TenantManagement.SYSTEM) {
     passwordSignUp.value = false
   }
 })

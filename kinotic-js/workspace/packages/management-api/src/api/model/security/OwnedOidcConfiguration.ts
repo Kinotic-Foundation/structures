@@ -43,7 +43,7 @@ export interface OwnedOidcConfiguration {
     /**
      * Whether the configuration signs new people up: an identity the provider verifies that no user of the scope is
      * bound to becomes a user of the scope on its first sign-in. Taken by an application's configuration, while the
-     * platform manages the application's tenants, and by a tenant's: an organization's members are added by its
+     * system manages the application's tenants, and by a tenant's: an organization's members are added by its
      * administrators, whom its provider then signs in.
      */
     createUserOnSignIn: boolean

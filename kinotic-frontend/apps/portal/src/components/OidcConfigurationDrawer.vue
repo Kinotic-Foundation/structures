@@ -106,7 +106,7 @@
             <label for="oidc-create-users" class="text-sm font-medium text-surface-950 dark:text-surface-0">Let new people sign up</label>
             <p class="text-[0.8125rem] text-muted-color">
               {{ createUserOnSignIn
-                  ? 'Someone the provider verifies who is not yet a user here becomes one the first time they sign in, where the platform manages the application\'s tenants or at the tenant\'s own login.'
+                  ? 'Someone the provider verifies who is not yet a user here becomes one the first time they sign in, where the system manages the application\'s tenants or at the tenant\'s own login.'
                   : 'Someone the provider verifies who is not yet a user here is refused until they are invited or created.' }}
             </p>
           </div>

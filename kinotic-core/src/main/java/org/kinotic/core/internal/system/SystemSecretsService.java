@@ -1,10 +1,10 @@
-package org.kinotic.core.internal.platform;
+package org.kinotic.core.internal.system;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.config.KinoticProperties;
-import org.kinotic.core.api.config.PlatformSecretsProperties;
+import org.kinotic.core.api.config.SystemSecretsProperties;
 import org.kinotic.core.api.config.VersionedKeySet;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * Loads platform-level {@link VersionedKeySet} JSON files from disk and periodically polls
+ * Loads system-level {@link VersionedKeySet} JSON files from disk and periodically polls
  * them for changes. Used by the JWT issuer (signing keys). File updates surface as atomic
  * reference swaps; consumers register listeners to react to rotations.
  * <p>
@@ -32,13 +32,13 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Component
-public class PlatformSecretsService {
+public class SystemSecretsService {
 
     private static final long POLL_INTERVAL_SECONDS = 30;
 
-    private final PlatformSecretsProperties properties;
+    private final SystemSecretsProperties properties;
     private final ObjectMapper objectMapper;
-    private final Optional<DevPlatformSecretsGenerator> generator;
+    private final Optional<DevSystemSecretsGenerator> generator;
 
     private final AtomicReference<Loaded> jwtSigningKeys = new AtomicReference<>();
 
@@ -46,24 +46,24 @@ public class PlatformSecretsService {
 
     private ScheduledExecutorService scheduler;
 
-    public PlatformSecretsService(KinoticProperties kinoticProperties,
+    public SystemSecretsService(KinoticProperties kinoticProperties,
                                   ObjectMapper objectMapper,
-                                  Optional<DevPlatformSecretsGenerator> generator) {
-        this.properties = kinoticProperties.getPlatformSecrets();
+                                  Optional<DevSystemSecretsGenerator> generator) {
+        this.properties = kinoticProperties.getSystemSecrets();
         this.objectMapper = objectMapper;
         this.generator = generator;
     }
 
     @PostConstruct
     public void start() {
-        generator.ifPresent(DevPlatformSecretsGenerator::ensureFilesExist);
+        generator.ifPresent(DevSystemSecretsGenerator::ensureFilesExist);
 
         if (properties.getJwtSigningKeysPath() != null) {
             jwtSigningKeys.set(loadFile(properties.getJwtSigningKeysPath()));
         }
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "platform-secrets-watcher");
+            Thread t = new Thread(r, "system-secrets-watcher");
             t.setDaemon(true);
             return t;
         });
@@ -93,7 +93,7 @@ public class PlatformSecretsService {
         try {
             reloadIfChanged(jwtSigningKeys, jwtListeners);
         } catch (Exception e) {
-            log.error("Platform secrets poll failed", e);
+            log.error("System secrets poll failed", e);
         }
     }
 
@@ -105,12 +105,12 @@ public class PlatformSecretsService {
             if (mtime == current.mtime()) return;
             Loaded updated = loadFile(current.path());
             ref.set(updated);
-            log.info("Reloaded platform secret file: {}", current.path());
+            log.info("Reloaded system secret file: {}", current.path());
             for (Consumer<VersionedKeySet> listener : listeners) {
                 try {
                     listener.accept(updated.content());
                 } catch (Exception e) {
-                    log.error("Platform secret listener threw", e);
+                    log.error("System secret listener threw", e);
                 }
             }
         } catch (Exception e) {
@@ -126,21 +126,21 @@ public class PlatformSecretsService {
             long mtime = Files.getLastModifiedTime(path).toMillis();
             return new Loaded(path, mtime, set);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to load platform secret file: " + path, e);
+            throw new IllegalStateException("Failed to load system secret file: " + path, e);
         }
     }
 
     private void validate(VersionedKeySet set, Path path) {
         if (set.getActiveKeyId() == null || set.getActiveKeyId().isBlank()) {
-            throw new IllegalStateException("Platform secret " + path + " has no activeKeyId");
+            throw new IllegalStateException("System secret " + path + " has no activeKeyId");
         }
         if (set.getKeys() == null || set.getKeys().isEmpty()) {
-            throw new IllegalStateException("Platform secret " + path + " has no keys");
+            throw new IllegalStateException("System secret " + path + " has no keys");
         }
         boolean hasActive = false;
         for (VersionedKeySet.KeyEntry entry : set.getKeys()) {
             if (entry.getId() == null || entry.getKey() == null) {
-                throw new IllegalStateException("Platform secret " + path + " has key entry missing id or key");
+                throw new IllegalStateException("System secret " + path + " has key entry missing id or key");
             }
             if (entry.getId().equals(set.getActiveKeyId())) {
                 hasActive = true;
@@ -148,7 +148,7 @@ public class PlatformSecretsService {
         }
         if (!hasActive) {
             throw new IllegalStateException(
-                    "Platform secret " + path + " activeKeyId '" + set.getActiveKeyId() + "' not in keys");
+                    "System secret " + path + " activeKeyId '" + set.getActiveKeyId() + "' not in keys");
         }
     }
 

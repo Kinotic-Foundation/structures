@@ -1,4 +1,4 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import { CrudServiceProxy, FunctionalIterablePage, type IKinotic, type ICrudServiceProxy, type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
 import { Project } from '@/api/model/Project'
 import type { ProjectDependencies } from '@/api/model/deployment/ProjectDependencies'

@@ -10,6 +10,7 @@ import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
+import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.test.support.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -103,7 +104,7 @@ public abstract class KinoticTestBase {
      * Runs the supplied async operation on a Vert.x context with the given participant bound, as
      * {@link #runAsOrganization(Supplier)} does with {@link #TEST_ORGANIZATION_PARTICIPANT}.
      */
-    protected <T> Future<T> runAs(OrganizationParticipant participant, Supplier<Future<T>> supplier) {
+    protected <T> Future<T> runAs(ScopedParticipant participant, Supplier<Future<T>> supplier) {
         Promise<T> promise = Promise.promise();
         Context context = vertx.getOrCreateContext();
         context.runOnContext(v -> {

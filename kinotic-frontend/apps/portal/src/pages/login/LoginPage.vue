@@ -97,7 +97,7 @@ import { apiUrl, readAuthError } from '@kinotic-ai/frontend-common'
 import { AuthPageShell } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import loginArt from '@/assets/login-background.svg'
-import { LAST_ORGANIZATION_KEY, organizationLoginPath, organizationSlug } from '@/pages/login/organizationLogin'
+import { organizationLoginPath, organizationSlug, rememberedOrganization } from '@/pages/login/organizationLogin'
 
 const debug = createDebug('login')
 
@@ -143,12 +143,18 @@ const route = useRoute()
 const router = useRouter()
 
 onMounted(() => {
-  void consumeUrlError()
-  // the organization the browser last signed in to, so a returning member only confirms it
-  organization.value = localStorage.getItem(LAST_ORGANIZATION_KEY) ?? ''
-  nextTick(() => focus(organizationInput))
-  // the buttons appear when the list arrives, so a server slow to answer does not hold up the form
-  void loadProviders()
+  const remembered = rememberedOrganization()
+  // a returning browser goes straight to the organization it last signed in to, unless a failed
+  // sign-in or a choice of organizations must be shown here
+  if (remembered !== null && urlError() === null) {
+    router.replace({ path: organizationLoginPath(remembered), query: route.query })
+  } else {
+    void consumeUrlError()
+    organization.value = remembered ?? ''
+    nextTick(() => focus(organizationInput))
+    // the buttons appear when the list arrives, so a server slow to answer does not hold up the form
+    void loadProviders()
+  }
 })
 
 watch(finding, open => {
@@ -234,8 +240,7 @@ function socialStartUrl(provider: string): string {
  * offers them instead of an error.
  */
 async function consumeUrlError() {
-  const search = new URLSearchParams(window.location.search)
-  const error = (route.query.error as string | undefined) ?? search.get('error')
+  const error = urlError()
   if (!error) return
 
   // Clean the query string so a refresh doesn't replay the error; the referer stays, for the login
@@ -256,6 +261,10 @@ async function consumeUrlError() {
       memberships.value = choices
     }
   }
+}
+
+function urlError(): string | null {
+  return (route.query.error as string | undefined) ?? new URLSearchParams(window.location.search).get('error')
 }
 
 // The organizations the sign-in found, offered for a short while after it; null when the request

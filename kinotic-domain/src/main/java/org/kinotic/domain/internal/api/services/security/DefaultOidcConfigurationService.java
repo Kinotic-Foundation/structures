@@ -129,7 +129,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     /**
      * Requires the bound participant to be the owner of {@code configuration}'s kind: a system participant
-     * for a managed registration, since that row names a secret of the platform's and is offered to
+     * for a managed registration, since that row names a secret of the system's and is offered to
      * every organization; a participant of the named organization for an organization's.
      *
      * @throws IllegalStateException  if no participant is bound to the current context
@@ -163,7 +163,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         });
     }
 
-    // a configuration using Kinotic's registration signs in through the platform's registration of its provider kind
+    // a configuration using Kinotic's registration signs in through the system's registration of its provider kind
     private Future<Void> requireManagedRegistration(OidcProviderType provider) {
         return oidcRepository.findEnabledSocialByProvider(provider).map(registration -> {
             Validate.isTrue(registration != null, "Kinotic manages no sign-in with %s; use the application's own credentials", provider.key());
@@ -219,10 +219,10 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                                                        .map(owned -> owned);
         Future<List<OidcConfiguration>> ret;
         if (applicationId == null) {
-            // an organization's login offers the platform's org sign-up registrations before its own
+            // an organization's login offers the system's org sign-up registrations before its own
             ret = concat(oidcRepository.findEnabledOrgSignup().map(signup -> signup), own);
         } else if (tenantId == null) {
-            // a configuration using Kinotic's registration is offered while the platform holds an enabled one of its kind
+            // a configuration using Kinotic's registration is offered while the system holds an enabled one of its kind
             ret = Future.all(own, oidcRepository.findEnabledSocial()).map(cf -> {
                 Set<OidcProviderType> managed = cf.<List<ApplicationSocialOidcConfiguration>>resultAt(1).stream()
                                                   .map(OidcConfiguration::getProvider)
@@ -261,7 +261,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                      case OrganizationOidcConfiguration owned ->
                                              Future.succeededFuture(applicationId == null && organizationId.equals(owned.getOrganizationId()));
                                      // offered at the application's login and at every one of its tenants'
-                                     // one using Kinotic's registration while the platform holds an enabled one of its kind,
+                                     // one using Kinotic's registration while the system holds an enabled one of its kind,
                                      // as findEnabledForScope lists it
                                      case ApplicationOidcConfiguration owned when OidcConfigurationService.isManaged(owned) ->
                                              organizationId.equals(owned.getOrganizationId()) && owned.getApplicationId().equals(applicationId)
@@ -274,7 +274,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                              Future.succeededFuture(organizationId.equals(owned.getOrganizationId())
                                                                     && owned.getApplicationId().equals(applicationId)
                                                                     && owned.getTenantId().equals(tenantId));
-                                     // every organization's own login offers the platform's org sign-up registrations
+                                     // every organization's own login offers the system's org sign-up registrations
                                      case OrgSignupOidcConfiguration signup -> Future.succeededFuture(applicationId == null);
                                      case null, default -> Future.succeededFuture(false);
                                  };

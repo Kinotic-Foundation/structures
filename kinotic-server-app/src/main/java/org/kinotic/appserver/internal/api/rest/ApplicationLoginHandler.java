@@ -96,7 +96,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
      * {@code POST /api/auth/app/login/oidc/start/:configId[?tenantId]} — begins a sign-in through a configuration
      * the login offers, answering {@code {redirect}} with the URL the page sends the browser to: the provider's
      * authorization URL for a configuration of the organization, whose flow returns to this handler's callback,
-     * or the shared host's authorize URL for one of the platform's social registrations (see
+     * or the shared host's authorize URL for one of the system's social registrations (see
      * {@link ApplicationSocialLoginHandler}). {@code 400} for a configuration the login does not offer;
      * {@code 403} from a page that is not one of the application's UIs.
      */

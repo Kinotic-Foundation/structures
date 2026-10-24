@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * Resolves named secrets from the platform Azure Key Vault. Authenticates via
+ * Resolves named secrets from the system's Azure Key Vault. Authenticates via
  * {@code DefaultAzureCredential} — on AKS this resolves to a Workload Identity, in
  * local dev to {@code az login} or env vars. Always reads the latest version of the
  * secret.

@@ -7,11 +7,11 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.system.api.model.llm.LlmConfiguration;
 
 /**
- * The large language models the platform's services call, each an {@link LlmConfiguration} that system users
- * manage and a service selects by name. A configuration's API key is given on save and held in the platform's scope
+ * The large language models the system's services call, each an {@link LlmConfiguration} that system users
+ * manage and a service selects by name. A configuration's API key is given on save and held in the system's scope
  * of the secret storage until a save gives another or the configuration is deleted.
  * <p>
- * Published in the system zone, which only SYSTEM participants and the platform's own cluster members may address.
+ * Published in the system zone, which only SYSTEM participants and the system's own cluster members may address.
  */
 @Publish
 public interface LlmConfigurationService {
@@ -37,7 +37,7 @@ public interface LlmConfigurationService {
     Future<LlmConfiguration> save(LlmConfiguration configuration, String apiKey);
 
     /**
-     * The API key held for the configuration {@code id}: the secret a platform service calls the provider with. Only
+     * The API key held for the configuration {@code id}: the secret a system service calls the provider with. Only
      * a cluster member calling as itself, as {@code SecurityContext.callWithoutParticipant} sends a call, may read
      * it; a call made for any participant, SYSTEM participants included, is refused.
      *

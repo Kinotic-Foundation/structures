@@ -116,9 +116,9 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         "The application id '%s' leaves no room for a UI name in its sites' labels, which are held to"
                                 + " %d characters so a tenant's name fits in front; shorten the application name",
                         entity.getId(), HostLabelUtil.MAX_SITE_LABEL_LENGTH);
-        // a new user gets a tenant of its own only while the platform manages the application's tenants
-        Validate.isTrue(!entity.isPasswordSignUp() || entity.getTenantManagement() == TenantManagement.PLATFORM,
-                        "Sign-up with an email and a password needs the platform to manage the application's tenants;"
+        // a new user gets a tenant of its own only while the system manages the application's tenants
+        Validate.isTrue(!entity.isPasswordSignUp() || entity.getTenantManagement() == TenantManagement.SYSTEM,
+                        "Sign-up with an email and a password needs the system to manage the application's tenants;"
                                 + " a user of an application whose tenants their administrators manage joins a tenant by invitation"
                                 + " or through the tenant's own sign-in providers");
         entity.setUpdated(new Date());

@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
  * {@link #authority(String)} fills from the organization's account at the provider, so an
  * organization never names a URL and the server only ever connects to the provider's own hosts.
  * A type without a template is offered to organizations' sign-up and sign-in through the
- * platform's curated registrations only.
+ * system's curated registrations only.
  */
 public enum OidcProviderType {
 

@@ -37,7 +37,7 @@ public interface ProfileService {
 
     /**
      * The configurations an organization user may connect as further sign-in methods and has not yet: the
-     * platform's org sign-up registrations, and the own configurations of every organization it may sign in
+     * system's org sign-up registrations, and the own configurations of every organization it may sign in
      * to; none for a system user, which signs in with a password alone. Connecting one starts at
      * {@code POST /api/auth/org/methods/start/<configurationId>}.
      */
@@ -56,7 +56,7 @@ public interface ProfileService {
     /**
      * Removes a provider identity from the calling user's sign-in methods. The last method that still signs
      * the user in cannot be removed, so the user always keeps a way to sign in: its password, a binding to
-     * one of the platform's registrations, or a binding to an organization's own configuration while the user
+     * one of the system's registrations, or a binding to an organization's own configuration while the user
      * is a member there.
      *
      * @param methodId the method's id, as {@link SignInMethod#id()} names it

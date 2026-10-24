@@ -274,9 +274,9 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_binding (
 );
 
 -- OIDC Configuration: every OIDC provider configuration (OidcConfiguration), discriminated by
--- type the way kinotic_participant_identity is. ORG_SIGNUP and APP_SOCIAL rows are the platform's
+-- type the way kinotic_participant_identity is. ORG_SIGNUP and APP_SOCIAL rows are the system's
 -- managed registrations (ManagedOidcConfiguration): they belong to no organization, are seeded below,
--- and name their client secret in the platform's secret storage with secretNameRef. type=ORG_SIGNUP
+-- and name their client secret in the system's secret storage with secretNameRef. type=ORG_SIGNUP
 -- (GitHub) powers the "Continue with X" buttons on org signup and org login; type=APP_SOCIAL
 -- (Google, Microsoft) is the registration an APPLICATION row of the same provider kind signs in through
 -- when its clientRegistrationType is MANAGED. type=ORGANIZATION, type=APPLICATION and type=TENANT are providers an
@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_binding (
 -- provider at another scope copies it there (OidcConfigurationService.copy). createUserOnSignIn says
 -- whether an identity the provider verifies that no user of the scope is bound to becomes a user on
 -- first sign-in. An APPLICATION row's clientRegistrationType says whose registration with the provider
--- a sign-in uses: MANAGED, the platform's APP_SOCIAL row of its provider kind, or OWN, the row's own
+-- a sign-in uses: MANAGED, the system's APP_SOCIAL row of its provider kind, or OWN, the row's own
 -- client; a MANAGED row keeps its own client fields for a switch back. The row names no client secret: OidcConfigurationService.save(configuration,
 -- clientSecret) holds the secret in the organization's scope of the secret storage
 -- (SecretStorageService), keyed by the row's id, and confidentialClient records that one is held. Nor
@@ -320,10 +320,10 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     updated DATE
 );
 
--- LLM configuration: a large language model the platform's services call, which system users
+-- LLM configuration: a large language model the system's services call, which system users
 -- manage in the system console (LlmConfigurationService) and a service selects by its unique name.
 -- The row names no API key: LlmConfigurationService.save(configuration, apiKey) holds the key in the
--- platform's scope of the secret storage, keyed by the row's id, and apiKeyHeld records that one is held.
+-- system's scope of the secret storage, keyed by the row's id, and apiKeyHeld records that one is held.
 CREATE TABLE IF NOT EXISTS kinotic_llm_configuration (
     id KEYWORD,
     name KEYWORD,
@@ -494,7 +494,7 @@ CREATE TABLE IF NOT EXISTS kinotic_vm_node (
 );
 
 -- Create the workload table for tracking deployed workloads.
--- organizationId/applicationId encode who the workload runs on behalf of (both null = platform
+-- organizationId/applicationId encode who the workload runs on behalf of (both null = system
 -- workload); the mapping is strict, so every Workload entity field must be declared here. A
 -- workload keeps the last status its node reported and carries NODE_UNREACHABLE in its state
 -- until the node's next report clears it.
@@ -570,7 +570,7 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
 -- The record says what it is now; its entries say how it got there. @timestamp is the write's time.
 CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD, parent KEYWORD, eventType KEYWORD, source KEYWORD, serverNodeId KEYWORD, generation LONG, message TEXT, value JSON NOT INDEXED) WITH (DATA_RETENTION = '30d') ;
 
--- The platform's managed IdP registrations: github-platform (ORG_SIGNUP) powers the "Continue with
+-- The system's managed IdP registrations: github-platform (ORG_SIGNUP) powers the "Continue with
 -- GitHub" button on org signup and login; google-platform and entra-platform (APP_SOCIAL) are the
 -- social sign-in an organization may offer to its application's users.
 --
@@ -578,7 +578,7 @@ CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD,
 -- SecretReferenceResolver — Azure Key Vault in prod (kinotic.domain.secretStorage.azure.vaultUrl)
 -- or KINOTIC_AKV_<uppercased,sanitized-secretNameRef> properties in dev. The secret name
 -- here must match the AKV secret object name terraform creates. Only the managed kinds carry a
--- secretNameRef; an ORGANIZATION row has none and cannot name a platform secret.
+-- secretNameRef; an ORGANIZATION row has none and cannot name a system secret.
 --
 -- audience is intentionally not set: for these social providers (Google, Microsoft Entra
 -- /common) the OAuth2 code-for-token exchange already pins the resulting id_token to our

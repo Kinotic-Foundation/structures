@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Sign-in to an application through one of its {@link ApplicationOidcConfiguration}s that uses Kinotic's
- * registration with the provider ({@link ClientRegistrationType#MANAGED}), the platform's
+ * registration with the provider ({@link ClientRegistrationType#MANAGED}), the system's
  * {@link ApplicationSocialOidcConfiguration} of the configuration's provider kind. The registration is shared by
  * every application, and a provider returns the browser only to a redirect URI registered in advance, so the
  * provider returns to one host for all of them: the app server's own, {@code kinotic.domain.appApiBaseUrl}. The flow
@@ -53,7 +53,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     private static final String COMPLETE_PATH = "/api/auth/app/login/social/complete/";
 
     // the application's configuration a flow at the shared host signs in through, held there for its callback, whose
-    // path names the platform registration the provider returns to
+    // path names the system registration the provider returns to
     private static final String CONFIGURATION_SESSION_KEY = "socialLoginConfiguration";
 
     private final ParticipantIdentityService identityService;
@@ -126,7 +126,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
                                        });
     }
 
-    // the platform's enabled registration the configuration signs in through, failing with CONFIG_NOT_FOUND when there is none
+    // the system's enabled registration the configuration signs in through, failing with CONFIG_NOT_FOUND when there is none
     private Future<ApplicationSocialOidcConfiguration> managedRegistration(ApplicationOidcConfiguration configuration) {
         return oidcConfigurationService.findEnabledAppSocialByProvider(configuration.getProvider())
                                        .map(registration -> {

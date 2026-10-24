@@ -20,7 +20,7 @@ export class Application implements Identifiable<string> {
     public description: string
 
     /**
-     * Who creates and administers this application's tenants. Under PLATFORM every APPLICATION-scope
+     * Who creates and administers this application's tenants. Under SYSTEM every APPLICATION-scope
      * user created for the application receives a tenant of its own; it applies to users created while
      * it is in force, and existing users are not backfilled.
      */
@@ -41,7 +41,7 @@ export class Application implements Identifiable<string> {
 
     /**
      * Whether a person may sign up as a new user of the application with an email and a password, the email verified
-     * by a link sent to it, from one of the application's UIs. Taken only while the platform manages the application's
+     * by a link sent to it, from one of the application's UIs. Taken only while the system manages the application's
      * tenants, which gives each new user a tenant of its own. The application's providers sign people up as each
      * one's `createUserOnSignIn` says.
      */

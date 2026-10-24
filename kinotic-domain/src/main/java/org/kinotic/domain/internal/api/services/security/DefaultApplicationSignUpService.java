@@ -104,7 +104,7 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
         }
         String email = OAuth2Util.stringClaim(verifiedClaims, "email");
         ApplicationParticipantIdentity user = newUser(application, email, OAuth2Util.firstPresent(verifiedClaims, "name", "preferred_username", "email"));
-        // the platform gives a user of the application a tenant of its own; a tenant's login creates the tenant's user
+        // the system gives a user of the application a tenant of its own; a tenant's login creates the tenant's user
         user.setTenantId(tenantId);
         return identityService.createOidcUser(user, configuration.getId(), subject);
     }
@@ -191,10 +191,10 @@ public class DefaultApplicationSignUpService implements ApplicationSignUpService
         return ret;
     }
 
-    // a new user of the application gets a tenant of its own only while the platform manages its tenants, and a
+    // a new user of the application gets a tenant of its own only while the system manages its tenants, and a
     // tenant's administrators decide who joins a tenant, so no method of the application's admits a person into one
     private static boolean admitsNewUsers(Application application, String tenantId) {
-        return tenantId == null && application.getTenantManagement() == TenantManagement.PLATFORM;
+        return tenantId == null && application.getTenantManagement() == TenantManagement.SYSTEM;
     }
 
     private static ApplicationParticipantIdentity newUser(ApplicationKey application, String email, String displayName) {

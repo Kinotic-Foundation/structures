@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Collection;
 
 /**
- * The OIDC provider configurations users sign up and in through: the platform's managed registrations
+ * The OIDC provider configurations users sign up and in through: the system's managed registrations
  * and each organization's own, each made for one sign-in scope. A write is held to its kind's owner: a
  * {@link ManagedOidcConfiguration} is saved or deleted by a system participant only, an
  * {@link OwnedOidcConfiguration} by an organization participant of the organization it names, and an
@@ -27,14 +27,14 @@ import java.util.Collection;
  * configuration must name a provider kind {@link OidcProviderType#offeredToOrganizations() offered to
  * organizations} and its account there in the form the kind expects; its authority is derived from the
  * two on every save. An application's configuration that signs in through Kinotic's registration
- * ({@link ClientRegistrationType#MANAGED}) must name a provider kind the platform holds an enabled
+ * ({@link ClientRegistrationType#MANAGED}) must name a provider kind the system holds an enabled
  * {@link ApplicationSocialOidcConfiguration} for, and needs no account or client of its own. The finders that serve the sign-in flows, which run before a participant is bound,
  * check no participant and say so.
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
 
     /**
-     * Whether {@code configuration} signs in through one of the platform's registrations rather than a client of the
+     * Whether {@code configuration} signs in through one of the system's registrations rather than a client of the
      * organization's own: an {@link ApplicationOidcConfiguration} using {@link ClientRegistrationType#MANAGED}, which
      * signs in through the {@link ApplicationSocialOidcConfiguration} of its provider kind.
      */
@@ -68,16 +68,16 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     Future<OrgSignupOidcConfiguration> findOrgSignupById(String id);
 
     /**
-     * Every enabled registration the platform holds for applications' sign-in, one per provider kind: the
+     * Every enabled registration the system holds for applications' sign-in, one per provider kind: the
      * registrations an {@link ApplicationOidcConfiguration} using {@link ClientRegistrationType#MANAGED} signs in
      * through. Checks no participant.
      */
     Future<List<ApplicationSocialOidcConfiguration>> findEnabledAppSocialRegistrations();
 
     /**
-     * The enabled registration the platform holds for applications' sign-in with {@code provider}, through which
+     * The enabled registration the system holds for applications' sign-in with {@code provider}, through which
      * an {@link ApplicationOidcConfiguration} of that kind using {@link ClientRegistrationType#MANAGED} signs in,
-     * or {@code null} when the platform holds none. Checks no participant.
+     * or {@code null} when the system holds none. Checks no participant.
      */
     Future<ApplicationSocialOidcConfiguration> findEnabledAppSocialByProvider(OidcProviderType provider);
 
@@ -85,7 +85,7 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * The enabled configurations a sign-in scope offers, in the order to present them. The organization's
      * own login ({@code applicationId} null) offers the org sign-up registrations followed by the
      * organization's {@link OrganizationOidcConfiguration}s; an application's login offers its
-     * {@link ApplicationOidcConfiguration}s, one using {@link ClientRegistrationType#MANAGED} while the platform
+     * {@link ApplicationOidcConfiguration}s, one using {@link ClientRegistrationType#MANAGED} while the system
      * holds an enabled registration of its provider kind; the login of one tenant of the application offers
      * the tenant's {@link TenantOidcConfiguration}s followed by what the application's login offers. Empty
      * when the scope offers none. Checks no participant.
@@ -105,7 +105,7 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
      * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
      * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, one using
-     * {@link ClientRegistrationType#MANAGED} while the platform holds an enabled registration of its kind, or at an
+     * {@link ClientRegistrationType#MANAGED} while the system holds an enabled registration of its kind, or at an
      * organization's own login any {@link OrgSignupOidcConfiguration}, which every organization's login offers. A tenant's login
      * offers what the application's offers as well as the tenant's own. Checks no participant.
      *

@@ -26,7 +26,7 @@ public class Application implements OrganizationScoped<String> {
     private String description;
 
     /**
-     * Who creates and administers this application's tenants. Under {@link TenantManagement#PLATFORM}
+     * Who creates and administers this application's tenants. Under {@link TenantManagement#SYSTEM}
      * every APPLICATION-scope {@link ParticipantIdentity} created for the application receives a tenant
      * of its own; it applies to users created while it is in force, and existing users are not
      * backfilled.
@@ -48,7 +48,7 @@ public class Application implements OrganizationScoped<String> {
 
     /**
      * Whether a person may sign up as a new user of the application with an email and a password, the email
-     * verified by a link sent to it, from one of the application's UIs. Taken only while the platform manages the
+     * verified by a link sent to it, from one of the application's UIs. Taken only while the system manages the
      * application's tenants, which gives each new user a tenant of its own; a user of an application whose tenants
      * their administrators manage joins a tenant through an invitation or the tenant's own login. The
      * application's providers sign people up as each one's {@code createUserOnSignIn} says.

@@ -19,7 +19,7 @@ import { PageHeader, TraceDetail } from '@kinotic-ai/frontend-common'
 import { scopePath } from '@/util/scope'
 
 /**
- * One trace opened from an Observability page: the platform's own, an organization's, or an
+ * One trace opened from an Observability page: the system's own, an organization's, or an
  * application's. The eyebrow leads back to the page it was opened from.
  */
 const props = defineProps<{

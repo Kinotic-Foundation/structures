@@ -10,11 +10,11 @@ package org.kinotic.domain.api.model.security;
  */
 public enum OidcConfigurationType {
     /**
-     * A registration the platform holds with a provider, through which organization users sign up and in.
+     * A registration the system holds with a provider, through which organization users sign up and in.
      */
     ORG_SIGNUP,
     /**
-     * A registration the platform holds with a social provider, which an application's configuration of the
+     * A registration the system holds with a social provider, which an application's configuration of the
      * same provider kind signs in through when it uses {@link ClientRegistrationType#MANAGED}.
      */
     APP_SOCIAL,
