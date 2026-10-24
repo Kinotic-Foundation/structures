@@ -28,9 +28,13 @@ public enum OidcProviderType {
 
     /** Google Workspace and consumer accounts share one issuer, so there is no account to name. */
     GOOGLE("google", "https://accounts.google.com", null, null),
-    /** The account is the Entra directory, named by its tenant id. */
+    /**
+     * The account is the Entra directory, named by its tenant id, or {@code common} for every Microsoft account and
+     * {@code organizations} for every work or school account, for a registration whose users come from any directory.
+     */
     AZURE_AD("azure-ad", "https://login.microsoftonline.com/{providerAccount}/v2.0",
-             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "Directory (tenant) ID"),
+             "common|organizations|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+             "Directory (tenant) ID, or common or organizations"),
     /** The account is the Okta org, named by its Okta domain, on any of Okta's own domains. */
     OKTA("okta", "https://{providerAccount}", "[a-z0-9-]{1,63}\\.(okta\\.com|oktapreview\\.com|okta-emea\\.com)", "Okta domain"),
     MICROSOFT_LIVE("microsoft-live"),

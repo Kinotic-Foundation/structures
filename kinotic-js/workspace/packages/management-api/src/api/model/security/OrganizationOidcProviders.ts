@@ -10,8 +10,8 @@ export const ORGANIZATION_OIDC_PROVIDERS: OrganizationOidcProvider[] = [
     { provider: OidcProviderType.GOOGLE, providerAccountLabel: null, providerAccountPattern: null },
     {
         provider: OidcProviderType.AZURE_AD,
-        providerAccountLabel: 'Directory (tenant) ID',
-        providerAccountPattern: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+        providerAccountLabel: 'Directory (tenant) ID, or common or organizations',
+        providerAccountPattern: /^(common|organizations|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/
     },
     {
         provider: OidcProviderType.OKTA,

@@ -68,6 +68,8 @@ public class EmailService {
     private static final Template VERIFICATION_TEXT = compileTemplate(TEXT_TEMPLATES, "verification-email");
     private static final Template INVITE_HTML = compileTemplate(HTML_TEMPLATES, "invite-email");
     private static final Template INVITE_TEXT = compileTemplate(TEXT_TEMPLATES, "invite-email");
+    private static final Template APPLICATION_SIGN_UP_HTML = compileTemplate(HTML_TEMPLATES, "application-signup-email");
+    private static final Template APPLICATION_SIGN_UP_TEXT = compileTemplate(TEXT_TEMPLATES, "application-signup-email");
     private static final Template ORGANIZATIONS_HTML = compileTemplate(HTML_TEMPLATES, "organizations-email");
     private static final Template ORGANIZATIONS_TEXT = compileTemplate(TEXT_TEMPLATES, "organizations-email");
 
@@ -114,6 +116,35 @@ public class EmailService {
                        render(VERIFICATION_TEXT, variables));
         }
         return ret;
+    }
+
+    /**
+     * Sends a person signing up to an application the link that verifies their email, naming the application.
+     *
+     * @param email           the recipient's email address
+     * @param displayName     the name the person gave, or {@code null}
+     * @param applicationName the name of the application signed up to
+     * @param verificationUrl the link to the application's UI page that completes the sign-up
+     * @return a future that completes once the send has finished (or fails if ACS rejects it)
+     */
+    public Future<Void> sendApplicationSignUpEmail(String email, String displayName, String applicationName, String verificationUrl) {
+        if (!properties.getDomain().getEmail().isEnabled()) {
+            log.warn("Email sending is disabled; sign-up verification URL of {} for <{}>: {}", applicationName, email, verificationUrl);
+            return Future.succeededFuture();
+        }
+
+        // HashMap rather than Map.of: displayName is omitted (not null) when none was given, so {{#if displayName}} sees it as falsy
+        Map<String, Object> variables = new HashMap<>();
+        if (displayName != null) {
+            variables.put("displayName", displayName);
+        }
+        variables.put("applicationName", applicationName);
+        variables.put("verificationUrl", verificationUrl);
+        return send(email,
+                    displayName != null ? displayName : email,
+                    "Confirm your email for " + applicationName,
+                    render(APPLICATION_SIGN_UP_HTML, variables),
+                    render(APPLICATION_SIGN_UP_TEXT, variables));
     }
 
     /**
