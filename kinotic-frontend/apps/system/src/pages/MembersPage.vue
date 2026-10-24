@@ -97,7 +97,7 @@ import { scopeTint, type Scope } from '@/util/scope'
 /**
  * The system users when no scope is given, otherwise the people with access to an
  * organization or the users of one of its applications, with pending invitations inline.
- * Read-only: an organization's people are the organization's to manage, and the platform's are
+ * Read-only: an organization's people are the organization's to manage, and the system's are
  * the identity provider's.
  */
 const props = defineProps<{
@@ -115,7 +115,7 @@ const headers: CrudHeader[] = [
   { field: 'created', header: 'Joined', sortable: false, optional: true, width: '22%' }
 ]
 
-// An organization's people are its members; an application's and the platform's are its users
+// An organization's people are its members; an application's and the system's are its users
 const title = computed(() => props.organizationId && !props.applicationId ? 'Members' : 'Users')
 
 const description = computed(() => {

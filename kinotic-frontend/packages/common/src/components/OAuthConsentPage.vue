@@ -21,8 +21,8 @@
         </p>
         <Message v-if="systemUser" severity="warn" :closable="false" class="consent-warning">
           This is a system user. It is not scoped to an organization, so
-          {{ pending.clientName }} would reach the MCP tools of every organization on this
-          platform. To authorize it for one organization, connect it to the organization API's
+          {{ pending.clientName }} would reach the MCP tools of every organization in this
+          system. To authorize it for one organization, connect it to the organization API's
           <code>/mcp</code> endpoint instead and approve there as a member of that organization.
         </Message>
         <Button

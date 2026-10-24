@@ -29,7 +29,7 @@ public class Application implements OrganizationScoped<String> {
     private String description;
 
     /**
-     * Who creates and administers this application's tenants. Under {@link TenantManagement#PLATFORM}
+     * Who creates and administers this application's tenants. Under {@link TenantManagement#SYSTEM}
      * every APPLICATION-scope {@link ParticipantIdentity} created for the application receives a tenant
      * of its own; it applies to users created while it is in force, and existing users are not
      * backfilled.
@@ -50,7 +50,7 @@ public class Application implements OrganizationScoped<String> {
     private String primaryUiUrl;
 
     /**
-     * The platform's social registrations this application's login offers, by provider kind, in the order
+     * The system's social registrations this application's login offers, by provider kind, in the order
      * to present them: Google, Microsoft. The application's users sign in with Kinotic's registration at
      * the provider, so the application registers nothing of its own; the organization's own providers
      * for the application are its {@code ApplicationOidcConfiguration}s. Empty offers none.

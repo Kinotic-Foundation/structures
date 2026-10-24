@@ -1,9 +1,9 @@
-package org.kinotic.core.internal.platform;
+package org.kinotic.core.internal.system;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.config.KinoticProperties;
-import org.kinotic.core.api.config.PlatformSecretsProperties;
+import org.kinotic.core.api.config.SystemSecretsProperties;
 import org.kinotic.core.api.config.VersionedKeySet;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -18,18 +18,18 @@ import java.util.Base64;
 import java.util.List;
 
 /**
- * Seeds the platform secret files that are missing on first boot, so the standard file-watch code
- * path in {@link PlatformSecretsService} works out of the box without a separate setup step.
+ * Seeds the system secret files that are missing on first boot, so the standard file-watch code
+ * path in {@link SystemSecretsService} works out of the box without a separate setup step.
  * Generated keys are fresh per developer machine and never committed.
  * <p>
- * Only registered when {@code kinotic.platformSecrets.generateMissing} is true; in production the
- * platform secrets must come from Azure Key Vault via the Secrets Store CSI driver.
+ * Only registered when {@code kinotic.systemSecrets.generateMissing} is true; in production the
+ * system secrets must come from Azure Key Vault via the Secrets Store CSI driver.
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(value = "kinotic.platformSecrets.generateMissing", havingValue = "true")
+@ConditionalOnProperty(value = "kinotic.systemSecrets.generateMissing", havingValue = "true")
 @RequiredArgsConstructor
-public class DevPlatformSecretsGenerator {
+public class DevSystemSecretsGenerator {
 
     private static final int KEY_BYTES = 32;
     private static final String INITIAL_VERSION = "v1";
@@ -42,7 +42,7 @@ public class DevPlatformSecretsGenerator {
      * Generates each configured secret file that does not exist yet, leaving existing files untouched.
      */
     public void ensureFilesExist() {
-        PlatformSecretsProperties props = kinoticProperties.getPlatformSecrets();
+        SystemSecretsProperties props = kinoticProperties.getSystemSecrets();
         ensureFile(props.getJwtSigningKeysPath(), "JWT signing keys");
     }
 
@@ -74,7 +74,7 @@ public class DevPlatformSecretsGenerator {
                 Files.deleteIfExists(tmp);
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to seed dev platform secret file: " + path, e);
+            throw new IllegalStateException("Failed to seed dev system secret file: " + path, e);
         }
     }
 

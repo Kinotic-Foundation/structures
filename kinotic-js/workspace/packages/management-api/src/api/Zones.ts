@@ -1,25 +1,25 @@
 import { validateLabel } from '@kinotic-ai/core'
 
 /**
- * The zones the Kinotic platform partitions the event bus address space into:
+ * The zones Kinotic partitions the event bus address space into:
  * `app.<organizationId>.<applicationId>` addresses belong to a single application, `app-api`
- * contains the platform's data plane for applications, `management-api` contains the platform services
- * organizations manage the system through, and `system-api` addresses are internal to the platform.
+ * contains the data plane for applications, `management-api` contains the services organizations
+ * manage their applications through, and `system-api` contains the system's own services.
  * The gateway enforces which zones a participant may address on every send and subscribe.
  */
 
 // The data plane zone lives in @kinotic-ai/persistence, whose services occupy it, and is
-// re-exported here so consumers of the platform zones can reach every zone from one import
+// re-exported here so consumers can reach every zone from one import
 export { APP_API_ZONE } from '@kinotic-ai/persistence'
 
 /**
- * The zone for platform services organizations use to manage the system, such as member,
- * application, and entity definition management
+ * The zone for the services organizations use to manage their members, applications and
+ * entity definitions
  */
 export const MANAGEMENT_API_ZONE = 'management-api'
 
 /**
- * The zone for services internal to the platform, only reachable by system participants
+ * The zone for the system's own services, only reachable by system participants
  */
 export const SYSTEM_API_ZONE = 'system-api'
 

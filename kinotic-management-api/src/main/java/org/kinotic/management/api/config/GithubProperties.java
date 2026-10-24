@@ -7,10 +7,10 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 /**
- * Non-secret + secret configuration for the single platform GitHub App.
+ * Non-secret + secret configuration for the system's single GitHub App.
  * <p>
  * In Kubernetes the secret values ({@link #appPrivateKey}, {@link #webhookSecret}) are
- * files of the server's platform-secrets volume, each named after its property
+ * files of the server's system-secrets volume, each named after its property
  * (e.g. {@code kinotic.managementApi.github.appPrivateKey}), which the server imports as
  * a config tree. For local dev they can also be set via {@code application.yml} or any
  * other Spring-supported source.

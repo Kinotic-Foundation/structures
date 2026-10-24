@@ -25,7 +25,7 @@
 const LABEL_SEPARATOR = '--'
 /**
  * The labels no organization id may take, which DomainUtil.validateOrganizationId refuses: the platform's own hosts
- * (RESERVED_ORGANIZATION_IDS, with Membership.PLATFORM) and xn, whose host labels would start with the DNS-reserved
+ * (RESERVED_ORGANIZATION_IDS, with DomainUtil.SYSTEM_ID) and xn, whose host labels would start with the DNS-reserved
  * xn--. A host of one of them is never a site, so the Worker refuses it even when a route sends it here.
  */
 const RESERVED_LABELS = new Set(['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status', 'docs',

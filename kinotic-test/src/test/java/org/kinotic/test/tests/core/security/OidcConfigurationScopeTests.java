@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies where an organization's OIDC configurations are offered: one made for the organization's own login
  * is offered there, after the org sign-up providers, and at none of its applications; one made for an
  * application is offered at that application only and must name one of the organization's; a disabled
- * configuration is offered nowhere; an application offers the platform's social registrations it names and no
+ * configuration is offered nowhere; an application offers the system's social registrations it names and no
  * other; one made for a tenant of an application is offered at that tenant's login, which also offers the
  * application's, and nowhere else; and a copy of a configuration into another scope is a configuration of that
  * scope, with the source's secret and an id of its own.
@@ -164,7 +164,7 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
     }
 
     @Test
-    public void anApplicationOffersThePlatformSocialRegistrationsItNames() throws Exception {
+    public void anApplicationOffersTheSystemSocialRegistrationsItNames() throws Exception {
         String appId = "oidc-scope-app-" + suffix();
         Application application = await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Social application", null)));
         assertTrue(await(oidcConfigurations.findEnabledForScope(organization.getId(), appId)).isEmpty());

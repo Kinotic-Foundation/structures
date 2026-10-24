@@ -104,14 +104,14 @@ public class DefaultProfileService implements ProfileService {
                                                               .map(m -> oidcConfigurationService.findEnabledForScope(m.getOrganizationId(), null))
                                                               .toList()))
                 .map(cf -> {
-                    // every organization's login lists the platform's registrations, so each appears once
+                    // every organization's login lists the system's registrations, so each appears once
                     Map<String, OidcConfiguration> byId = new LinkedHashMap<>();
                     for (List<OidcConfiguration> configurations : cf.<List<OidcConfiguration>>list()) {
                         configurations.forEach(configuration -> byId.putIfAbsent(configuration.getId(), configuration));
                     }
                     return List.copyOf(byId.values());
                 })
-                // an organization user of no organization still connects the platform's registrations
+                // an organization user of no organization still connects the system's registrations
                 .compose(configurations -> configurations.isEmpty()
                         ? oidcConfigurationService.findEnabledOrgSignupProviders().map(signup -> List.<OidcConfiguration>copyOf(signup))
                         : Future.succeededFuture(configurations));
@@ -167,7 +167,7 @@ public class DefaultProfileService implements ProfileService {
     }
 
     // a binding signs the organization user in where its configuration is offered: at every organization's login for
-    // one of the platform's registrations, and at its organization's for one of the organization's own while the
+    // one of the system's registrations, and at its organization's for one of the organization's own while the
     // user is a member there
     private static boolean signsIn(OidcConfiguration configuration, List<OrganizationMembership> memberships) {
         boolean ret;

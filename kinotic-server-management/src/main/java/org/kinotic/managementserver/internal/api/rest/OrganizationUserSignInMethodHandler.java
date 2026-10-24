@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Connects a provider identity to the signed-in organization user as a further sign-in method: one of the
- * platform's registrations, or an organization's own configuration where the user is a member. The person is
+ * system's registrations, or an organization's own configuration where the user is a member. The person is
  * already signed in, which is what proves the organization user is theirs: the provider round-trip then asserts the identity,
  * and the configuration's callback at {@link OrganizationOidcCallbackHandler} hands the result back here to
  * bind. Nothing here signs anyone in; a sign-in through the new binding runs through
@@ -56,7 +56,7 @@ public class OrganizationUserSignInMethodHandler implements SuppliesGatewayRoute
 
     /**
      * {@code POST /api/auth/org/methods/start/:configurationId} — begins the round-trip to a configuration
-     * for the signed-in organization user, redirecting the browser to the provider: one of the platform's org sign-up
+     * for the signed-in organization user, redirecting the browser to the provider: one of the system's org sign-up
      * registrations, or an organization's own configuration when the user may sign in to that organization.
      * {@code 400} for any other configuration, {@code 403} for an organization's the user may not sign in
      * to, {@code 401} without a signed-in user.

@@ -24,7 +24,7 @@ public interface ApplicationService extends OrganizationScopedCrudService<Applic
      * @param name the name of the application to create
      * @param description the description of the application to create
      * @param tenantManagement who creates and administers the application's tenants, or null for
-     *                         {@link TenantManagement#TENANT_ADMINISTRATORS}. {@code PLATFORM} applies
+     *                         {@link TenantManagement#TENANT_ADMINISTRATORS}. {@code SYSTEM} applies
      *                         to users created while it is in force, so it is chosen before the
      *                         application has users
      * @return {@link Future} emitting the created application, or the existing

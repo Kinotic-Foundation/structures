@@ -31,7 +31,7 @@ public final class OidcErrorCodes {
     public static final String NO_USER = "no_user";
 
     /**
-     * A sign-in through a platform social registration that named no organization found the identity a
+     * A sign-in through a system social registration that named no organization found the identity a
      * member of several, so the person chooses one and signs in at its own login; the session that completed
      * the sign-in holds their ids, which the login page reads from {@code GET /api/auth/org/login/choices}.
      */

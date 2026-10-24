@@ -9,7 +9,7 @@ import org.kinotic.domain.api.model.ApplicationScoped;
 /**
  * An {@link OwnedOidcConfiguration} offered at one application's login, for that application's own
  * users: a provider the organization registered with for the application, as opposed to one of the
- * platform's social registrations, which an application offers by naming the provider kind in its
+ * system's social registrations, which an application offers by naming the provider kind in its
  * {@code Application.socialProviders}.
  */
 @Getter

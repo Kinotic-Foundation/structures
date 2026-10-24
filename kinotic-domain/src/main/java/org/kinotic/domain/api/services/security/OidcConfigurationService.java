@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Collection;
 
 /**
- * The OIDC provider configurations users sign up and in through: the platform's managed registrations
+ * The OIDC provider configurations users sign up and in through: the system's managed registrations
  * and each organization's own, each made for one sign-in scope. A write is held to its kind's owner: a
  * {@link ManagedOidcConfiguration} is saved or deleted by a system participant only, an
  * {@link OwnedOidcConfiguration} by an organization participant of the organization it names, and an
@@ -58,7 +58,7 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * The enabled configurations a sign-in scope offers, in the order to present them. The organization's
      * own login ({@code applicationId} null) offers the org sign-up registrations followed by the
      * organization's {@link OrganizationOidcConfiguration}s; an application's login offers its
-     * {@link ApplicationOidcConfiguration}s followed by the platform's
+     * {@link ApplicationOidcConfiguration}s followed by the system's
      * {@link ApplicationSocialOidcConfiguration}s whose provider kinds the application names; the login of
      * one tenant of the application offers the tenant's {@link TenantOidcConfiguration}s followed by what
      * the application's login offers. Empty when the scope offers none. Checks no participant.

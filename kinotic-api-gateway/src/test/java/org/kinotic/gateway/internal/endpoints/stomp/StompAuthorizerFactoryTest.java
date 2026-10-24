@@ -67,7 +67,7 @@ public class StompAuthorizerFactoryTest {
         assertTrue(authorizer.sendAllowed(CRI.create("srv://app.acme-org.orders-app.billing~InvoiceService/pay#1.0.0")));
 
         // the organization management surface, other applications, other organizations, the
-        // platform internals, and un-zoned addresses
+        // system internals, and un-zoned addresses
         assertFalse(authorizer.sendAllowed(CRI.create("srv://management-api~org.kinotic.management.api.services.iam.MemberService/inviteMember#1.0.0")));
         assertFalse(authorizer.sendAllowed(CRI.create("srv://app.acme-org.other-app~OrderService/create#1.0.0")));
         assertFalse(authorizer.sendAllowed(CRI.create("srv://app.other-org.orders-app~OrderService/create#1.0.0")));
@@ -146,7 +146,7 @@ public class StompAuthorizerFactoryTest {
         assertTrue(authorizer.sendAllowed(CRI.create("srv://app-api~org.kinotic.persistence.api.services.JsonEntitiesRepository/save#1.0.0")));
         assertTrue(authorizer.sendAllowed(CRI.create("srv://app.acme-org.orders-app~OrderService/create#1.0.0")));
 
-        // never another organization's applications or the platform internals
+        // never another organization's applications or the system internals
         assertFalse(authorizer.sendAllowed(CRI.create("srv://app.other-org.orders-app~OrderService/create#1.0.0")));
         assertFalse(authorizer.sendAllowed(CRI.create("srv://system-api~org.kinotic.system.api.services.workload.VmNodeOrchestrationService/query#1.0.0")));
     }

@@ -58,6 +58,7 @@ export * from '@/api/model/MigrationResult'
 
 export * from '@/api/model/grind/ExecutionStatus'
 export * from '@/api/model/grind/JobRun'
+export * from '@/api/model/grind/JobRunFilter'
 export * from '@/api/model/grind/StoreType'
 export * from '@/api/model/grind/TaskRecord'
 export * from '@/api/model/grind/TaskView'
@@ -148,7 +149,7 @@ export * from '@/api/services/IGitHubAppInstallationService'
 
 // Plugin
 export * from '@/api/ManagementApiPlugin'
-export * from '@/api/PlatformZones'
+export * from '@/api/Zones'
 
 import type { IManagementApiExtension } from '@/api/ManagementApiPlugin'
 

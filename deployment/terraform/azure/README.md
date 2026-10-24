@@ -186,7 +186,7 @@ terraform apply -var="beta_mode=false"
 | The platform zone (kinotic.ai) on Cloudflare, with the email records | `global/` | Permanent |
 | Entra ID App Registrations | `global/` | Permanent |
 | Azure Communication Services (email) | `global/` | Permanent |
-| Key Vault (platform secrets) | `global/` | Permanent |
+| Key Vault (system secrets) | `global/` | Permanent |
 | AKS cluster + node pools | `cluster/` | Disposable |
 | VNet, subnet, identities | `cluster/` | Disposable |
 | cert-manager + TLS cert | `cluster/` | Disposable (re-issued on rebuild) |
