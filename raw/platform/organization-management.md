@@ -38,7 +38,7 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
     </td>
     
     <td>
-      A registration the platform holds with a provider (GitHub) shown as a login/signup button to everyone. Belongs to no organization
+      A registration the system holds with a provider (GitHub) shown as a login/signup button to everyone. Belongs to no organization
     </td>
     
     <td>
@@ -54,7 +54,7 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
     </td>
     
     <td>
-      A registration the platform holds with a social provider (Google, Microsoft) that any organization may offer at one of its applications' logins. Belongs to no organization
+      A registration the system holds with a social provider (Google, Microsoft) that any organization may offer at one of its applications' logins. Belongs to no organization
     </td>
     
     <td>
@@ -290,7 +290,7 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
 </tbody>
 </table>
 
-A configuration is offered at the one scope its kind names. When the same Okta tenant serves both the org's own login and one of its applications', the org copies the configuration into the application's scope with `OwnedOidcConfigurationService.copy`; the copy is registered with the provider under its own callback URL and keeps its own copy of the client secret. An application offers the platform's Google and Microsoft registrations by naming their provider kinds in its `socialProviders`.
+A configuration is offered at the one scope its kind names. When the same Okta tenant serves both the org's own login and one of its applications', the org copies the configuration into the application's scope with `OwnedOidcConfigurationService.copy`; the copy is registered with the provider under its own callback URL and keeps its own copy of the client secret. An application offers the system's Google and Microsoft registrations by naming their provider kinds in its `socialProviders`.
 
 ### Two distinct OIDC roles
 
@@ -446,7 +446,7 @@ A configuration is offered at the one scope its kind names. When the same Okta t
 </tbody>
 </table>
 
-The roles are separate *subtypes* of `OidcConfiguration`, stored in one index under a `type` discriminator the way the kinds of `ParticipantIdentity` are, rather than one type with a flag, because the difference between them is ownership. Every lookup filters on the discriminator and every write is held to its kind's owner, so an org admin configuring SSO can never make it appear as a global button or name a platform secret, and a seeded platform registration can never affect an org's SSO settings.
+The roles are separate *subtypes* of `OidcConfiguration`, stored in one index under a `type` discriminator the way the kinds of `ParticipantIdentity` are, rather than one type with a flag, because the difference between them is ownership. Every lookup filters on the discriminator and every write is held to its kind's owner, so an org admin configuring SSO can never make it appear as a global button or name a system secret, and a seeded system registration can never affect an org's SSO settings.
 
 ## Org Creation
 
@@ -654,8 +654,8 @@ An organization's own provider therefore signs in only the members its administr
 
 A login is addressed to an organization. An organization user may be a member of any number of organizations, each an `OrganizationMembership` of its own, so nothing about the person alone says where they are signing in; the organization's id, the slug of its hostnames (see [Applications and Projects](/apps/application-structure/applications-and-projects#applications)), is what every login route and page is addressed by. The portal has two login pages:
 
-- `/login`, the landing page, for someone whose organization is not yet known: the platform's social buttons, which sign in without naming an organization when the identity belongs to exactly one and otherwise offer the ones it belongs to; an organization field that leads to that organization's page; and a "Don't know your organization?" link that emails the person the organizations their address belongs to.
-- `/login/<organizationId>`, the organization's page (`OrganizationLoginPage.vue`), which offers exactly what that organization's login supports: one button per configuration `GET /api/auth/org/login/<organizationId>/providers` lists — the platform's org sign-up registrations (GitHub) followed by the organization's own `OrganizationOidcConfiguration`s — and an email + password form. The organization's own host, `<organizationId>.<sitesDomain>`, redirects here.
+- `/login`, the landing page, for someone whose organization is not yet known: the system's social buttons, which sign in without naming an organization when the identity belongs to exactly one and otherwise offer the ones it belongs to; an organization field that leads to that organization's page; and a "Don't know your organization?" link that emails the person the organizations their address belongs to.
+- `/login/<organizationId>`, the organization's page (`OrganizationLoginPage.vue`), which offers exactly what that organization's login supports: one button per configuration `GET /api/auth/org/login/<organizationId>/providers` lists — the system's org sign-up registrations (GitHub) followed by the organization's own `OrganizationOidcConfiguration`s — and an email + password form. The organization's own host, `<organizationId>.<sitesDomain>`, redirects here.
 
 The browser remembers, in `localStorage`, the organization it last signed in to, whichever method signed it in: password, GitHub, an organization's own provider, sign-up, an accepted invitation or a switch of organizations. A returning browser that opens `/login` is sent on to that organization's page, keeping the query and so the `referer`. The landing page stays put when nothing is remembered, and when its query carries `?error=`, so a failed sign-in or a choice of organizations is shown there; its organization field is then prefilled with the remembered organization. The organization page's **Not your organization?** link forgets the remembered organization before it returns to `/login`, so the landing page stays put; it is also the way out when the remembered organization no longer exists and the page says there is no organization by that name.
 
@@ -1161,7 +1161,7 @@ An `OrganizationOidcConfiguration` is offered at the org's own login page, `/log
 3. Editing a configuration leaves its kind fixed, since the kind is the scope it is offered at and the server refuses a save that changes it. The client secret field starts empty: a save with it empty keeps the secret held (`save` with a null or blank secret keeps it), and a secret entered replaces it. **Make this a public client**, which asks for confirmation, deletes the held secret with `OwnedOidcConfigurationService.deleteClientSecret(configId)`.
 4. The row menu also enables or disables the configuration (a disabled one is listed on no login page and signs no one in), deletes it after a confirmation (sign-ins through it stop at once and its held secret is deleted), and copies it to an application: **Copy to application** calls `OwnedOidcConfigurationService.copy(configurationId, applicationId)`, which makes an `ApplicationOidcConfiguration` with the source's provider, account, client ID and secret, and shows the copy's own callback URL, `<the application's API host>/api/auth/app/login/oidc/callback/<copyId>`, to register with the provider as well. The application's API host is its label under `kinotic.domain.appApiBaseUrl`.
 
-A user who logs in via this path lands at the `/api/auth/org/login/sso/callback/:configId` handler — the IdP doesn't care that the configId is org-scoped instead of platform. The provider's application launcher can link straight to `<kinotic.managementApi.apiBaseUrl>/api/auth/org/login/<organizationId>/start/<configId>`, which starts the same flow from a plain `GET`; the form and the row's details show it as the **Direct sign-in link**.
+A user who logs in via this path lands at the `/api/auth/org/login/sso/callback/:configId` handler — the IdP doesn't care that the configId is org-scoped instead of system-scoped. The provider's application launcher can link straight to `<kinotic.managementApi.apiBaseUrl>/api/auth/org/login/<organizationId>/start/<configId>`, which starts the same flow from a plain `GET`; the form and the row's details show it as the **Direct sign-in link**.
 
 ## System Authentication
 
@@ -1361,7 +1361,7 @@ Each handler is a component of the module that serves it, so a server mounts the
 </tbody>
 </table>
 
-The app server serves every application at an API host of its own, `<organizationId>--<applicationId>` under `kinotic.domain.appApiBaseUrl` (see [Configuration](/platform/configuration#application-api-hosts)). Its login and OAuth routes act for the application whose host the request is addressed to and answer `404` on any other host, and that host is the application's OAuth issuer. The one exception is a sign-in through a platform social registration (`ApplicationSocialOidcConfiguration`): a provider returns the browser only to a redirect URI registered in advance, and the registration is shared by every application that offers it, so its `authorize` and `callback` routes are served at `kinotic.domain.appApiBaseUrl` itself, the shared host, and the verified sign-in is handed to the application's own host under a single-use code (`SocialLoginHandoffService`, an Ignite cache with a one-minute TTL) where the session is established. The code completes the sign-in only in the browser that started it: the start at the application's host put a value in that browser's session, the shared host carries it through its own session into the handoff, and the completion requires the browser to present it again, so a completion URL passed to another person signs no one in.
+The app server serves every application at an API host of its own, `<organizationId>--<applicationId>` under `kinotic.domain.appApiBaseUrl` (see [Configuration](/platform/configuration#application-api-hosts)). Its login and OAuth routes act for the application whose host the request is addressed to and answer `404` on any other host, and that host is the application's OAuth issuer. The one exception is a sign-in through a system social registration (`ApplicationSocialOidcConfiguration`): a provider returns the browser only to a redirect URI registered in advance, and the registration is shared by every application that offers it, so its `authorize` and `callback` routes are served at `kinotic.domain.appApiBaseUrl` itself, the shared host, and the verified sign-in is handed to the application's own host under a single-use code (`SocialLoginHandoffService`, an Ignite cache with a one-minute TTL) where the session is established. The code completes the sign-in only in the browser that started it: the start at the application's host put a value in that browser's session, the shared host carries it through its own session into the handoff, and the completion requires the browser to present it again, so a completion URL passed to another person signs no one in.
 
 CORS for the server's UI origin is applied at the router root. A Vert.x `SessionHandler` covers every `/api/*` route (and the STOMP WebSocket path), so the same session cookie carries the OIDC roundtrip state and the post-login identity; the cookie is `HttpOnly`, `Secure`, `SameSite=Lax`, with a configurable timeout (`kinotic.api-gateway.session-timeout`).
 
@@ -1557,7 +1557,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      The one callback a platform registration is registered with: a login signs in to the stashed organization, or the one organization the identity is a member of; a sign-up, an invitation or a connect is completed by its own handler, as the flow's recorded purpose says
+      The one callback a system registration is registered with: a login signs in to the stashed organization, or the one organization the identity is a member of; a sign-up, an invitation or a connect is completed by its own handler, as the flow's recorded purpose says
     </td>
   </tr>
   
@@ -1733,7 +1733,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      Connect a configuration to the signed-in organization user: a platform registration, or an organization's own configuration when the user may sign in there (<code>
+      Connect a configuration to the signed-in organization user: a system registration, or an organization's own configuration when the user may sign in there (<code>
         403
       </code>
       
@@ -1981,7 +1981,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
         authorize
       </code>
       
-       URL for a platform social registration, carrying a <code>
+       URL for a system social registration, carrying a <code>
         binding
       </code>
       

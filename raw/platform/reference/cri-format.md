@@ -145,7 +145,7 @@ The optional zone places the resource in the isolation boundary the gateway vali
     </td>
     
     <td>
-      Platform-internal services. Only system participants can call or host them.
+      The system's own services. Only system participants can call or host them.
     </td>
   </tr>
 </tbody>
@@ -492,7 +492,7 @@ cri.raw()           // 'srv://tenant-123@app.acme-org.orders-app~OrderService/pl
     </td>
     
     <td>
-      A platform-internal service
+      A system service
     </td>
   </tr>
   

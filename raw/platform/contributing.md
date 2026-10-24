@@ -246,7 +246,7 @@ That brings up the whole platform from published images:
     </td>
     
     <td>
-      Creates the indices and seeds the platform rows, then exits; the servers wait for it
+      Creates the indices and seeds the system's rows, then exits; the servers wait for it
     </td>
   </tr>
   
@@ -603,7 +603,7 @@ bun run dev
 `.env.development`, which Bun loads for `bun run dev`, supplies the rest: the node id
 `dev-node-1`, the SYSTEM machine identity the development migration seeds, and compose's Loki
 and OTLP collector for workload logs, traces and metrics. The node registers with the system
-server and shows `ONLINE` in the system console under **Platform → Worker nodes**. Guests reach
+server and shows `ONLINE` in the system console under **System → Worker nodes**. Guests reach
 the org and app servers at `192.168.127.254`, boxlite's alias for the host, which the system
 server's `development` profile sets as `kinotic.systemApi.deployment.managementServer.host` and
 `appServer.host`.

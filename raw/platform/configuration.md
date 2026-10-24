@@ -126,7 +126,7 @@ The server reads workload logs from Grafana Loki, and workload traces and metric
 
 In docker-compose the server points at `http://loki:3100`, `http://tempo:3200`, and `http://mimir:9009`; the Helm chart defaults them to `http://loki.observability.svc:3100`, `http://tempo.observability.svc:3100`, and `http://mimir.observability.svc:9009`, the services the Azure terraform deploys in the `observability` namespace (Tempo's chart serves its HTTP API on 3100).
 
-Every server also runs the OpenTelemetry Java agent its image embeds, which exports the server's own traces and metrics to the platform tenant, `kinotic-system`, read by the system console's Platform **Observability** page. The Helm chart attaches it on every server and sends each signal straight to its store, with no collector between; its logs reach Loki through Alloy instead, so the agent exports none:
+Every server also runs the OpenTelemetry Java agent its image embeds, which exports the server's own traces and metrics to the system tenant, `kinotic-system`, read by the system console's System **Observability** page. The Helm chart attaches it on every server and sends each signal straight to its store, with no collector between; its logs reach Loki through Alloy instead, so the agent exports none:
 
 <table>
 <thead>
@@ -580,7 +580,7 @@ A node denies every workload the cloud metadata endpoint (`169.254.169.254`) and
 </tbody>
 </table>
 
-An entry that names a protected address is placed above the node's own rules so it overrides them; every other entry is placed below, so a range containing one grants everything in it *except* that address, and a hostname resolving to one grants nothing there. Only a system participant can reach the service that carries a workload's policy, so naming an address outright is a decision the platform made — a range that merely contains one is not, and does not become one by accident.
+An entry that names a protected address is placed above the node's own rules so it overrides them; every other entry is placed below, so a range containing one grants everything in it *except* that address, and a hostname resolving to one grants nothing there. Only a system participant can reach the service that carries a workload's policy, so naming an address outright is a decision the system made — a range that merely contains one is not, and does not become one by accident.
 
 A provider needs its host prepared for it, so the setting follows the node's provisioning: a developer machine keeps the default, and a node built for Kata is configured for `CLOUD_HYPERVISOR`. An unrecognised value stops the vm-manager at startup rather than falling back, so a node never registers running something other than what it was configured for.
 
@@ -1016,7 +1016,7 @@ management-api. The Helm chart sets all three from the same paths in its values:
         OwnedOidcConfigurationService.findCallbackUrl
       </code>
       
-       gives an application's or a tenant's OIDC configuration. The base URL itself is the shared host a sign-in through one of the platform's social registrations returns to. The development profiles set <code>
+       gives an application's or a tenant's OIDC configuration. The base URL itself is the shared host a sign-in through one of the system's social registrations returns to. The development profiles set <code>
         http://localhost:58505
       </code>
     </td>
@@ -1304,7 +1304,7 @@ organization is created and again before its first site is published:
     </td>
     
     <td>
-      A token holding DNS edit on the zone and nothing else, imported as a platform secret (<code>
+      A token holding DNS edit on the zone and nothing else, imported as a system secret (<code>
         kinotic-cloudflare-dns-api-token
       </code>
       
@@ -1390,7 +1390,7 @@ request and verifies it with the site's secret, under `kinotic.managementServer.
     </td>
     
     <td>
-      The site's secret key, imported as a platform secret (<code>
+      The site's secret key, imported as a system secret (<code>
         kinotic-turnstile-secret-key
       </code>
       
@@ -1406,7 +1406,7 @@ works with no site of one's own.
 ## LLM configurations
 
 The large language models the platform's services call are configured at runtime rather than in a
-property file: a system user adds them on the system console's **Platform → LLM configurations**
+property file: a system user adds them on the system console's **System → LLM configurations**
 page, and a service selects one by its name through `LlmConfigurationService.findByName`, published
 in the `system-api` zone.
 
@@ -1432,7 +1432,7 @@ in the `system-api` zone.
     </td>
     
     <td>
-      The name a service selects the configuration by, unique on the platform
+      The name a service selects the configuration by, unique in the system
     </td>
   </tr>
   
@@ -1521,7 +1521,7 @@ in the `system-api` zone.
 </table>
 
 The API key is given on save, `LlmConfigurationService.save(configuration, apiKey)`, and held through
-`SecretStorageService` in the platform's scope, keyed by the configuration's id; a save without one
+`SecretStorageService` in the system's scope, keyed by the configuration's id; a save without one
 keeps the key held, and deleting the configuration deletes its key. `findApiKey(id)` reads it back for
 a platform service that calls the model: only a cluster member calling as itself, with no participant
 bound, can read it, so no gateway connection can, the system console's users included.

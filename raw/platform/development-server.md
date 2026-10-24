@@ -74,7 +74,7 @@ A node is never a container on the host: it needs its own kernel modules, sysctl
 ### No Kubernetes
 
 Nothing the servers need comes from Kubernetes. Ignite discovers peers by shared filesystem or
-static addresses as readily as by the Kubernetes API (`KinoticIgniteConfig`), platform secrets
+static addresses as readily as by the Kubernetes API (`KinoticIgniteConfig`), system secrets
 are two JSON files at a path, TLS is two PEM files at a path, and the docker-compose stack in
 `deployment/docker-compose/` is the complete platform — with Tempo and Mimir, which the Helm
 charts do not deploy yet. The development server runs that stack's images and config files,
@@ -545,8 +545,8 @@ kinotic-{org,system,app}-server/src/main/resources/
 ```
 
 Each server runs with `SPRING_PROFILES_ACTIVE=dev-server`. Leaving out `development` is what
-takes it off the development conveniences: no auto-seeded platform secrets
-(`kinotic.platformSecrets.generateMissing` is set by the development profile alone), the halting Ignite failure handler, the
+takes it off the development conveniences: no auto-seeded system secrets
+(`kinotic.systemSecrets.generateMissing` is set by the development profile alone), the halting Ignite failure handler, the
 production shard defaults — which `dev-server` then overrides. Its environment is composed by
 terraform from what the three share — the compose services', the Azure root's outputs, and the
 addresses only the proxmox root knows — and what is its own; its secrets arrive through
@@ -1367,7 +1367,7 @@ What the three share:
   <tr>
     <td>
       <code>
-        kinotic.platformSecrets.jwtSigningKeysPath
+        kinotic.systemSecrets.jwtSigningKeysPath
       </code>
     </td>
     
@@ -1538,7 +1538,7 @@ What the three share:
     </td>
     
     <td>
-      No collector: the agent exports each signal to its store under the platform tenant, which is what the compose collector stamps on
+      No collector: the agent exports each signal to its store under the system tenant, which is what the compose collector stamps on
     </td>
   </tr>
   
@@ -1585,7 +1585,7 @@ process, so it mounts the management server's secrets directory at `/etc/kinotic
 management server's environment. Its image carries no `dev-server` profile, so the proxmox root
 sets what that profile would: the `secrets.yml` import, the JWT key set's path, the `AZURE` secret
 storage backend, and one shard and one replica. It serves `8080` with TLS (`summit42.ssl`), with a
-certificate of its own mounted from `/etc/kinotic/secrets/summit-42/certs`. The platform LLM
+certificate of its own mounted from `/etc/kinotic/secrets/summit-42/certs`. The system LLM
 configuration named `summit-42`, which the system console adds, holds the model and its API key.
 
 ### Loki, Tempo, Mimir, Grafana
@@ -2018,7 +2018,7 @@ per-server load balancers. The router's address is dynamic: a timer on the host 
 servers' A records whenever it changes, as the servers' principal.
 
 Peers use `https://dev-portal.kinotic.ai`: organization sign-up with email verification
-through ACS, social login through the platform OIDC providers registered with
+through ACS, social login through the system OIDC providers registered with
 `https://dev-api.kinotic.ai` redirect URIs, the CLI's device grant, and MCP hosts through the
 authorization-code grant. Their applications' users sign in on the applications' own hosts.
 Nothing on the LAN besides the forwarded port is reachable from outside.
