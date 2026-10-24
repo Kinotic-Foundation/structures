@@ -4,9 +4,9 @@
       <div class="login-organization">
         <span class="login-organization__label">Signing in to</span>
         <span class="login-organization__name">{{ organizationId }}</span>
-        <router-link :to="{ path: '/login', query: route.query }" class="login-link login-organization__switch">
+        <a href="#" class="login-link login-organization__switch" @click.prevent="switchOrganization">
           Not your organization?
-        </router-link>
+        </a>
       </div>
 
       <template v-if="unknown">
@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -85,7 +85,7 @@ import { apiUrl, postCredentials } from '@kinotic-ai/frontend-common'
 import { AuthPageShell } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import loginArt from '@/assets/login-background.svg'
-import { LAST_ORGANIZATION_KEY } from '@/pages/login/organizationLogin'
+import { forgetOrganization } from '@/pages/login/organizationLogin'
 
 const debug = createDebug('login')
 
@@ -111,6 +111,7 @@ const toast = useToast()
 const userState: IUserState = KinoticStates.getUserState()
 
 const route = useRoute()
+const router = useRouter()
 
 onMounted(() => {
   nextTick(() => focusEmailInput())
@@ -161,7 +162,6 @@ async function handleSubmit() {
   loading.value = true
   try {
     await postCredentials(`/api/auth/org/login/${encodeURIComponent(props.organizationId)}`, email.value, password.value)
-    localStorage.setItem(LAST_ORGANIZATION_KEY, props.organizationId)
     // Open the realtime connection, authenticated by the freshly set session cookie.
     await userState.login()
     const referer = (route.query.referer as string | undefined) || '/'
@@ -173,6 +173,12 @@ async function handleSubmit() {
   } finally {
     loading.value = false
   }
+}
+
+// forgotten first, so the landing page stays put instead of returning the browser here
+function switchOrganization() {
+  forgetOrganization()
+  router.push({ path: '/login', query: route.query })
 }
 
 function focusEmailInput() {
