@@ -94,3 +94,14 @@ function displayError(text: string) {
   toast.add({ severity: 'error', summary: 'Error', detail: text, life: 10000 })
 }
 </script>
+
+<style scoped>
+/* AuthPageShell's root carries this component's scope, so its footer links take the brand red */
+.login-page {
+  --lp-footer-link: var(--p-primary-500);
+}
+
+.dark .login-page {
+  --lp-footer-link: var(--p-primary-400);
+}
+</style>

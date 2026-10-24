@@ -6,9 +6,8 @@ import type { ProgressBarDesignTokens } from '@primeuix/themes/types/progressbar
         borderRadius: "{content.border.radius}",
         height: "1.25rem"
     },
-    // Progress fills in sky, the colour of everything in progress
     value: {
-        background: "{sky.500}"
+        background: "{primary.color}"
     },
     label: {
         color: "{primary.contrast.color}",

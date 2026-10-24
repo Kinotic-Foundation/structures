@@ -189,11 +189,11 @@ import type { DataTableDesignTokens } from '@primeuix/themes/types/datatable';
                 hoverBackground: "{surface.100}",
                 color: "{surface.600}",
                 hoverColor: "{surface.800}",
-                // The sorted column reads as a darker grey band
+                // The sorted column reads as a darker grey band, not the brand highlight
                 selectedBackground: "{surface.200}",
                 selectedColor: "{surface.950}"
             },
-            // A selected row reads as the hover grey
+            // A selected row reads as the hover grey; the brand red stays for failures
             row: {
                 stripedBackground: "{surface.50}",
                 selectedBackground: "{surface.100}",
@@ -244,7 +244,7 @@ import type { DataTableDesignTokens } from '@primeuix/themes/types/datatable';
             margin-inline-end: calc(-1 * var(--p-button-sm-padding-x));
         }
         /* The sort-order badge means something only once two columns sort together; it reads as a
-           quiet grey count then */
+           quiet grey count then, never the brand red the platform keeps for failures */
         .p-datatable .p-datatable-sort-badge {
             min-width: 1rem;
             height: 1rem;
