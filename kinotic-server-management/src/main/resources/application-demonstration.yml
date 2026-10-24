@@ -1,0 +1,36 @@
+# The demonstration server: the whole platform on one machine from deployment/docker-compose
+# (compose.yml), to try Kinotic with no Azure, no GitHub and no mail service. compose.kinotic-servers.yml
+# runs every server with this profile, and supplies the container addresses: Elasticsearch, the Ignite
+# cluster and the observability stack. application-single-machine.yml holds what it shares with the
+# development profile.
+kinotic:
+  managementApi:
+    # This server's API as a browser and Claude Code reach it: the OAuth issuer of /mcp, and the base of the
+    # OIDC callbacks, all on 58503; 9090 serves only the portal's files. A developer's tunnel replaces it from
+    # ./config/application.yml, which outranks every file packaged in the jar
+    apiBaseUrl: http://localhost:58503
+    # Projects' repositories are hosted on the Gitea compose.gitea.yml runs, so a project needs no GitHub
+    repoHost: GITEA
+    # No GitHub App: its webhook secret signs Gitea's push webhooks, and its key is never used
+    github:
+      webhookSecret: "-"
+      appPrivateKey: "-"
+  managementServer:
+    # The portal's sign-up page offers an email and a password, which needs neither GitHub nor a mail service
+    passwordSignUp: true
+    turnstile:
+      # No bot check on a server only the people trying it can reach, so the find-my-organizations form calls no
+      # Cloudflare service
+      enabled: false
+  domain:
+    cors:
+      # The portal this server serves, and a developer's ngrok tunnel to it. The tunnel is same-origin but
+      # still CORS-checked, because the social login forms POST and browsers send Origin on a POST navigation
+      allowedOriginPattern: "http:\\/\\/localhost:9090|https:\\/\\/[a-zA-Z0-9-]+\\.ngrok(-free)?\\.(app|dev|io)"
+      allowCredentials: true
+    # The portal build this server serves on 9090
+    portalBaseUrl: http://localhost:9090
+    email:
+      # No mail service: a sign-up continues at its verification link at once, an inviter is shown the
+      # invitation's link to send on, and the find-my-organizations form lists the address's organizations
+      enabled: false

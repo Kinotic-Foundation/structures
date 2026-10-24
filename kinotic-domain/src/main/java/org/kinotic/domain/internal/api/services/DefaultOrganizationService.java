@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.OrganizationLoginLink;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.internal.api.repositories.OrganizationRepository;
 import org.kinotic.domain.internal.api.repositories.OrganizationMembershipRepository;
@@ -65,7 +66,7 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
     }
 
     @Override
-    public Future<Void> sendMembershipsEmail(String email) {
+    public Future<List<OrganizationLoginLink>> sendMembershipsEmail(String email) {
         Validate.notBlank(email, "email cannot be blank");
         return identityRepository.findOrganizationUserByEmail(email)
                                  // a disabled organization user signs in nowhere, so it is told of no organizations, as the landing page tells it

@@ -1,4 +1,4 @@
-package org.kinotic.management.internal.api.services.github;
+package org.kinotic.management.internal.api.services.template;
 
 import java.nio.file.Path;
 

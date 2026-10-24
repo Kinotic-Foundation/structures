@@ -1,4 +1,4 @@
-package org.kinotic.management.internal.api.services.github;
+package org.kinotic.management.internal.api.services.template;
 
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;

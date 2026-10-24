@@ -1,4 +1,4 @@
-package org.kinotic.management.internal.api.services.github;
+package org.kinotic.management.internal.api.services.template;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;

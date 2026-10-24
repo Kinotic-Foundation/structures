@@ -6,22 +6,22 @@ import org.kinotic.management.api.model.deployment.DeploymentStatus;
 import org.kinotic.management.api.model.deployment.DeploymentStatusType;
 import org.kinotic.management.api.model.deployment.UiDeployment;
 import org.kinotic.system.api.services.deployment.UiDeploymentProvisioner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
- * Fallback {@link UiDeploymentProvisioner} used when the environment has no Azure storage
- * ({@code kinotic.systemApi.disableAzureStorage=true}). Nothing serves, and every deployment
- * reads ready at once so publishing completes in development and tests without Azure.
+ * {@link UiDeploymentProvisioner} of a machine's own site storage: every deployment reads ready at once. With
+ * {@code AZURITE} storage the local edge reads a site's files from the emulator on every request, so a site
+ * serves its commit as soon as its upload finished; with {@code DISABLED} storage nothing serves.
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(value = "kinotic.systemApi.disableAzureStorage", havingValue = "true")
-public class MockUiDeploymentProvisioner implements UiDeploymentProvisioner {
+@ConditionalOnExpression("'${kinotic.systemApi.uiDeployment.siteStorage:AZURE}'.toUpperCase() != 'AZURE'")
+public class LocalUiDeploymentProvisioner implements UiDeploymentProvisioner {
 
     @Override
     public Future<DeploymentStatus> check(UiDeployment deployment, String commitSha) {
-        log.debug("MockUiDeploymentProvisioner reads site {} ready", deployment.getId());
+        log.debug("LocalUiDeploymentProvisioner reads site {} ready", deployment.getId());
         return Future.succeededFuture(new DeploymentStatus(DeploymentStatusType.READY));
     }
 
