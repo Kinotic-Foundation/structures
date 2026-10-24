@@ -19,7 +19,7 @@ importers:
         version: 5.0.0-beta.28(supports-color@8.1.1)
       '@kinotic-ai/management-api':
         specifier: ^5.0.0-beta.66
-        version: 5.0.0-beta.65(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))
+        version: 5.0.0-beta.66(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))
       '@kinotic-ai/persistence':
         specifier: ^5.0.0-beta.18
         version: 5.0.0-beta.18(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))
@@ -461,11 +461,6 @@ packages:
     resolution: {integrity: sha512-4XnGs3Gz2p3uKlIu5ypdG4Ad/llF/D1NpGMIMaJ24cXedgB8tt69GtVPsCBM5JujaeXfRL2b7nhEpAVGR5Gqcg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
-
-  '@kinotic-ai/management-api@5.0.0-beta.65':
-    resolution: {integrity: sha512-gnX3VG2QmK/Zjof5I1j6JvsSZ7BkpbQEEmY9VjS23VeSGJJDTjADQA12DL4+If1Nx9wQDpLHnmyAbslZCumtxg==}
-    peerDependencies:
-      '@kinotic-ai/core': ^5.0.0-beta.28
 
   '@kinotic-ai/management-api@5.0.0-beta.66':
     resolution: {integrity: sha512-ukIqj7Lz/9bLXwPN1fgEcGsISy7vvj6aBMBvMwvg9yCIME0+zPc3s0gy1QEZvvj1PupvEjZQm5MtrfdAGCQdEw==}
@@ -2585,13 +2580,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@kinotic-ai/management-api@5.0.0-beta.65(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))':
-    dependencies:
-      '@kinotic-ai/core': 5.0.0-beta.28(supports-color@8.1.1)
-      '@kinotic-ai/idl': 5.0.0-beta.5
-      '@kinotic-ai/persistence': 5.0.0-beta.18(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))
-      rxjs: 7.8.2
-
   '@kinotic-ai/management-api@5.0.0-beta.66(@kinotic-ai/core@5.0.0-beta.28(supports-color@8.1.1))':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.28(supports-color@8.1.1)
@@ -2622,7 +2610,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.0(hono@4.13.0)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -3007,8 +2995,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@8.20.0:
