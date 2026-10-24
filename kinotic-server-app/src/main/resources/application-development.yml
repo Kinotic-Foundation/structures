@@ -24,12 +24,12 @@ kinotic:
   maxNumberOfCoresToUse: 4
   ignite:
     discoveryType: SHAREDFS
-  platformSecrets:
-    # Seeded on first boot by DevPlatformSecretsGenerator, or by whichever server boots first: every
+  systemSecrets:
+    # Seeded on first boot by DevSystemSecretsGenerator, or by whichever server boots first: every
     # server on the machine reads the same file. Production uses Azure Key Vault via the Secrets
     # Store CSI driver — same file layout, different origin.
     generateMissing: true
-    jwtSigningKeysPath: ${user.home}/.kinotic/dev-platform-secrets/jwt-signing-keys
+    jwtSigningKeysPath: ${user.home}/.kinotic/dev-system-secrets/jwt-signing-keys
 
 logging:
   level:

@@ -31,7 +31,7 @@ servers:
         siteKey: ""
     # The Secret holding this server's certificate when tls.enabled
     tlsSecretName: kinotic-server-management-tls
-    # Mounts the platform GitHub App's private key and webhook secret, which a server loading
+    # Mounts the system GitHub App's private key and webhook secret, which a server loading
     # management-api requires
     githubApp: true
     # Mounts the Cloudflare DNS token, with which this server creates an organization's sites
@@ -170,13 +170,13 @@ workloadIdentity:
   enabled: false
   clientId: ""
 
-# Platform secrets, mounted as files at platformSecrets.mountPath: each server's JWT signing keys,
+# System secrets, mounted as files at systemSecrets.mountPath: each server's JWT signing keys,
 # which the server watches for in-place rotation, and the secret properties it imports from the
 # directory as a config tree, each file named after the property it sets. Each server signs with a
 # key set of its own, the object `<server>-jwt-signing-keys`. The Secrets Store CSI driver projects
 # them from the global Key Vault, so keyVault.* must be set.
-platformSecrets:
-  mountPath: /etc/kinotic/platform-secrets
+systemSecrets:
+  mountPath: /etc/kinotic/system-secrets
   keyVault:
     name: ""        # from global/ terraform output: platform_key_vault_name
     tenantId: ""    # from global/ terraform output: tenant_id

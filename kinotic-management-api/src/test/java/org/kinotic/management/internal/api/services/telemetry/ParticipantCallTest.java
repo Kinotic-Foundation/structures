@@ -25,7 +25,7 @@ abstract class ParticipantCallTest {
 
     protected static final Participant ACME_USER =
             new DefaultOrganizationParticipant("user-1", "acme", Map.of(), List.of("USER"));
-    protected static final Participant PLATFORM_OPERATOR =
+    protected static final Participant SYSTEM_PARTICIPANT =
             new DefaultSystemParticipant("system-user-1", Map.of(), List.of("ADMIN"));
 
     protected static SecurityContext securityContext;

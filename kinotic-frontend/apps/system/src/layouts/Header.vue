@@ -31,7 +31,7 @@
 
       <!-- A segment the route no longer names is one the trail remembers from further down, shown
            muted so the way back stays one click away -->
-      <!-- On the platform pages: a way to pick an organization from here -->
+      <!-- On the system pages: a way to pick an organization from here -->
       <template v-if="!crumbOrganizationId && organizationItems.length > 0">
         <span class="text-lg text-surface-300 dark:text-surface-600">/</span>
         <BreadcrumbSwitcher

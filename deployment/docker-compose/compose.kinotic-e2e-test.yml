@@ -15,11 +15,11 @@ x-kinotic-server-e2e-environment: &kinotic-server-e2e-environment
   # `test,e2e-tests,compose`, so supply the dummy test key here. Matches kinotic-test's
   # application.yml so derived secret names stay consistent with the test fixtures.
   KINOTIC_DOMAIN_SECRETSTORAGE_MASTERKEY: a2lub3RpYy10ZXN0LW1hc3Rlci1rZXktZHVtbXktMDA=
-  # KinoticJwtIssuer signs every access token with these keys. DevPlatformSecretsGenerator seeds
-  # them when the `development` profile sets kinotic.platformSecrets.generateMissing, and e2e drops
+  # KinoticJwtIssuer signs every access token with these keys. DevSystemSecretsGenerator seeds
+  # them when the `development` profile sets kinotic.systemSecrets.generateMissing, and e2e drops
   # that profile, so mount the dummy set below; without
   # it the OAuth token endpoints cannot mint a token.
-  KINOTIC_PLATFORMSECRETS_JWTSIGNINGKEYSPATH: /platform-secrets/jwt-signing-keys
+  KINOTIC_SYSTEMSECRETS_JWTSIGNINGKEYSPATH: /system-secrets/jwt-signing-keys
   # The nodes find each other over this static address list and form one Ignite cluster. A node
   # the running suite did not start does not resolve; Ignite logs the miss and carries on.
   KINOTIC_IGNITE_DISCOVERYTYPE: LOCAL
@@ -59,7 +59,7 @@ services:
     # Replaces compose.kinotic-servers.yml's mount of the developer's tunnel and GitHub App,
     # which would otherwise configure the e2e server on a developer machine
     volumes: !override
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-system:
     environment:
       <<: [*kinotic-server-e2e-environment, *kinotic-management-api-e2e-environment]
@@ -79,12 +79,12 @@ services:
       KINOTIC_SYSTEMSERVER_CONSOLEBASEURL: http://localhost:5174
     # Replaces compose.kinotic-servers.yml's mount of the developer's GitHub App
     volumes: !override
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-app:
     environment:
       <<: *kinotic-server-e2e-environment
     volumes:
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-app-2:
     extends:
       file: compose.kinotic-servers.yml
@@ -95,4 +95,4 @@ services:
     environment:
       <<: *kinotic-server-e2e-environment
     volumes:
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro

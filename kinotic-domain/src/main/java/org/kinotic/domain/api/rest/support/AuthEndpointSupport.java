@@ -371,14 +371,14 @@ public abstract class AuthEndpointSupport {
         try {
             providerKind = OidcProviderType.fromKey(provider);
         } catch (IllegalArgumentException ex) {
-            respondError(ctx, 400, "Unknown platform provider: " + provider);
+            respondError(ctx, 400, "Unknown system provider: " + provider);
             return;
         }
 
         oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
               .onSuccess(config -> {
                   if (config == null) {
-                      respondError(ctx, 400, "Unknown or disabled platform provider: " + provider);
+                      respondError(ctx, 400, "Unknown or disabled system provider: " + provider);
                   } else {
                       redirectToIdp(ctx, config, start.apply(config));
                   }

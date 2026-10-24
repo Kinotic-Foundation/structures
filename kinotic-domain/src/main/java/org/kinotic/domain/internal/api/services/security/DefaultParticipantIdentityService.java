@@ -473,7 +473,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                                 "Application " + applicationUser.getApplicationId() + " not found in organization "
                                 + applicationUser.getOrganizationId());
                     }
-                    if (app.getTenantManagement() == TenantManagement.PLATFORM) {
+                    if (app.getTenantManagement() == TenantManagement.SYSTEM) {
                         applicationUser.setTenantId(UUID.randomUUID().toString());
                     }
                     return user;

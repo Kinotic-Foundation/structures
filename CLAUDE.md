@@ -46,6 +46,15 @@ The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the
 
 Names suggest meaning but don't define it. Before using an annotation, framework hook, base class, or library helper you haven't used in this codebase before, read its source or docs and confirm what it actually does. Don't infer behaviour from a plausible-sounding name and ship it. If you can't verify the behaviour, ask — don't write a comment justifying the guess.
 
+## Say system, never platform, for the system's own scope
+
+The tier above every organization is the **system**: its users are system users, its jobs are
+system jobs, the runs, workloads, secrets and log tenant it owns are the system's, and its console
+is the system console. Name that scope *system* in every identifier, label, comment, Javadoc and
+doc, never *platform* (`JobOwner.system()`, `SystemJobService`, `kinotic-system`). *Platform* is
+only the product itself, Kinotic as a whole ("the Kinotic platform"). The old name still turns up
+in surrounding code; rename it to *system* when the scope is meant, rather than copying it.
+
 ## Java Conventions
 
 Always use Lombok where possible: `@Getter`, `@Setter`, `@Accessors(chain = true)`, `@NoArgsConstructor`, `@RequiredArgsConstructor`, `@Slf4j`, `@Data`, `@Builder`. Prefer `@RequiredArgsConstructor` over hand-written constructors for dependency injection. Use `@Slf4j` instead of manual `LoggerFactory.getLogger()` calls.
@@ -106,7 +115,7 @@ Never gate a bean on a Spring profile — `@Profile` is for test contexts only; 
 
 One fact, one property. Never add a property whose value always equals another property's: a per-server copy of a setting, or a feature's own copy of a URL or domain that another module already configures. Put the fact in one property on the properties class of the nearest module that every reader of it loads, decided by where it is needed, never by default in a catch-all: the management server's API URL is read by management-api and the management server, which loads management-api, so it is `kinotic.managementApi.apiBaseUrl`; the app API URL is also read by the app server, which loads only kinotic-domain, so it is `kinotic.domain.appApiBaseUrl`. Derive anything else from that one property in code. Before adding a property, grep the yml profiles, Helm values, Terraform and compose files for the value it would hold; if another property already holds it, read that one. Two properties that must always match are Shotgun Surgery across every deployment file, and a bug the first time one is changed without the other.
 
-Properties are always scoped to the module and feature they configure: a setting lives as a field on the properties class of the thing it controls, nested under that module's tree (`kinotic.managementApi.github.disableProvisioner`, `kinotic.systemApi.deployment.managementServer.host`). The only root-level `kinotic.*` entries are genuinely platform-wide settings. Never park a feature-level flag at the root — a flag whose home class exists belongs on it, both as a field and in the `@ConditionalOnProperty` path.
+Properties are always scoped to the module and feature they configure: a setting lives as a field on the properties class of the thing it controls, nested under that module's tree (`kinotic.managementApi.github.disableProvisioner`, `kinotic.systemApi.deployment.managementServer.host`). The only root-level `kinotic.*` entries are genuinely system-wide settings. Never park a feature-level flag at the root — a flag whose home class exists belongs on it, both as a field and in the `@ConditionalOnProperty` path.
 
 ## Dependency Versions
 

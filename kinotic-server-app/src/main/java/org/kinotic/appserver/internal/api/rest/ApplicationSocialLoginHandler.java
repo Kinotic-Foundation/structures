@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 
 
 /**
- * Sign-in to an application through one of the platform's social registrations
+ * Sign-in to an application through one of the system's social registrations
  * ({@link ApplicationSocialOidcConfiguration}). The registration is shared by every application that offers
  * it, and a provider returns the browser only to a redirect URI registered in advance, so the provider
  * returns to one host for all of them: the app server's own, {@code kinotic.domain.appApiBaseUrl}. The flow

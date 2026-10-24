@@ -1,4 +1,4 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 import type { Observable } from 'rxjs'
 import type { JobRun } from '@/api/model/grind/JobRun'

@@ -1,11 +1,11 @@
 <template>
   <FormDrawer :visible="visible" :title="isNew ? 'Add LLM configuration' : 'Edit LLM configuration'"
-              description="A model the platform's services call, selected by its name." @close="emit('update:visible', false)">
+              description="A model the system's services call, selected by its name." @close="emit('update:visible', false)">
     <form id="llm-configuration-form" class="flex flex-col gap-5" @submit.prevent="submit">
       <div>
         <label for="llm-name" class="mb-2 block text-sm font-medium">Name</label>
         <InputText id="llm-name" v-model="name" placeholder="app-builder" autocomplete="off" class="w-full font-mono" />
-        <p class="mt-1.5 text-[0.8125rem] text-muted-color">The name a service selects this configuration by, unique on the platform.</p>
+        <p class="mt-1.5 text-[0.8125rem] text-muted-color">The name a service selects this configuration by, unique in the system.</p>
       </div>
 
       <div>

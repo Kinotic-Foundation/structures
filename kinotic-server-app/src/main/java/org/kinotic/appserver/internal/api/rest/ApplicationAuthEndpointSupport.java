@@ -41,7 +41,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     /**
      * Path on the shared host, {@code kinotic.domain.appApiBaseUrl}, that begins a sign-in through one of the
-     * platform's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
+     * system's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
      */
     public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
 
@@ -176,7 +176,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     }
 
     /**
-     * The URL on the shared host that begins a sign-in to {@code scope} through the platform social
+     * The URL on the shared host that begins a sign-in to {@code scope} through the system social
      * registration {@code configId}, for the page at {@code origin}, in the browser whose session at this host
      * holds {@code binding} under {@link #SOCIAL_LOGIN_BINDING_SESSION_KEY}.
      */

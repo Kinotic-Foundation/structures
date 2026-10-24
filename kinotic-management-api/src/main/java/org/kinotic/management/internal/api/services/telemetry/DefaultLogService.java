@@ -14,7 +14,7 @@ import reactor.core.publisher.Flux;
 
 /**
  * Default {@link LogService} that reads a workload's logs from the Loki tenant of the organization named
- * by each call, and a server's from the platform's tenant, provided {@link TenantAccess} admits the caller.
+ * by each call, and a server's from the system's tenant, provided {@link TenantAccess} admits the caller.
  */
 @Component
 @RequiredArgsConstructor
@@ -60,7 +60,7 @@ public class DefaultLogService implements LogService {
         Flux<Buffer> ret;
         try {
             String selector = TelemetryTenant.serverLogSelector(telemetryServiceName, telemetryServiceInstanceId);
-            // the platform's tenant, which admits a system participant alone
+            // the system's tenant, which admits a system participant alone
             String tenant = tenantAccess.readableTenant(tenantAccess.currentParticipant(), null);
             ret = lokiClient.tail(tenant, selector, start);
         } catch (Exception e) {

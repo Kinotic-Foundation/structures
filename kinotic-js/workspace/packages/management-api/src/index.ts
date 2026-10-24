@@ -155,7 +155,7 @@ export * from '@/api/services/IVulnerabilityAlertService'
 
 // Plugin
 export * from '@/api/ManagementApiPlugin'
-export * from '@/api/PlatformZones'
+export * from '@/api/Zones'
 
 import type { IManagementApiExtension } from '@/api/ManagementApiPlugin'
 

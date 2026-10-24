@@ -1,4 +1,4 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import type { IKinotic, IServiceProxy } from '@kinotic-ai/core'
 import type { LoginProviderSummary } from '@/api/model/security/LoginProviderSummary'
 import type { Organization } from '@/api/model/Organization'
@@ -20,7 +20,7 @@ export interface IProfileService {
     findMySignInMethods(): Promise<SignInMethod[]>
 
     /**
-     * The configurations an organization user may connect as further sign-in methods and has not yet: the platform's
+     * The configurations an organization user may connect as further sign-in methods and has not yet: the system's
      * registrations and the own configurations of the organizations it may sign in to; none for a system user,
      * which signs in with a password alone. Connecting one
      * is a form POST to `/api/auth/org/methods/start/<configurationId>`.
@@ -35,7 +35,7 @@ export interface IProfileService {
 
     /**
      * Removes a provider identity from the user's sign-in methods; the last method that still signs the user in
-     * (its password, a platform registration, or an organization's configuration while the user is a member there)
+     * (its password, a system registration, or an organization's configuration while the user is a member there)
      * cannot be removed.
      */
     removeSignInMethod(methodId: string): Promise<void>
