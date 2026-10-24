@@ -19,6 +19,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,12 +32,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Resolution fails — and with it the authorization request — unless the URL is a well-formed
  * client identifier, its host resolves to a routable address, the fetch answers {@code 200} within
- * the size limit, and the document names itself and registers at least one redirect URI.
+ * the size limit, and the document names itself and registers at least one redirect URI. A
+ * document Kinotic publishes, under {@code kinotic.ai}, must register only loopback redirect URIs.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ClientMetadataDocumentService {
+
+    /** Domain of the client metadata documents Kinotic publishes for native clients that have none. */
+    private static final String KINOTIC_DOCUMENT_DOMAIN = "kinotic.ai";
 
     private final KinoticDomainProperties domainProperties;
     private final JsonMapper jsonMapper;
@@ -183,10 +188,15 @@ public class ClientMetadataDocumentService {
         if (!clientId.equals(document.getClientId())) {
             throw new IllegalArgumentException("client metadata document does not match its client_id");
         }
-        // no shared secret can exist for a document-identified client
+        // no shared secret can exist for a document-identified client, so the token endpoint takes
+        // none; a client preferring another method qualifies when it lists none among those it
+        // supports, as ChatGPT's private_key_jwt document does
         String authMethod = document.getTokenEndpointAuthMethod();
-        if (authMethod != null && !"none".equals(authMethod)) {
-            throw new IllegalArgumentException("client metadata document must use token_endpoint_auth_method none");
+        List<String> supportedAuthMethods = document.getTokenEndpointAuthMethodsSupported();
+        boolean supportsNone = "none".equals(authMethod)
+                || (supportedAuthMethods != null ? supportedAuthMethods.contains("none") : authMethod == null);
+        if (!supportsNone) {
+            throw new IllegalArgumentException("client metadata document must support token_endpoint_auth_method none");
         }
         if (document.getClientSecret() != null || document.getClientSecretExpiresAt() != null) {
             throw new IllegalArgumentException("client metadata document must not carry a client secret");
@@ -195,8 +205,18 @@ public class ClientMetadataDocumentService {
         if (redirectUris == null || redirectUris.isEmpty()) {
             throw new IllegalArgumentException("client metadata document must register at least one redirect_uri");
         }
+        // a document Kinotic publishes vouches for no remote callback, so its codes stay on the
+        // user's machine even if an edit to the website adds one
+        String clientHost = URI.create(clientId).getHost().toLowerCase(Locale.ROOT);
+        boolean loopbackOnly = KINOTIC_DOCUMENT_DOMAIN.equals(clientHost)
+                || clientHost.endsWith("." + KINOTIC_DOCUMENT_DOMAIN);
         for (String redirectUri : redirectUris) {
-            validateRedirectUri(redirectUri);
+            URI uri = validateRedirectUri(redirectUri);
+            if (loopbackOnly && !OAuth2Util.isLoopbackHost(uri.getHost())) {
+                throw new IllegalArgumentException(
+                        "a client metadata document published by Kinotic must register only loopback redirect_uris: "
+                                + redirectUri);
+            }
         }
         // the consent page always has something to show, even for a document that omitted the name
         String clientName = document.getClientName();
@@ -212,7 +232,7 @@ public class ClientMetadataDocumentService {
      * URI with {@code window.location.href}, so a {@code javascript:} or {@code data:} entry would
      * execute on the SPA's origin when the user approves.
      */
-    private static void validateRedirectUri(String redirectUri) {
+    private static URI validateRedirectUri(String redirectUri) {
         URI uri;
         try {
             uri = new URI(redirectUri);
@@ -226,6 +246,7 @@ public class ClientMetadataDocumentService {
         if (uri.getFragment() != null) {
             throw new IllegalArgumentException("redirect_uri must not contain a fragment: " + redirectUri);
         }
+        return uri;
     }
 
     private Date cacheExpiry() {

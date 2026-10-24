@@ -5,7 +5,7 @@ import Tag from 'primevue/tag'
 import type { MenuItem } from 'primevue/menuitem'
 import { Kinotic, type IDataSource, type IterablePage, type Pageable } from '@kinotic-ai/core'
 import type { EntityDefinition } from '@kinotic-ai/management-api'
-import { CrudTable, DatetimeUtil, type CrudHeader } from '@kinotic-ai/frontend-common'
+import { CrudTable, TimePill, type CrudHeader } from '@kinotic-ai/frontend-common'
 import { useEntityPublishing } from '@/composables/entity-definition/useEntityPublishing'
 
 /**
@@ -111,11 +111,11 @@ function openEntity(item: EntityDefinition, tab: 'data' | 'schema' = 'data'): vo
       @onRowClick="openEntity"
     >
       <template #item.created="{ item }">
-        <span>{{ DatetimeUtil.formatMonthDayYear(item.created) }}</span>
+        <TimePill :date="item.created" />
       </template>
 
       <template #item.updated="{ item }">
-        <span>{{ DatetimeUtil.formatRelativeDate(item.updated) }}</span>
+        <TimePill :date="item.updated" />
       </template>
 
       <template #item.published="{ item }">

@@ -5,13 +5,12 @@
 | Environment | Directory | Purpose |
 |---|---|---|
 | **Docker Compose** | `docker-compose/` | Local development (Elasticsearch, the observability stack, Keycloak); the development server runs the same images and config files as containers |
-| **KinD** | `kind/` | Local Kubernetes via Kubernetes in Docker, for rehearsing the Helm charts |
-| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host with a container per service, workload nodes on their own machines, Front Door and email kept in Azure ([design](https://kinotic.ai/platform/development-server)) |
-| **Developer's Azure side** | `terraform/azure/dev/` | Front Door, sites account, and email for the servers on a developer machine |
+| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host with a container per service, workload nodes on their own machines, the sites account and email kept in Azure and the sites on Cloudflare ([design](https://kinotic.ai/platform/development-server)) |
+| **Developer's Azure side** | `terraform/azure/dev/` | The sites account, the Cloudflare sites Worker, and email for the servers on a developer machine |
 | **Azure** | `terraform/azure/` | Production AKS cluster |
 
-KinD and Azure are deployed with Terraform and share the same Helm charts. The development
-server is deployed with Terraform and shares the images and config files with local development.
+Azure is deployed with Terraform and the Helm charts. The development server is deployed with
+Terraform and shares the images and config files with local development.
 
 ## Workload nodes
 
@@ -26,7 +25,6 @@ what each step establishes.
 helm/
 ├── eck-stack/          # Elasticsearch via the official elastic/eck-stack chart
 │   ├── values.yaml     # Base: version, cluster name, Kibana off
-│   ├── values-kind.yaml
 │   ├── values-azure.yaml
 │   └── values-azure-beta.yaml
 ├── kinotic/            # The org, system and app servers (a Deployment, Service and ConfigMap each), one Ignite cluster, the migration Job, RBAC
@@ -36,27 +34,24 @@ helm/
 └── observability/      # Loki, Tempo, Alloy, Grafana values + Alloy pipeline config
 ```
 
-Charts use a **layered values** pattern. The base `values.yaml` contains defaults that work across environments. Environment-specific files override what differs (resource limits, TLS, service type, storage classes, node topology).
+Charts use a **layered values** pattern. The base `values.yaml` contains the defaults. Environment-specific files override what differs (resource limits, TLS, service type, storage classes, node topology).
 
 To add a new environment, create a new values overlay file and reference it from your terraform.
 
 ## Namespace Convention
 
-Both KinD and Azure use the same layout:
+The Azure cluster uses this layout:
 
 | Namespace | Contents |
 |---|---|
 | `elastic-system` | ECK operator |
 | `elastic` | Elasticsearch cluster |
-| `kinotic` | The Kinotic servers, TLS certs, Keycloak (when enabled), load generator |
+| `kinotic` | The Kinotic servers, TLS certs, load generator |
 | `observability` | Loki, Tempo, Mimir, Alloy, Grafana |
 
 ## Network Policy
 
-Both environments enforce `NetworkPolicy` resources to restrict Elasticsearch access:
-
-- **KinD** — uses kindnet (supports NetworkPolicy since KinD v0.23+)
-- **Azure** — uses Azure CNI with Cilium (`network_data_plane = "cilium"`), which replaces Calico as the network policy engine. Cilium is eBPF-based, built into AKS, and fully managed by Azure.
+The cluster enforces `NetworkPolicy` resources to restrict Elasticsearch access. It uses Azure CNI with Cilium (`network_data_plane = "cilium"`), which replaces Calico as the network policy engine. Cilium is eBPF-based, built into AKS, and fully managed by Azure.
 
 The ES NetworkPolicy allows ingress only from the `kinotic` namespace (the servers + migration) and `elastic-system` (ECK operator). All other namespaces are blocked.
 
@@ -72,26 +67,22 @@ value in the eck-stack values and running `terraform apply`. You can only grow, 
 
 ## TLS Pattern
 
-No ingress controller or reverse proxy in either environment. Vert.x handles TLS directly in each pod by reading PEM certificate files mounted from a Kubernetes Secret.
+No ingress controller or reverse proxy. Vert.x handles TLS directly in each pod by reading PEM certificate files mounted from a Kubernetes Secret.
 
-| Environment | Certificate Source | Rotation |
-|---|---|---|
-| KinD | mkcert (browser-trusted local CA) | N/A (dev) |
-| Azure | cert-manager + Let's Encrypt (DNS-01 via Azure DNS) | Automatic (Reloader restarts pods) |
-
-Keycloak and Grafana also read from the same TLS secret.
+Certificates come from cert-manager + Let's Encrypt (DNS-01 via Cloudflare DNS) and rotate
+automatically: Reloader restarts the pods.
 
 ## Observability
 
 Centralized logs, traces and metrics using Grafana's stack:
 
 - **Alloy** — DaemonSet on each node, collects pod logs, ships to Loki under the `kinotic-system` tenant. Pipeline config in `helm/observability/alloy-config.alloy`.
-- **Loki** — Multi-tenant log storage (`auth_enabled: true`): one tenant per organization for workload logs, plus the reserved `kinotic-system` tenant for platform logs. Filesystem in KinD, Azure Blob Storage in Azure.
-- **Tempo** — Multi-tenant trace storage (`multitenancy_enabled: true`), the grafana/tempo single-binary chart with `values-tempo.yaml`. It receives OTLP on 4317/4318 and serves its HTTP API on 3100; its metrics-generator writes each tenant's span metrics to Mimir under the same tenant. Traces are kept 30 days: on a persistent volume in KinD, in Azure Blob Storage in Azure (`values-tempo-azure.yaml`).
-- **Mimir** — Multi-tenant metrics storage, the local `helm/mimir` chart running one monolithic process. It receives OTLP at `/otlp` and serves the Prometheus API under `/prometheus` on 9009. Blocks are kept 30 days: on a persistent volume in KinD, in Azure Blob Storage in Azure (`helm/mimir/values-azure.yaml`).
+- **Loki** — Multi-tenant log storage (`auth_enabled: true`): one tenant per organization for workload logs, plus the reserved `kinotic-system` tenant for system logs. Azure Blob Storage.
+- **Tempo** — Multi-tenant trace storage (`multitenancy_enabled: true`), the grafana/tempo single-binary chart with `values-tempo.yaml`. It receives OTLP on 4317/4318 and serves its HTTP API on 3100; its metrics-generator writes each tenant's span metrics to Mimir under the same tenant. Traces are kept 30 days in Azure Blob Storage (`values-tempo-azure.yaml`).
+- **Mimir** — Multi-tenant metrics storage, the local `helm/mimir` chart running one monolithic process. It receives OTLP at `/otlp` and serves the Prometheus API under `/prometheus` on 9009. Blocks are kept 30 days in Azure Blob Storage (`helm/mimir/values-azure.yaml`).
 
 On Azure the three stores share one storage account, `st<prefix>obs`, each in containers of its own (`loki-chunks`, `loki-ruler`, `tempo-traces`, `mimir-blocks`, `mimir-ruler`), and each authenticates as a workload identity of its own (`id-<prefix>-loki`, `-tempo`, `-mimir`) holding Storage Blob Data Contributor on its containers alone. The account takes no public traffic and no shared keys: the stores reach it through its private endpoint in the VNet's private-endpoints subnet, resolved by the `privatelink.blob.core.windows.net` zone linked to the VNet, with Entra ID tokens. Terraform manages it through the resource manager alone (`data_plane_available = false` in the cluster root's provider). Their persistent volumes hold only write-ahead logs and caches.
-- **Grafana** — Query and dashboards, with Loki, Tempo and Mimir datasources linked to each other. Each datasource browses the `kinotic-system` tenant by default; Loki's multi-tenant queries accept pipe-separated ids (`acme|kinotic-system`). Local auth in KinD, Entra ID (Azure AD) in Azure.
+- **Grafana** — Query and dashboards, with Loki, Tempo and Mimir datasources linked to each other. Each datasource browses the `kinotic-system` tenant by default; Loki's multi-tenant queries accept pipe-separated ids (`acme|kinotic-system`). Entra ID (Azure AD) login.
 
 Each server runs the OpenTelemetry Java agent its image embeds, exporting its traces to Tempo and its metrics to Mimir over OTLP/HTTP under the `kinotic-system` tenant (`otel.*` in the kinotic chart's values); its logs go through Alloy, so the agent exports none.
 
@@ -100,21 +91,6 @@ Customer workload (micro VM) logs are shipped separately: each vm-manager node r
 To add a new cluster log source, add a `local.file_match` + `loki.source.file` block to the Alloy config and apply.
 
 ## Quick Reference
-
-### KinD
-
-```bash
-cd deployment/kind
-./setup.sh                            # one-time: install tools + mkcert CA
-cd terraform
-terraform init && terraform apply
-
-# With OIDC:  terraform apply -var="enable_keycloak=true"
-# Rebuild:    ../dev-reload.sh
-# Tear down:  terraform destroy
-```
-
-See [kind/README.md](kind/README.md) for full details.
 
 ### Azure
 

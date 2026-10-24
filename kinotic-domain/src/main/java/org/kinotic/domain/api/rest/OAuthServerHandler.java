@@ -9,7 +9,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.KinoticAudience;
 import org.kinotic.domain.api.services.security.OAuthAuthorizationService;
 import org.kinotic.domain.api.services.security.RefreshTokenService;
@@ -75,6 +75,7 @@ public abstract class OAuthServerHandler implements SuppliesGatewayRoutes {
         extensionGrants.forEach(grant -> grantTypes.add(grant.grantType()));
         JsonObject metadata = new JsonObject()
                 .put("issuer", issuer)
+                .put("authorization_response_iss_parameter_supported", true)
                 .put("authorization_endpoint", issuer + "/api/auth/oauth/authorize")
                 .put("token_endpoint", issuer + "/api/auth/oauth/token")
                 // draft-ietf-oauth-client-id-metadata-document Section 5 — lets a host check for
@@ -144,8 +145,7 @@ public abstract class OAuthServerHandler implements SuppliesGatewayRoutes {
     private void handleApprove(RoutingContext ctx) {
         Participant approver = authEndpointSupport.requireSessionUser(ctx);
         String requestId = authEndpointSupport.readJsonBody(ctx).getString("requestId");
-        respondRedirectUrl(ctx, oauthAuthorizationService.approve(issuer(ctx), requestId,
-                                                                  approver.getId()));
+        respondRedirectUrl(ctx, oauthAuthorizationService.approve(issuer(ctx), requestId, approver));
     }
 
     /**
@@ -190,7 +190,7 @@ public abstract class OAuthServerHandler implements SuppliesGatewayRoutes {
         String codeVerifier = ctx.request().getFormAttribute("code_verifier");
         oauthAuthorizationService.exchangeCode(issuer(ctx), code, clientId, redirectUri, codeVerifier)
               .compose(exchange -> authEndpointSupport.issueDelegateTokens(ctx, exchange.approver(),
-                                                                           DelegateKind.MCP_CLIENT,
+                                                                           DelegateType.MCP_CLIENT,
                                                                            exchange.clientId(),
                                                                            exchange.clientName(), null))
               .onFailure(err -> {

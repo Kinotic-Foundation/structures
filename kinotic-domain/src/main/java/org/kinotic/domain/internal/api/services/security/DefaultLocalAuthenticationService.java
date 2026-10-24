@@ -4,15 +4,15 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.domain.api.model.security.AuthType;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.internal.api.repositories.IdentityCredentialRepository;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.stereotype.Component;
-
-import java.util.function.Supplier;
 
 @Slf4j
 @Component
@@ -23,41 +23,47 @@ public class DefaultLocalAuthenticationService implements LocalAuthenticationSer
     private final ParticipantIdentityRepository identityRepository;
 
     @Override
-    public Future<UserParticipantIdentity> authenticateOrgUser(String email, String password) {
-        Validate.notBlank(email, "email cannot be blank");
-        Validate.notBlank(password, "password cannot be blank");
-        return verifyMatchingUser(password, () -> identityRepository.findFirstOrgUserByEmail(email));
+    public Future<SystemParticipantIdentity> authenticateSystemUser(String email, String password) {
+        requireCredentials(email, password);
+        return identityRepository.findSystemUserByEmail(email).compose(user -> verify(user, password));
     }
 
     @Override
-    public Future<UserParticipantIdentity> authenticateLocal(String email,
-                                                             String password,
-                                                             String organizationId,
-                                                             String applicationId) {
-        Validate.notBlank(email, "email cannot be blank");
-        Validate.notBlank(password, "password cannot be blank");
-        if (applicationId != null) {
-            Validate.notBlank(organizationId, "organizationId is required when applicationId is supplied");
-        }
-        return verifyMatchingUser(password, () -> identityRepository.findByEmail(email, organizationId, applicationId));
+    public Future<OrganizationParticipantIdentity> authenticateOrganizationUser(String email, String password) {
+        requireCredentials(email, password);
+        return identityRepository.findOrganizationUserByEmail(email).compose(user -> verify(user, password));
     }
 
-    private Future<UserParticipantIdentity> verifyMatchingUser(String password,
-                                                               Supplier<Future<UserParticipantIdentity>> lookup) {
-        return lookup.get().compose(user -> {
-            if (user == null
-                    || user.getAuthType() != AuthType.LOCAL
-                    || !user.isEnabled()) {
-                return Future.succeededFuture(null);
-            }
-            return credentialRepository.findById(user.getId())
-                                  .map(credential -> {
-                                      if (credential == null
-                                              || !DomainUtil.verifyPassword(password, credential.getSecretHash())) {
-                                          return null;
-                                      }
-                                      return user;
-                                  });
-        });
+    @Override
+    public Future<ApplicationParticipantIdentity> authenticateApplicationUser(String email, String password,
+                                                                                String organizationId, String applicationId) {
+        requireCredentials(email, password);
+        return identityRepository.findApplicationUserByEmail(email, organizationId, applicationId).compose(user -> verify(user, password));
+    }
+
+    @Override
+    public Future<Boolean> verifyPassword(UserParticipantIdentity user, String password) {
+        Validate.notNull(user, "user cannot be null");
+        Validate.notBlank(password, "password cannot be blank");
+        return verify(user, password).map(verified -> verified != null);
+    }
+
+    private static void requireCredentials(String email, String password) {
+        Validate.notBlank(email, "email cannot be blank");
+        Validate.notBlank(password, "password cannot be blank");
+    }
+
+    // the user when it is enabled and password matches its credential, otherwise null
+    private <T extends UserParticipantIdentity> Future<T> verify(T user, String password) {
+        Future<T> ret;
+        if (user == null || !user.isEnabled()) {
+            ret = Future.succeededFuture();
+        } else {
+            ret = credentialRepository.findById(user.getId())
+                                      .map(credential -> credential != null && DomainUtil.verifyPassword(password, credential.getSecretHash())
+                                              ? user
+                                              : null);
+        }
+        return ret;
     }
 }

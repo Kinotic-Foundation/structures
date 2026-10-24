@@ -12,12 +12,17 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
+import org.kinotic.domain.api.model.security.identity.ScopedParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
+import org.kinotic.domain.api.model.security.participant.ParticipantScope;
+import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.nio.charset.StandardCharsets;
@@ -31,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -39,19 +45,19 @@ import java.util.regex.Pattern;
 public class DomainUtil {
 
     /**
-     * The zone for platform services organizations use to manage the system, such as member,
-     * application, and entity definition management
+     * The zone for the services organizations use to manage their members, applications and
+     * entity definitions
      */
     public static final String MANAGEMENT_API_ZONE = "management-api";
 
     /**
-     * The zone for the platform's application facing data services, such as entity persistence
+     * The zone for the application facing data services, such as entity persistence
      * and named query execution
      */
     public static final String APP_API_ZONE = "app-api";
 
     /**
-     * The zone for services internal to the platform, only reachable by system participants
+     * The zone for the system's own services, only reachable by system participants
      */
     public static final String SYSTEM_API_ZONE = "system-api";
 
@@ -61,15 +67,36 @@ public class DomainUtil {
     public static final String APP_ZONE_PREFIX = "app";
 
     /**
+     * The zone an application's own services are addressed in, {@code app.<organizationId>.<applicationId>},
+     * which the application's runtimes and users reach and nothing outside the application does.
+     *
+     * @param organizationId the application's organization
+     * @param applicationId  the application
+     * @return the zone
+     */
+    public static String applicationZone(String organizationId, String applicationId) {
+        return APP_ZONE_PREFIX + "." + organizationId + "." + applicationId;
+    }
+
+    /**
      * The prefix of the Elasticsearch indices the platform creates, including the index that holds
      * the items of each published EntityDefinition
      */
     public static final String INDEX_PREFIX = "kinotic_";
 
-    // Organization ids beginning with this prefix belong to the platform, which needs an
-    // organization wherever it is its own tenant — the owner of VM workloads the OS runs for
-    // the OS, for instance
+    /** The system's id wherever a scope's id names an owner, such as a secret scope; no organization may take it. */
+    public static final String SYSTEM_ID = "system";
+
+    // no organization carries the platform's name: an id beginning with it would put that name on a customer's
+    // hosts, <org>--<app> under the apps-api domain and *.<org> under the sites domain
     private static final String RESERVED_ID_PREFIX = "kinotic";
+    // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow;
+    // the path segments the organization login's own routes claim under /api/auth/org/login/, which an
+    // organization's id would be mistaken for; and the system's own id
+    private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
+                                                                         "console", "mail", "admin", "login", "status", "docs",
+                                                                         "find", "social", "sso", "providers", "choices",
+                                                                         SYSTEM_ID);
 
     // Project ids may start with a digit because they embed application ids, which may
     // themselves start with a digit
@@ -111,9 +138,9 @@ public class DomainUtil {
         // an organization id of "xn" would start its applications' host labels with "xn--", which
         // DNS reserves for internationalized labels
         Validate.isTrue(!"xn".equals(organizationId), "Organization Id '%s' is reserved", organizationId);
-        // The platform's own organizations are seeded by db migrations, which do not come
-        // through here, so the prefix needs no escape hatch
         Validate.isTrue(!organizationId.startsWith(RESERVED_ID_PREFIX),
+                        "Organization Id '%s' is reserved by the platform", organizationId);
+        Validate.isTrue(!RESERVED_ORGANIZATION_IDS.contains(organizationId),
                         "Organization Id '%s' is reserved by the platform", organizationId);
     }
 
@@ -129,6 +156,23 @@ public class DomainUtil {
             throw new IllegalArgumentException("UI name must not be null");
         }
         validateHostLabelPart(uiName);
+    }
+
+    /**
+     * Validates that the given tenant id contains only lowercase letters, digits, and interior dashes,
+     * never {@code --}, and is at most {@link HostLabelUtil#MAX_TENANT_ID_LENGTH} characters, since it is the
+     * first name of the tenant's site labels.
+     *
+     * @param tenantId to validate
+     * @throws IllegalArgumentException if the tenant id is null, invalid, or too long
+     */
+    public static void validateTenantId(String tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant Id must not be null");
+        }
+        validateHostLabelPart(tenantId);
+        Validate.isTrue(tenantId.length() <= HostLabelUtil.MAX_TENANT_ID_LENGTH,
+                        "Tenant Id '%s' is longer than %d characters; shorten the tenant name", tenantId, HostLabelUtil.MAX_TENANT_ID_LENGTH);
     }
 
     private static void validateZoneLabelId(String id) {
@@ -320,43 +364,50 @@ public class DomainUtil {
     }
 
     /**
-     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}.
-     * Returns the typed subtype that matches the user's structural scope:
+     * Builds the {@link Participant} security identity for an authenticated {@link ParticipantIdentity}: a
+     * {@link DefaultSystemParticipant} for a system user, and for a {@link ScopedParticipantIdentity} the participant
+     * of the layer its scope is:
      * <ul>
-     *   <li>{@code organizationId == null} → {@link DefaultSystemParticipant}</li>
-     *   <li>{@code organizationId != null, applicationId == null} → {@link DefaultOrganizationParticipant}</li>
-     *   <li>both set → {@link DefaultApplicationParticipant} (also carrying {@code tenantId})</li>
+     *   <li>SYSTEM → {@link DefaultSystemParticipant}</li>
+     *   <li>ORGANIZATION → {@link DefaultOrganizationParticipant}</li>
+     *   <li>APPLICATION → {@link DefaultApplicationParticipant}, carrying the {@code tenantId} too</li>
      * </ul>
-     * Synchronous: every field needed lives on the user, no lookups required.
+     * An organization user acts through one of its memberships, by
+     * {@link #createParticipant(OrganizationParticipantIdentity, OrganizationMembership)}.
      *
-     * @param user the authenticated user
-     * @return the typed participant for the given user
+     * @param identity the authenticated identity, other than an organization user
+     * @return the typed participant for the given identity
      */
-    public static Participant createParticipant(ParticipantIdentity user) {
-        Map<String, String> metadata = participantMetadata(user);
-        if (user.getOrganizationId() == null) {
-            return DefaultSystemParticipant.builder()
-                                           .id(user.getId())
-                                           .metadata(metadata)
-                                           .roles(List.of())
-                                           .build();
+    public static Participant createParticipant(ParticipantIdentity identity) {
+        Validate.isTrue(!(identity instanceof OrganizationParticipantIdentity),
+                        "An organization user acts through one of its memberships");
+        ParticipantScope scope = scopeOf(identity);
+        Map<String, String> metadata = participantMetadata(identity);
+        Participant ret;
+        if (scope.organizationId() == null) {
+            ret = DefaultSystemParticipant.builder()
+                                          .id(identity.getId())
+                                          .metadata(metadata)
+                                          .roles(List.of())
+                                          .build();
+        } else if (scope.applicationId() == null) {
+            ret = DefaultOrganizationParticipant.builder()
+                                                .id(identity.getId())
+                                                .organizationId(scope.organizationId())
+                                                .metadata(metadata)
+                                                .roles(List.of())
+                                                .build();
+        } else {
+            ret = DefaultApplicationParticipant.builder()
+                                               .id(identity.getId())
+                                               .organizationId(scope.organizationId())
+                                               .applicationId(scope.applicationId())
+                                               .tenantId(scope.tenantId())
+                                               .metadata(metadata)
+                                               .roles(List.of())
+                                               .build();
         }
-        if (user.getApplicationId() == null) {
-            return DefaultOrganizationParticipant.builder()
-                                                 .id(user.getId())
-                                                 .organizationId(user.getOrganizationId())
-                                                 .metadata(metadata)
-                                                 .roles(List.of())
-                                                 .build();
-        }
-        return DefaultApplicationParticipant.builder()
-                                            .id(user.getId())
-                                            .organizationId(user.getOrganizationId())
-                                            .applicationId(user.getApplicationId())
-                                            .tenantId(user.getTenantId())
-                                            .metadata(metadata)
-                                            .roles(List.of())
-                                            .build();
+        return ret;
     }
 
     /**
@@ -424,10 +475,37 @@ public class DomainUtil {
         return "APPLICATION/" + organizationId + "/" + applicationId;
     }
 
+    /**
+     * The participant organization user {@code user} acts as through {@code membership}: an
+     * {@link OrganizationParticipant} of the membership's organization. The participant's id is the user's, so what
+     * the person creates is attributed to them whichever organization they act in.
+     */
+    public static Participant createParticipant(OrganizationParticipantIdentity user, OrganizationMembership membership) {
+        Validate.isTrue(user.getId().equals(membership.getOrganizationUserId()), "The membership is not the user's");
+        return DefaultOrganizationParticipant.builder()
+                                             .id(user.getId())
+                                             .organizationId(membership.getOrganizationId())
+                                             .metadata(participantMetadata(user))
+                                             .roles(List.of())
+                                             .build();
+    }
+
+    /** The scope a participant acts in: its own for a scoped participant, the system's (all null) otherwise. */
+    public static ParticipantScope scopeOf(Participant participant) {
+        return participant instanceof ScopedParticipant scoped ? scoped.getScope() : new ParticipantScope(null, null, null);
+    }
+
+    /**
+     * The scope ids an identity carries: a {@link ScopedParticipantIdentity}'s scope, and none (all {@code null}) for
+     * a system user or an organization user.
+     */
+    public static ParticipantScope scopeOf(ParticipantIdentity identity) {
+        return identity instanceof ScopedParticipantIdentity scoped ? scoped.scope() : new ParticipantScope(null, null, null);
+    }
+
     private static Map<String, String> participantMetadata(ParticipantIdentity identity) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, participantTypeFor(identity.getType()));
-        metadata.put("authType", identity.getAuthType().name());
         switch (identity) {
             case UserParticipantIdentity user -> {
                 metadata.put("email", user.getEmail());
@@ -447,7 +525,7 @@ public class DomainUtil {
 
     private static String participantTypeFor(ParticipantIdentityType type) {
         return switch (type) {
-            case USER -> ParticipantConstants.PARTICIPANT_TYPE_USER;
+            case SYSTEM_USER, ORGANIZATION_USER, APPLICATION_USER -> ParticipantConstants.PARTICIPANT_TYPE_USER;
             case DELEGATE -> ParticipantConstants.PARTICIPANT_TYPE_DELEGATE;
             case MACHINE -> ParticipantConstants.PARTICIPANT_TYPE_MACHINE;
         };

@@ -146,10 +146,10 @@ async function load() {
       Kinotic.systemOrganizations.findOrganizationById(orgId),
       Kinotic.systemOrganizations.findApplications(orgId, firstPage),
       Kinotic.systemOrganizations.findProjects(orgId, firstPage),
-      Kinotic.systemOrganizations.findMembers(orgId, null, firstPage),
+      Kinotic.systemOrganizations.findMembers(orgId, firstPage),
       Kinotic.systemOrganizations.findPendingInvites(orgId, null, firstPage),
       scanWorkloads({ organizationId: orgId }),
-      scanJobRuns({ organizationId: orgId, since: Date.now() - RUN_WINDOW_DAYS * DAY_MS })
+      scanJobRuns({ organizationId: orgId, startedSince: new Date(Date.now() - RUN_WINDOW_DAYS * DAY_MS).toISOString() })
     ])
     organization.value = org
     applicationCount.value = apps.totalElements ?? 0

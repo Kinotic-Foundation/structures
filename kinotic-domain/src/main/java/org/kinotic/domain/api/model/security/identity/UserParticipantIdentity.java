@@ -4,39 +4,22 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.domain.api.model.security.AuthType;
 
 /**
- * A person. Unique by email within their scope, pre-created by an administrator before they
- * can authenticate, using {@link AuthType#LOCAL} credentials or a federated
- * {@link AuthType#OIDC} identity.
+ * A person, at any scope: what every kind of user has, an email and sign-in methods of its own, a password and,
+ * for an organization's or an application's user, any number of {@link OidcBinding}s. The concrete subtype is the
+ * scope the person signs in to — {@link SystemParticipantIdentity}, {@link OrganizationParticipantIdentity}
+ * or {@link ApplicationParticipantIdentity} — and one email may be a user of each, each with its own sign-in
+ * methods.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class UserParticipantIdentity extends ParticipantIdentity {
+public abstract sealed class UserParticipantIdentity extends ParticipantIdentity
+        permits SystemParticipantIdentity, OrganizationParticipantIdentity, ApplicationParticipantIdentity {
 
-    /**
-     * Email address, unique within the user's scope (organizationId + applicationId).
-     */
+    /** Email address, unique among the users of the same scope. */
     private String email;
 
-    /**
-     * The {@code sub} claim from the OIDC token. Populated when an OIDC user is provisioned
-     * (auto on first login, or via pending sign-up completion); used together with
-     * {@link #oidcConfigId} to resolve the user back from the IdP callback.
-     */
-    private String oidcSubject;
-
-    /**
-     * Reference to the OIDC configuration used to provision this user. Distinguishes
-     * {@code sub}s issued by different IdPs that might collide.
-     */
-    private String oidcConfigId;
-
-    @Override
-    public ParticipantIdentityType getType() {
-        return ParticipantIdentityType.USER;
-    }
 }

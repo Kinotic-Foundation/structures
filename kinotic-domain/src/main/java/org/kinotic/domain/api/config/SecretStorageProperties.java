@@ -17,15 +17,11 @@ public class SecretStorageProperties {
      */
     private String masterKey;
     /**
-     * Backend type. If null, in-memory storage is used.
+     * Backend type. Defaults to {@link SecretStorageBackendType#IN_MEMORY}.
      */
-    private SecretStorageBackendType backend;
+    private SecretStorageBackendType backend = SecretStorageBackendType.IN_MEMORY;
     /**
      * Azure Key Vault settings. Required when {@code backend} is {@link SecretStorageBackendType#AZURE}.
      */
     private AzureProperties azure;
-    /**
-     * Chronicle Map settings. Required when {@code backend} is {@link SecretStorageBackendType#HFT}.
-     */
-    private ChronicleMapProperties chronicleMap;
 }

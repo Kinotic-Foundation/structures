@@ -5,12 +5,11 @@ package org.kinotic.domain.api.config;
  */
 public enum SecretStorageBackendType {
     /**
-     * Chronicle Map (OpenHFT) backed secret storage that persists secrets to a memory-mapped file.
-     * Intended for local development.
+     * Process-memory secret storage; every stored secret is lost when the process stops.
      */
-    HFT,
+    IN_MEMORY,
     /**
-     * Azure Key Vault backed secret storage.
+     * Azure Key Vault backed secret storage, provided by the {@code kinotic-ee} module.
      */
     AZURE
 }

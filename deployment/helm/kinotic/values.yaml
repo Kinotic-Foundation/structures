@@ -22,25 +22,26 @@ servers:
     webServer:
       enabled: true
       port: 9090
-    # kinotic.managementServer.*: the URLs this server is reached at (no trailing slashes)
+    # kinotic.managementServer.*: the Turnstile site this server's open routes are guarded by; the
+    # URLs of its API and the portal are kinotic.managementApi.apiBaseUrl and kinotic.domain.portalBaseUrl below
     managementServer:
-      # this server's REST endpoints, the base of its OIDC redirect_uris; the portal's own origin
-      # for a same-origin deploy
-      apiBaseUrl: "http://localhost:9090"
-      # the portal, where browser flows return and where the emailed verification and invite
-      # links open
-      portalBaseUrl: "http://localhost:9090"
+      # kinotic.managementServer.turnstile.siteKey: the Cloudflare Turnstile site the portal's
+      # find-my-organizations form presents; its secret is mounted with turnstile set below
+      turnstile:
+        siteKey: ""
     # The Secret holding this server's certificate when tls.enabled
     tlsSecretName: kinotic-server-management-tls
-    # Mounts the platform GitHub App's private key and webhook secret, which a server loading
+    # Mounts the system GitHub App's private key and webhook secret, which a server loading
     # management-api requires
     githubApp: true
+    # Mounts the Cloudflare DNS token, with which this server creates an organization's sites
+    # record when an organization signs up
+    cloudflareDns: true
+    # Mounts the Turnstile site's secret key, with which this server verifies the token each
+    # find-my-organizations request carries
+    turnstile: true
     service:
       type: ClusterIP
-      nodePorts:
-        gateway: null
-        ui: null
-        uiDirect: null
     resources: {}
     # Environment variables this server alone gets, on top of extraEnv
     extraEnv: {}
@@ -60,17 +61,13 @@ servers:
       apiBaseUrl: "http://localhost:58504"
       # the system console, where browser flows return
       consoleBaseUrl: "http://localhost:5174"
-    # kinotic.systemApi.deployment.appApiBaseUrl: the base every application's API host is a label
-    # under, as a browser reaches it, which each UI build is handed; the app server serves it under
-    # kinotic.appServer.apiBaseUrl
-    deployment:
-      appApiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-system-tls
+    turnstile: false
     githubApp: true
+    # the system server creates an organization's sites record before its first site is published
+    cloudflareDns: true
     service:
       type: ClusterIP
-      nodePorts:
-        gateway: null
     resources: {}
     extraEnv: {}
 
@@ -83,16 +80,12 @@ servers:
     gatewayPort: 58505
     webServer:
       enabled: false
-    # kinotic.appServer.apiBaseUrl: the base every application's API host is a label under
-    # (https://<organizationId>--<applicationId>.<domain>); each host is its own OAuth issuer
-    appServer:
-      apiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-app-tls
+    turnstile: false
     githubApp: false
+    cloudflareDns: false
     service:
       type: ClusterIP
-      nodePorts:
-        gateway: null
     resources: {}
     extraEnv: {}
 
@@ -109,10 +102,6 @@ properties:
   enableJmx: true
   enableNmt: true
   javaToolOptions: "-Djava.net.preferIPv4Stack=true -XX:MaxDirectMemorySize=512m"
-  # JPMS opens/exports required by Apache Ignite (java.base reflection) and
-  # Calcite/Janino runtime code generation (jdk.compiler internals).
-  # Concatenated onto JAVA_TOOL_OPTIONS in each server's ConfigMap.
-  javaModuleAccess: "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
   bplJvmHeadRoom: 10
 
 # Where each server's OpenTelemetry agent exports its traces and metrics: the OTLP/HTTP endpoints
@@ -122,14 +111,20 @@ otel:
   metricsEndpoint: "http://mimir.observability.svc:9009/otlp/v1/metrics"
 
 # What every server shares — mirrors the Spring property structure:
-#   kinotic.domain.*       → email, Elasticsearch
-#   kinotic.managementApi.* → the stores LogService and TelemetryService query
+#   kinotic.domain.*       → the app API and portal URLs, email, Elasticsearch
+#   kinotic.managementApi.* → the management API's URL, the stores LogService and TelemetryService query
 #   kinotic.ignite.*       → the cluster (set in each server's application-kubernetes.yml)
 kinotic:
   domain:
-    # kinotic.domain.email.* — outbound mail via Azure Communication Services. The links in the
-    # mail open in the portal, so each server that sends mail is handed the management server's
-    # portalBaseUrl as kinotic.domain.email.linkBaseUrl.
+    # kinotic.domain.appApiBaseUrl: the base every application's API host is a label under
+    # (https://<organizationId>--<applicationId>.<domain>), as a browser reaches it: what the app
+    # server serves, each host its own OAuth issuer; what the system server hands each UI build; and
+    # the host of the callback URL of an application's and a tenant's OIDC configurations
+    appApiBaseUrl: "http://localhost:58505"
+    # kinotic.domain.portalBaseUrl: the portal (no trailing slash), where the management server's
+    # browser flows return and where the emailed verification and invite links open
+    portalBaseUrl: "http://localhost:9090"
+    # kinotic.domain.email.* — outbound mail via Azure Communication Services
     email:
       # When false, EmailService logs verification URLs instead of sending. Required for
       # local/dev environments without a real ACS resource.
@@ -139,6 +134,10 @@ kinotic:
       managedIdentityClientId: ""
   # kinotic.managementApi.* — management-api configuration, loaded by the org and system servers
   managementApi:
+    # kinotic.managementApi.apiBaseUrl: the management server's REST endpoints as a browser
+    # reaches them (no trailing slash), the base of its OIDC redirect_uris and of the callback URL of
+    # an organization's own OIDC configurations; the portal's own origin for a same-origin deploy
+    apiBaseUrl: "http://localhost:9090"
     # Loki HTTP API backing the LogService
     lokiUrl: "http://loki.observability.svc:3100"
     # Tempo and Mimir HTTP APIs backing the TelemetryService
@@ -164,11 +163,6 @@ kinotic:
 tls:
   enabled: false
 
-evictionTracking:
-  enabled: false
-  mountPath: "/eviction-data"
-  hostPath: "/tmp/kinotic-eviction-data"
-
 nodeSelector: {}
 
 # Workload identity (Azure) — enables keyless auth to Azure services
@@ -176,26 +170,29 @@ workloadIdentity:
   enabled: false
   clientId: ""
 
-# Platform secrets, mounted as files at platformSecrets.mountPath: each server's JWT signing keys,
+# System secrets, mounted as files at systemSecrets.mountPath: each server's JWT signing keys,
 # which the server watches for in-place rotation, and the secret properties it imports from the
 # directory as a config tree, each file named after the property it sets. Each server signs with a
-# key set of its own, the object `<server>-jwt-signing-keys`. Always required in clustered
-# environments: Azure projects them via the Secrets Store CSI driver from the global Key Vault
-# (keyVault.* must be set); KinD mounts a k8s Secret generated by local terraform.
-platformSecrets:
-  mountPath: /etc/kinotic/platform-secrets
-  # Source — exactly one of `keyVault` (Azure CSI) or `secretName` (KinD k8s Secret) is used.
+# key set of its own, the object `<server>-jwt-signing-keys`. The Secrets Store CSI driver projects
+# them from the global Key Vault, so keyVault.* must be set.
+systemSecrets:
+  mountPath: /etc/kinotic/system-secrets
   keyVault:
     name: ""        # from global/ terraform output: platform_key_vault_name
     tenantId: ""    # from global/ terraform output: tenant_id
-  secretName: ""    # KinD: a k8s Secret in the release namespace holding every server's objects
-  # The Key Vault secret names, or keys of secretName, of the imported properties
+  # The Key Vault secret names of the imported properties
   objects:
     # kinotic.domain.secretStorage.masterKey, the same for every server
     secretStorageMasterKey: kinotic-secret-storage-master-key
     # kinotic.managementApi.github.appPrivateKey and webhookSecret, on a server with githubApp set
     githubAppPrivateKey: kinotic-github-app-private-key
     githubWebhookSecret: kinotic-github-webhook-secret
+    # kinotic.domain.publishedSites.cloudflare.apiToken, on a server with cloudflareDns set: the management
+    # server creates an organization's sites record at sign-up, the system server before its first publish
+    cloudflareDnsApiToken: kinotic-cloudflare-dns-api-token
+    # kinotic.managementServer.turnstile.secretKey, on a server with turnstile set: the management server
+    # verifies the token the portal's find-my-organizations form earns from the Turnstile site
+    turnstileSecretKey: kinotic-turnstile-secret-key
 
 # OIDC client secrets are now resolved at runtime by SecretReferenceResolver — Azure Key
 # Vault in production (kinotic.domain.secretStorage.azure.vaultUrl) or KINOTIC_AKV_<sanitizedName>

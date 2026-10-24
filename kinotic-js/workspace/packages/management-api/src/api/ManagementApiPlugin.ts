@@ -1,5 +1,6 @@
 import type { IKinotic, KinoticPlugin } from '@kinotic-ai/core'
 import { ApplicationService, type IApplicationService } from '@/api/services/IApplicationService'
+import { TenantService, type ITenantService } from '@/api/services/ITenantService'
 import { ProjectService, type IProjectService } from '@/api/services/IProjectService'
 import { ProjectArtifactService, type IProjectArtifactService } from '@/api/services/deployment/IProjectArtifactService'
 import { MicroserviceDeploymentService, type IMicroserviceDeploymentService } from '@/api/services/deployment/IMicroserviceDeploymentService'
@@ -13,12 +14,14 @@ import { MemberService, type IMemberService } from '@/api/services/security/IMem
 import { InviteEmailTemplateService, type IInviteEmailTemplateService } from '@/api/services/IInviteEmailTemplateService'
 import { DelegateService, type IDelegateService } from '@/api/services/security/IDelegateService'
 import { ProfileService, type IProfileService } from '@/api/services/security/IProfileService'
+import { OwnedOidcConfigurationService, type IOwnedOidcConfigurationService } from '@/api/services/security/IOwnedOidcConfigurationService'
 import { MachineService, type IMachineService } from '@/api/services/security/IMachineService'
 import { GitHubAppInstallationService, type IGitHubAppInstallationService } from '@/api/services/IGitHubAppInstallationService'
 import { JobMonitoringService, type IJobMonitoringService } from '@/api/services/IJobMonitoringService'
 
 export interface IManagementApiExtension {
     applications: IApplicationService
+    tenants: ITenantService
     projects: IProjectService
     projectArtifacts: IProjectArtifactService
     microserviceDeployments: IMicroserviceDeploymentService
@@ -33,6 +36,7 @@ export interface IManagementApiExtension {
     inviteEmailTemplates: IInviteEmailTemplateService
     delegates: IDelegateService
     profile: IProfileService
+    ownedOidcConfigurations: IOwnedOidcConfigurationService
     machines: IMachineService
     githubAppInstallations: IGitHubAppInstallationService
 }
@@ -41,6 +45,7 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
     install(kinotic: IKinotic): IManagementApiExtension {
         return {
             applications: new ApplicationService(kinotic),
+            tenants: new TenantService(kinotic),
             projects: new ProjectService(kinotic),
             projectArtifacts: new ProjectArtifactService(kinotic),
             microserviceDeployments: new MicroserviceDeploymentService(kinotic),
@@ -55,6 +60,7 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
             inviteEmailTemplates: new InviteEmailTemplateService(kinotic),
             delegates: new DelegateService(kinotic),
             profile: new ProfileService(kinotic),
+            ownedOidcConfigurations: new OwnedOidcConfigurationService(kinotic),
             machines: new MachineService(kinotic),
             githubAppInstallations: new GitHubAppInstallationService(kinotic),
         }

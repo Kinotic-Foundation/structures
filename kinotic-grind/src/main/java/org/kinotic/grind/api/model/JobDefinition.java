@@ -71,21 +71,12 @@ public interface JobDefinition {
     JobDefinition input(Object... values);
 
     /**
-     * Adds a {@link Task} whose result is not kept.
+     * Adds a {@link Task}, its result kept as the task's {@link Task#getStore() Store} declares, or
+     * not kept when it declares none.
      * @param task to add
      * @return this for fluent use
      */
     JobDefinition task(Task<?> task);
-
-    /**
-     * Adds a {@link Task} whose result is kept as the given {@link Store} declares: its
-     * {@link StoreType} governs resume behavior, its name places the value in the job scope
-     * for later tasks, and its wire flag publishes the value to watchers of the run.
-     * @param task to add
-     * @param store how the result is kept
-     * @return this for fluent use
-     */
-    JobDefinition task(Task<?> task, Store store);
 
     /**
      * Adds a nested {@link JobDefinition} executed as one task of this definition.

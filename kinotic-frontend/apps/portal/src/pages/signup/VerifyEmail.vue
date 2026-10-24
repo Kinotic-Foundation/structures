@@ -29,7 +29,7 @@
         />
 
         <Button
-          label="Create account"
+          label="Create organization"
           class="login-submit"
           :loading="loading"
           :disabled="!canSubmit"
@@ -117,15 +117,15 @@ async function handleSubmit() {
     })
 
     if (!response.ok) {
-      displayAlert(await readAuthError(response, 'Account creation failed'))
+      displayAlert(await readAuthError(response, 'Sign-up failed'))
       return
     }
 
     // The org, admin user, and browser session are created; connect with it and go to the app.
     await userState.login()
-    await KINOTIC_UI.navigate('/applications')
+    await KINOTIC_UI.navigate('/')
   } catch (error: unknown) {
-    displayAlert(error instanceof Error ? error.message : 'Account creation failed')
+    displayAlert(error instanceof Error ? error.message : 'Sign-up failed')
   } finally {
     loading.value = false
   }

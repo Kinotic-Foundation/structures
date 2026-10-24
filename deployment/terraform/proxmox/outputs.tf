@@ -8,13 +8,18 @@ output "server_hostnames" {
   value       = { for name, server in local.servers : name => server.hostnames[0] }
 }
 
+output "server_images" {
+  description = "Each server's image on Docker Hub, which redeploy.sh compares against what the host runs"
+  value       = local.server_images
+}
+
 output "portal_hostname" {
-  description = "The portal, served by Front Door"
+  description = "The portal, served by the sites Worker"
   value       = local.azure.portal_hostname
 }
 
 output "console_hostname" {
-  description = "The system console, served by Front Door"
+  description = "The system console, served by the sites Worker"
   value       = local.azure.console_hostname
 }
 
@@ -64,7 +69,7 @@ output "hosts_entry" {
 }
 
 output "kinotic_version" {
-  description = "The image tag the servers and the migration run, which redeploy.sh compares against Docker Hub"
+  description = "The image tag Kinotic's servers and the migration run, which redeploy.sh compares against Docker Hub"
   value       = var.kinotic_version
 }
 

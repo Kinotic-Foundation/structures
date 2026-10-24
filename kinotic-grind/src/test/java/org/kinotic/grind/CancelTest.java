@@ -43,4 +43,30 @@ public class CancelTest extends AbstractGrindTest {
         assertEquals(ExecutionStatus.CANCELLED, repository.taskAt(handle.getJobRunId(), "0").getStatus());
     }
 
+    @Test
+    public void aTaskBlockedWhenTheRunIsCancelledIsCancelled() throws Exception {
+        JobDefinition job = JobDefinition.create("blocked")
+                .name("blocked").version("1")
+                .task(Tasks.fromCallable("sleep", () -> {
+                    Thread.sleep(60_000);
+                    return null;
+                }));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        handle.getEvents().subscribe(event -> { }, error -> { });
+
+        awaitUntil("the sleeping task to start", () -> {
+            var record = repository.taskAt(handle.getJobRunId(), "0/1");
+            return record != null && record.getStatus() == ExecutionStatus.RUNNING;
+        });
+
+        handle.cancel();
+
+        awaitUntil("the run to record CANCELLED", () -> {
+            var run = repository.savedRuns.get(handle.getJobRunId());
+            return run != null && run.getStatus() == ExecutionStatus.CANCELLED;
+        });
+        assertEquals(ExecutionStatus.CANCELLED, repository.taskAt(handle.getJobRunId(), "0/1").getStatus());
+    }
+
 }

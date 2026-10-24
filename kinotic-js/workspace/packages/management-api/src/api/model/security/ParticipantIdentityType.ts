@@ -3,7 +3,9 @@
  * discriminator of the document.
  */
 export enum ParticipantIdentityType {
-    USER = 'USER',
+    SYSTEM_USER = 'SYSTEM_USER',
+    ORGANIZATION_USER = 'ORGANIZATION_USER',
+    APPLICATION_USER = 'APPLICATION_USER',
     DELEGATE = 'DELEGATE',
     MACHINE = 'MACHINE'
 }

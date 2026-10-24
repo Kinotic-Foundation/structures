@@ -15,15 +15,20 @@ x-kinotic-server-e2e-environment: &kinotic-server-e2e-environment
   # `test,e2e-tests,compose`, so supply the dummy test key here. Matches kinotic-test's
   # application.yml so derived secret names stay consistent with the test fixtures.
   KINOTIC_DOMAIN_SECRETSTORAGE_MASTERKEY: a2lub3RpYy10ZXN0LW1hc3Rlci1rZXktZHVtbXktMDA=
-  # KinoticJwtIssuer signs every access token with these keys. DevPlatformSecretsGenerator seeds
-  # them when the `development` profile sets kinotic.platformSecrets.generateMissing, and e2e drops
+  # KinoticJwtIssuer signs every access token with these keys. DevSystemSecretsGenerator seeds
+  # them when the `development` profile sets kinotic.systemSecrets.generateMissing, and e2e drops
   # that profile, so mount the dummy set below; without
   # it the OAuth token endpoints cannot mint a token.
-  KINOTIC_PLATFORMSECRETS_JWTSIGNINGKEYSPATH: /platform-secrets/jwt-signing-keys
+  KINOTIC_SYSTEMSECRETS_JWTSIGNINGKEYSPATH: /system-secrets/jwt-signing-keys
   # The nodes find each other over this static address list and form one Ignite cluster. A node
   # the running suite did not start does not resolve; Ignite logs the miss and carries on.
   KINOTIC_IGNITE_DISCOVERYTYPE: LOCAL
   KINOTIC_IGNITE_LOCALADDRESSES: kinotic-server-management:47500,kinotic-server-system:47500,kinotic-server-app:47500,kinotic-server-app-2:47500
+  # Every application's API host is a label under this base, and the ServerPlanes suite addresses
+  # <org>--<app>.localhost:58505 at both app server nodes
+  KINOTIC_DOMAIN_APPAPIBASEURL: http://localhost:58505
+  # The portal the emailed links open, read before a send is skipped as disabled
+  KINOTIC_DOMAIN_PORTALBASEURL: http://localhost:9090
 
 # Placeholder GitHub App config for the servers that load management-api: GithubProperties validates
 # these @NotBlank at boot even though no e2e test calls GitHub. disableProvisioner swaps in
@@ -36,10 +41,6 @@ x-kinotic-management-api-e2e-environment: &kinotic-management-api-e2e-environmen
   KINOTIC_MANAGEMENTAPI_GITHUB_WEBHOOKSECRET: "-"
   KINOTIC_MANAGEMENTAPI_GITHUB_REPOTEMPLATE: "-"
 
-# The app server's own URL base: every application's API host is a label under it, and the
-# ServerPlanes suite addresses <org>--<app>.localhost:58505 at both app server nodes
-x-kinotic-app-server-e2e-environment: &kinotic-app-server-e2e-environment
-  KINOTIC_APPSERVER_APIBASEURL: http://localhost:58505
 
 services:
   kinotic-migration:
@@ -53,38 +54,37 @@ services:
   kinotic-server-management:
     environment:
       <<: [*kinotic-server-e2e-environment, *kinotic-management-api-e2e-environment]
+      # No Turnstile site: the find-my-organizations route accepts every request without a token
+      KINOTIC_MANAGEMENTSERVER_TURNSTILE_ENABLED: "false"
     # Replaces compose.kinotic-servers.yml's mount of the developer's tunnel and GitHub App,
     # which would otherwise configure the e2e server on a developer machine
     volumes: !override
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-system:
     environment:
       <<: [*kinotic-server-e2e-environment, *kinotic-management-api-e2e-environment]
       # No Azure storage accounts: the site provisioner is the mock.
       KINOTIC_SYSTEMAPI_DISABLEAZURESTORAGE: "true"
-      # Placeholder UI site config, validated at boot the same way; no e2e test deploys a UI.
-      KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN: apps.localhost
+      # Placeholder UI site config; the storage endpoint is validated at boot the same way. No e2e
+      # test deploys a UI.
+      KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN: apps.localhost
       KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT: "-"
       # The workloads' server hosts are @NotBlank and validated at boot. They are set in the
       # `development` profile, which e2e drops in favor of `test,e2e-tests,compose`, so supply them
       # here. No e2e test deploys a workload, so the values only have to bind.
       KINOTIC_SYSTEMAPI_DEPLOYMENT_MANAGEMENTSERVER_HOST: localhost
       KINOTIC_SYSTEMAPI_DEPLOYMENT_APPSERVER_HOST: localhost
-      # The URLs the system server is reached at and hands out; validated at boot. No console runs
-      # in the e2e stack, and the app API base is what a UI build would be handed
+      # The URLs the system server is reached at; validated at boot. No console runs in the e2e stack
       KINOTIC_SYSTEMSERVER_APIBASEURL: http://localhost:58504
       KINOTIC_SYSTEMSERVER_CONSOLEBASEURL: http://localhost:5174
-      KINOTIC_SYSTEMAPI_DEPLOYMENT_APPAPIBASEURL: http://localhost:58505
-      # The emailed links' base, read before the send is skipped as disabled
-      KINOTIC_DOMAIN_EMAIL_LINKBASEURL: http://localhost:9090
     # Replaces compose.kinotic-servers.yml's mount of the developer's GitHub App
     volumes: !override
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-app:
     environment:
-      <<: [*kinotic-server-e2e-environment, *kinotic-app-server-e2e-environment]
+      <<: *kinotic-server-e2e-environment
     volumes:
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro
   kinotic-server-app-2:
     extends:
       file: compose.kinotic-servers.yml
@@ -93,6 +93,6 @@ services:
     ports: !override
       - "127.0.0.1:58506:58505" # REST and STOMP
     environment:
-      <<: [*kinotic-server-e2e-environment, *kinotic-app-server-e2e-environment]
+      <<: *kinotic-server-e2e-environment
     volumes:
-      - ./jwt-signing-keys.e2e-test.json:/platform-secrets/jwt-signing-keys:ro
+      - ./jwt-signing-keys.e2e-test.json:/system-secrets/jwt-signing-keys:ro

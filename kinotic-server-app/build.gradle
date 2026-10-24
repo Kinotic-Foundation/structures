@@ -5,11 +5,15 @@ plugins {
 dependencies {
 	implementation project(':kinotic-core')
 	implementation project(':kinotic-domain')
+	implementation project(':kinotic-app-api')
+	implementation project(':kinotic-ee')
 	implementation project(':kinotic-persistence')
 	implementation project(':kinotic-api-gateway')
 
 	implementation 'io.vertx:vertx-core'
 	implementation 'io.vertx:vertx-web'
+
+	implementation 'org.apache.ignite:ignite-core'
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }

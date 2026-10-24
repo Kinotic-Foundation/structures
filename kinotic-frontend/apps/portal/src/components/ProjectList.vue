@@ -11,7 +11,6 @@ import type { IDataSource, IterablePage, Pageable } from '@kinotic-ai/core'
 import { Kinotic } from '@kinotic-ai/core'
 import { Project, RepositoryConnectionStatus } from '@kinotic-ai/management-api'
 import type { CrudHeader } from '@kinotic-ai/frontend-common'
-import { DatetimeUtil } from "@kinotic-ai/frontend-common"
 import { createDebug } from '@kinotic-ai/frontend-common'
 
 const debug = createDebug('project-list');
@@ -224,9 +223,7 @@ async function retryRepoInit(project: Project): Promise<void> {
         <TimePill :date="item.updated" />
       </template>
       <template #item.created="{ item }">
-        <span>
-          {{ DatetimeUtil.formatMonthDayYear(item.created) }}
-        </span>
+        <TimePill :date="item.created" />
       </template>
     </CrudTable>
 

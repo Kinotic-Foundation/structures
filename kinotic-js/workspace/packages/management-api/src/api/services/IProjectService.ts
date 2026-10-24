@@ -1,10 +1,10 @@
-import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
+import { MANAGEMENT_API_ZONE } from '@/api/Zones'
 import { CrudServiceProxy, FunctionalIterablePage, type IKinotic, type ICrudServiceProxy, type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
 import { Project } from '@/api/model/Project'
 import type { ProjectDependencies } from '@/api/model/deployment/ProjectDependencies'
 import type { ProjectDeployment } from '@/api/model/deployment/ProjectDeployment'
 import type { WatchEvent } from '@/api/model/reconcile/WatchEvent'
-import type { WatchEventKind } from '@/api/model/reconcile/WatchEventKind'
+import type { WatchEventType } from '@/api/model/reconcile/WatchEventType'
 
 export interface IProjectService extends ICrudServiceProxy<Project> {
 
@@ -29,7 +29,7 @@ export interface IProjectService extends ICrudServiceProxy<Project> {
      * @param kinds the kinds of entries to list
      * @param pageable the page to return
      */
-    findAllDeploymentHistory(kinds: WatchEventKind[], pageable: Pageable): Promise<IterablePage<WatchEvent>>
+    findAllDeploymentHistory(kinds: WatchEventType[], pageable: Pageable): Promise<IterablePage<WatchEvent>>
 
     /**
      * Finds all projects for the given application.
@@ -98,13 +98,13 @@ export class ProjectService extends CrudServiceProxy<Project> implements IProjec
         return this.serviceProxy.invoke('createProjectIfNotExist', [project])
     }
 
-    public async findAllDeploymentHistory(kinds: WatchEventKind[], pageable: Pageable): Promise<IterablePage<WatchEvent>> {
+    public async findAllDeploymentHistory(kinds: WatchEventType[], pageable: Pageable): Promise<IterablePage<WatchEvent>> {
         const page: Page<WatchEvent> = await this.findAllDeploymentHistorySinglePage(kinds, pageable)
         return new FunctionalIterablePage(pageable, page,
             (pageable: Pageable) => this.findAllDeploymentHistorySinglePage(kinds, pageable))
     }
 
-    public findAllDeploymentHistorySinglePage(kinds: WatchEventKind[], pageable: Pageable): Promise<Page<WatchEvent>> {
+    public findAllDeploymentHistorySinglePage(kinds: WatchEventType[], pageable: Pageable): Promise<Page<WatchEvent>> {
         return this.serviceProxy.invoke('findAllDeploymentHistory', [kinds, pageable])
     }
 

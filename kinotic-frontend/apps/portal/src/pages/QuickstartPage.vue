@@ -9,7 +9,8 @@
         Build and ship your first app on Kinotic
       </h2>
       <p class="mx-auto mt-4 max-w-[560px] text-sm text-muted-color">
-        Four steps from an empty organization to an app running from your own repository.
+        Install the Kinotic plugin, connect Claude to Kinotic, and ask for your app. Claude creates the
+        application and project, writes the code, and every push deploys it.
       </p>
       <div class="mx-auto mt-8 flex max-w-[320px] items-center gap-3">
         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700">
@@ -43,8 +44,8 @@
               </div>
               <p class="mt-1 text-sm leading-6 text-muted-color">{{ step.description }}</p>
 
-              <div v-if="step.id === 'build' && !loading" class="mt-3 overflow-hidden rounded-lg bg-surface-950 dark:ring-1 dark:ring-surface-700">
-                <div v-for="command in PLUGIN_COMMANDS" :key="command"
+              <div v-if="step.commands && !loading" class="mt-3 overflow-hidden rounded-lg bg-surface-950 dark:ring-1 dark:ring-surface-700">
+                <div v-for="command in step.commands" :key="command"
                      class="group flex items-center gap-3 px-3.5 py-1.5 first:pt-3 last:pb-3">
                   <span class="select-none font-mono text-xs text-green-400">›</span>
                   <code class="flex-1 truncate font-mono text-xs text-surface-100">{{ command }}</code>
@@ -55,7 +56,8 @@
                 </div>
               </div>
 
-              <div v-if="!loading && !step.done && index === currentIndex" class="mt-3 flex flex-wrap gap-2">
+              <p v-if="!loading && !step.done && index === currentIndex && step.hint" class="mt-3 text-sm leading-6 text-muted-color">{{ step.hint }}</p>
+              <div v-if="!loading && !step.done && index === currentIndex && step.actions.length" class="mt-3 flex flex-wrap gap-2">
                 <Button v-for="action in step.actions" :key="action.label" :label="action.label"
                         :severity="action.primary ? undefined : 'secondary'" :outlined="!action.primary" size="small"
                         :loading="action.label === 'Link GitHub' && linking" @click="action.run">
@@ -283,31 +285,34 @@
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, ref, type Component } from 'vue'
-import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import { ArrowRight, ArrowUpRight, BookOpen, Boxes, Braces, ChartLine, Check, CloudUpload, Copy, Database, FileCode, FolderGit2, GitBranch,
-         GitCommitHorizontal, Globe, Layers, Library, Package, Plus, Table, Terminal } from '@lucide/vue'
+         GitCommitHorizontal, Globe, Layers, Library, Package, Table, Terminal } from '@lucide/vue'
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import type { GitHubAppInstallation, Project } from '@kinotic-ai/management-api'
+import { DelegateType, type DelegatingParticipantIdentity, type GitHubAppInstallation, type Project } from '@kinotic-ai/management-api'
 import { createDebug, PageHeader, TINTS } from '@kinotic-ai/frontend-common'
-import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { DOCUMENTATION_URL } from '@/util/externalLinks'
 import githubLogo from '@/assets/github-icon.svg'
 import claudeCodeIcon from '@/assets/claude-code.svg'
 
 /**
- * The organization's onboarding checklist: link GitHub, create an application, create a project,
- * then build and deploy it with Claude Code. Each step is checked off from the organization's real
- * state, and the first one not done carries the actions that do it.
+ * The organization's onboarding checklist: install the Kinotic plugin in Claude Code, authorize its
+ * MCP server, then ask Claude for an app, which creates the application and project and builds it.
+ * Each step is checked off from the organization's real state, and the first one not done carries
+ * what to do next.
  */
 
 const debug = createDebug('quickstart')
 
 const QUICK_START_URL = 'https://kinotic.ai/apps/quick-start'
-const PLUGIN_COMMANDS = ['/plugin marketplace add kinotic-ai/claude-plugin', '/plugin install kinotic@kinotic']
-// How many projects the checklist reads to find the first one and whether any has deployed
+const PLUGIN_COMMANDS = ['/plugin marketplace add kinotic-ai/agent-plugin', '/plugin install kinotic@kinotic']
+const AUTHORIZE_COMMANDS = ['/mcp']
+const NEW_APP_COMMANDS = ['/kinotic:new-app my-app']
+// How many projects the checklist reads to find the most recently updated one
 const PROJECT_SAMPLE_SIZE = 20
+// How many of the user's delegates the checklist reads to find an authorized MCP client
+const DELEGATE_SAMPLE_SIZE = 50
 
 const CARD_CLASS = 'rounded-2xl border border-surface-200 bg-surface-0 p-7 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-surface-700 dark:bg-surface-800/30'
 
@@ -370,18 +375,20 @@ interface StepAction {
 }
 
 interface Step {
-  id: 'github' | 'application' | 'project' | 'build'
+  id: 'plugin' | 'authorize' | 'ask'
   title: string
   description: string
   done: boolean
-  /** What is done, e.g. the linked account, shown beside a checked step. */
+  /** What is done, e.g. the connected client, shown beside a checked step. */
   doneDetail?: string
+  /** Claude Code commands for the step, shown in a copyable terminal block. */
+  commands?: string[]
+  /** A note shown above the actions of the current step. */
+  hint?: string
   actions: StepAction[]
   /** Where to see what a checked step made. */
   revisit?: { label: string, to: string }
 }
-
-const router = useRouter()
 
 const loading = ref(true)
 const linking = ref(false)
@@ -389,10 +396,8 @@ const error = ref<string | null>(null)
 const copied = ref<string | null>(null)
 const installation = ref<GitHubAppInstallation | null>(null)
 const projects = ref<Project[]>([])
-const deployedProject = ref<Project | null>(null)
+const mcpClient = ref<DelegatingParticipantIdentity | null>(null)
 
-const applications = computed(() => APPLICATION_STATE.allApplications)
-const firstApplication = computed(() => applications.value[0] ?? null)
 /** The project updated most recently, which the checklist names and links to. */
 const latestProject = computed(() => [...projects.value]
     .sort((a, b) => new Date(b.updated ?? 0).getTime() - new Date(a.updated ?? 0).getTime())[0] ?? null)
@@ -403,52 +408,38 @@ function projectPath(project: Project): string {
 
 const steps = computed<Step[]>(() => [
   {
-    id: 'github',
-    title: 'Link GitHub',
-    description: 'Kinotic creates a repository for each of your projects under the account you link, and deploys a project when you push to it.',
-    done: installation.value !== null,
-    doneDetail: installation.value ? `linked as ${installation.value.accountLogin}` : undefined,
-    actions: [{ label: 'Link GitHub', icon: markRaw(GitBranch), primary: true, run: linkGitHub }],
-    revisit: { label: 'Integrations', to: '/organization-settings' }
+    id: 'plugin',
+    title: 'Install the Kinotic plugin',
+    description: 'In Claude Code, add the Kinotic marketplace and install the plugin. It teaches Claude how Kinotic apps are built and connects it to Kinotic.',
+    // the portal cannot see Claude Code's plugins; an authorized MCP client shows the plugin is in use
+    done: mcpClient.value !== null,
+    commands: PLUGIN_COMMANDS,
+    actions: []
   },
   {
-    id: 'application',
-    title: 'Create an application',
-    description: 'An application groups the projects your organization builds and deploys, with its own users, data and settings.',
-    done: applications.value.length > 0,
-    doneDetail: `${applications.value.length} ${applications.value.length === 1 ? 'application' : 'applications'}`,
-    actions: [{ label: 'New application', icon: markRaw(Plus), primary: true, run: () => router.push('/applications?add=true') }],
-    revisit: { label: 'Applications', to: '/applications' }
+    id: 'authorize',
+    title: 'Connect Claude to Kinotic',
+    description: 'Run /mcp in Claude Code, select kinotic-os and choose Authenticate, then approve the consent screen that opens in your browser.',
+    done: mcpClient.value !== null,
+    doneDetail: mcpClient.value?.displayName ? `${mcpClient.value.displayName} connected` : undefined,
+    commands: AUTHORIZE_COMMANDS,
+    actions: [],
+    revisit: { label: 'Connected apps', to: '/account/connected-apps' }
   },
   {
-    id: 'project',
-    title: 'Create a project',
-    description: 'A project gets its own GitHub repository, scaffolded for Kinotic, and deploys from it.',
+    id: 'ask',
+    title: 'Ask Claude for your app',
+    description: 'Describe the app you want, or run /kinotic:new-app. Claude creates the application and its project with a GitHub repository, writes the entities, services and UIs, and pushes. Every push deploys.',
     done: projects.value.length > 0,
     doneDetail: latestProject.value?.name,
-    actions: [{
-      label: 'New project', icon: markRaw(FolderGit2), primary: true,
-      run: () => router.push(firstApplication.value
-          ? `/application/${encodeURIComponent(firstApplication.value.id)}/projects?openNewProject=1`
-          : '/applications?add=true')
-    }],
+    commands: NEW_APP_COMMANDS,
+    hint: installation.value === null
+        ? 'Claude creates your project\'s repository under the GitHub account you link, so link GitHub before you ask.'
+        : undefined,
+    actions: installation.value === null
+        ? [{ label: 'Link GitHub', icon: markRaw(GitBranch), primary: true, run: linkGitHub }]
+        : [],
     revisit: latestProject.value ? { label: 'Open project', to: projectPath(latestProject.value) } : undefined
-  },
-  {
-    id: 'build',
-    title: 'Build and deploy with Claude Code',
-    description: 'Install the Kinotic plugin in Claude Code, open your project\'s repository, and build. Every push to its default branch deploys it.',
-    done: deployedProject.value !== null,
-    doneDetail: deployedProject.value ? `${deployedProject.value.name} deployed` : undefined,
-    actions: [
-      ...(latestProject.value?.repoFullName
-          ? [{ label: 'Open repository', icon: markRaw(GitBranch), primary: true,
-               run: () => window.open(`https://github.com/${latestProject.value?.repoFullName}`, '_blank', 'noopener') }]
-          : []),
-      { label: 'Read the quick start', icon: markRaw(ArrowUpRight), primary: !latestProject.value?.repoFullName,
-        run: () => window.open(QUICK_START_URL, '_blank', 'noopener') }
-    ],
-    revisit: deployedProject.value ? { label: 'View deployment', to: `${projectPath(deployedProject.value)}/deployment` } : undefined
   }
 ])
 
@@ -492,30 +483,19 @@ async function loadInstallation(): Promise<void> {
   }
 }
 
-// The organization's projects, read application by application until enough are found
 async function loadProjects(): Promise<void> {
-  if (APPLICATION_STATE.allApplications.length === 0) {
-    await APPLICATION_STATE.loadAllApplications()
-  }
-  const found: Project[] = []
-  for (const application of APPLICATION_STATE.allApplications) {
-    if (found.length >= PROJECT_SAMPLE_SIZE) break
-    const page = await Kinotic.projects.findAllForApplication(application.id, Pageable.create(0, PROJECT_SAMPLE_SIZE))
-    found.push(...(page.content ?? []))
-  }
-  projects.value = found
+  const page = await Kinotic.projects.findAll(Pageable.create(0, PROJECT_SAMPLE_SIZE))
+  projects.value = page.content ?? []
 }
 
-async function loadDeployedProject(): Promise<void> {
-  const deployments = await Promise.all(projects.value.map(project =>
-      Kinotic.projects.findDeployment(project.id ?? '').then(deployment => ({ project, deployment })).catch(() => null)))
-  deployedProject.value = deployments.find(entry => entry?.deployment)?.project ?? null
+async function loadMcpClient(): Promise<void> {
+  const page = await Kinotic.delegates.findMyDelegates(Pageable.create(0, DELEGATE_SAMPLE_SIZE))
+  mcpClient.value = (page.content ?? []).find(delegate => delegate.enabled && delegate.delegateType === DelegateType.MCP_CLIENT) ?? null
 }
 
 onMounted(async () => {
   try {
-    await Promise.all([loadInstallation(), loadProjects()])
-    await loadDeployedProject()
+    await Promise.all([loadInstallation(), loadProjects(), loadMcpClient()])
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
   } finally {

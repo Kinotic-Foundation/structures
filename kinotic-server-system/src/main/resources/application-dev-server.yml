@@ -1,7 +1,7 @@
 # The development server's system server: kinotic-server-system as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox), with
-# Front Door, the sites storage account, email, and a Key Vault in Azure
-# (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
+# the sites storage account, email, and a Key Vault in Azure and the sites Worker on Cloudflare
+# (deployment/terraform/azure/dev-server). Activated as `dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and
 # the credentials through the file imported below.
@@ -25,16 +25,15 @@ kinotic:
       enabled: true
       certPath: /etc/kinotic/certs/fullchain.pem
       keyPath: /etc/kinotic/certs/privkey.pem
+  systemSecrets:
+    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox):
+    # an activeKeyId and a keys list, so a key can be added to the set at migration time
+    jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
+  domain:
     cors:
       # The system console alone
       allowedOriginPattern: "https:\\/\\/${DEV_SERVER_CONSOLE_HOSTNAME}"
       allowCredentials: true
-  platformSecrets:
-    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),
-    # in the shape deployment/kind/terraform/platform-secrets.tf produces: an activeKeyId and a
-    # keys list, so a key can be added to the set at migration time
-    jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
-  domain:
     secretStorage:
       # The in-memory default loses every stored secret on restart; the Key Vault the
       # dev-server terraform root creates keeps them, and keeps them in Azure for migration.

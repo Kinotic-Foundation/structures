@@ -1,21 +1,18 @@
 <template>
-  <JobRunProgress :key="jobRunId" :job-run-id="jobRunId" :expandable="ProjectDeployResultNames.hasDetail" :task-icon="ProjectDeployResultNames.iconOf" :failure-of="ProjectDeployResultNames.failureOf">
-    <template #detail="{ node, root }">
-      <ProjectDeployTaskDetail :organization-id="organizationId ?? owningOrganizationId" :node="node" :root="root" />
-    </template>
-  </JobRunProgress>
+  <JobRunProgress :key="jobRunId" :job-run-id="jobRunId"
+                  :failure-of="systemRun ? undefined : ProjectDeployResultNames.failureOf"
+                  :next-step="systemRun ? SYSTEM_JOB_RETRY_HINT : undefined" @loaded="onLoaded" />
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Kinotic } from '@kinotic-ai/core'
-import { JobRunProgress, ProjectDeployResultNames, ProjectDeployTaskDetail, createDebug } from '@kinotic-ai/frontend-common'
-
-const debug = createDebug('job-run-detail')
+import type { JobRun } from '@kinotic-ai/management-api'
+import { JobRunProgress, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
 
 /**
- * One job run's progress, step by step, with each step's detail, read in the given organization;
- * without one, in the organization the run belongs to, which it emits as organization once known.
+ * One job run's progress, step by step, with each step's detail. A failed deployment explains its
+ * failure as a deployment, and a failed system run says how to run it again. Without the
+ * organization the run belongs to, it emits that organization once the run is loaded.
  */
 const props = defineProps<{
   jobRunId: string
@@ -26,21 +23,23 @@ const emit = defineEmits<{
   (e: 'organization', organizationId: string | null): void
 }>()
 
-const owningOrganizationId = ref<string | null>(null)
+const SYSTEM_JOB_RETRY_HINT = 'To try again, start the job again with Run system job on the Jobs page.'
 
-watch(() => props.jobRunId, loadOwningOrganization, { immediate: true })
+// true once the loaded run is one of the system jobs' runs, which no organization owns
+const systemRun = ref(false)
 
-async function loadOwningOrganization(): Promise<void> {
-  owningOrganizationId.value = null
-  if (props.organizationId) {
-    return
+// another run's organization is cleared at once, so a run that fails to load never shows the last one's
+watch(() => props.jobRunId, () => {
+  systemRun.value = false
+  if (!props.organizationId) {
+    emit('organization', null)
   }
-  try {
-    const run = await Kinotic.jobMonitoring.findJobRun(props.jobRunId)
-    owningOrganizationId.value = run.organizationId
-  } catch (error) {
-    debug('Failed to load job run %s: %O', props.jobRunId, error)
+})
+
+function onLoaded(run: JobRun): void {
+  systemRun.value = !run.organizationId
+  if (!props.organizationId) {
+    emit('organization', run.organizationId)
   }
-  emit('organization', owningOrganizationId.value)
 }
 </script>

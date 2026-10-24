@@ -35,9 +35,25 @@ it to track follow-up work. When your PR merges, restart your working branch fro
 request for the next unit of work. If the branch carries unmerged commits, rebase them onto
 the new base instead of discarding them.
 
+A pull request description never mentions Claude or any AI tool: no "Generated with Claude Code"
+line, no `Co-Authored-By` trailer, no session link, and no other attribution to an assistant.
+
+## Enterprise Features live in kinotic-ee
+
+The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the Kinotic Additional Limitations, except `kinotic-ee/`, which holds the Enterprise Features under the Kinotic Enterprise License (`kinotic-ee/LICENSE`). Every interface in an ELv2 package with an `ee` segment (`org.kinotic.domain.api.ee.services.SecretStorageBackend`) is an Enterprise Extension Point whose production implementations are Enterprise Features. To make a capability enterprise-only, put its interface in the module's `api/ee/` tree, mirroring `api/` (`api/ee/services/`), and put its implementations in `kinotic-ee`, never in an ELv2 module. The package name is the license designation, so an `ee` package may hold a single file.
+
 ## Don't guess from names
 
 Names suggest meaning but don't define it. Before using an annotation, framework hook, base class, or library helper you haven't used in this codebase before, read its source or docs and confirm what it actually does. Don't infer behaviour from a plausible-sounding name and ship it. If you can't verify the behaviour, ask — don't write a comment justifying the guess.
+
+## Say system, never platform, for the system's own scope
+
+The tier above every organization is the **system**: its users are system users, its jobs are
+system jobs, the runs, workloads, secrets and log tenant it owns are the system's, and its console
+is the system console. Name that scope *system* in every identifier, label, comment, Javadoc and
+doc, never *platform* (`JobOwner.system()`, `SystemJobService`, `kinotic-system`). *Platform* is
+only the product itself, Kinotic as a whole ("the Kinotic platform"). The old name still turns up
+in surrounding code; rename it to *system* when the scope is meant, rather than copying it.
 
 ## Java Conventions
 
@@ -45,7 +61,9 @@ Always use Lombok where possible: `@Getter`, `@Setter`, `@Accessors(chain = true
 
 Prefer a single `return` per method. Guard clauses that short-circuit errors or degenerate cases at the top of a method are fine (throwing, or bailing before the real work), but branching LOGIC paths use if/else assigning a result variable that is returned once at the end (the `String ret; if (...) { ret = ...; } else { ret = ...; } return ret;` idiom used throughout the codebase) — never a `return` inside each branch.
 
-Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `AuthType`, `OidcProviderKind`.
+Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `DelegateType`, `OidcProviderType`.
+
+An enum that says what sort of thing something is gets named `<Thing>Type` (`DelegateType`, `OidcProviderType`), never `<Thing>Kind`, and the field holding it is `type`, never `kind`.
 
 When bridging a `CompletableFuture` into Vert.x, always pass the context: `Future.fromCompletionStage(stage, vertx.getOrCreateContext())`, never the single-argument overload. The stage may complete on a foreign thread (Azure SDK, Caffeine loader, JDK executor), and without the context argument everything composed after it leaves the request's Vert.x context — breaking anything downstream that reads a context-local, such as `SecurityContext`'s participant. For delays, use `vertx.timer(...)` instead of a JDK scheduled executor for the same reason.
 
@@ -95,7 +113,9 @@ Properties should never be created for something that will not need to be config
 
 Never gate a bean on a Spring profile — `@Profile` is for test contexts only; profile-gated beans are hard to audit. Profiles are property bundles: an `application-<name>.yml` selects property values for a deployment shape. Which modules a server runs is decided by its server module: every library module auto-configures once it is on the runtime classpath, so the server's `build.gradle` dependencies select the modules, and `@SpringBootApplication(exclude = …)` excludes the auto-configuration of a module the server needs only for its types (`TestServerApplication` excludes `KinoticDomainAutoConfiguration`). Enabling or disabling a feature within a module is done with an explicit `kinotic.*` property read by `@ConditionalOnProperty` (`kinotic.managementApi.github.disableProvisioner` is the established idiom), so what a deployment runs can be read from its server module and YAML alone.
 
-Properties are always scoped to the module and feature they configure: a setting lives as a field on the properties class of the thing it controls, nested under that module's tree (`kinotic.managementApi.github.disableProvisioner`, `kinotic.systemApi.deployment.managementServer.host`). The only root-level `kinotic.*` entries are genuinely platform-wide settings. Never park a feature-level flag at the root — a flag whose home class exists belongs on it, both as a field and in the `@ConditionalOnProperty` path.
+One fact, one property. Never add a property whose value always equals another property's: a per-server copy of a setting, or a feature's own copy of a URL or domain that another module already configures. Put the fact in one property on the properties class of the nearest module that every reader of it loads, decided by where it is needed, never by default in a catch-all: the management server's API URL is read by management-api and the management server, which loads management-api, so it is `kinotic.managementApi.apiBaseUrl`; the app API URL is also read by the app server, which loads only kinotic-domain, so it is `kinotic.domain.appApiBaseUrl`. Derive anything else from that one property in code. Before adding a property, grep the yml profiles, Helm values, Terraform and compose files for the value it would hold; if another property already holds it, read that one. Two properties that must always match are Shotgun Surgery across every deployment file, and a bug the first time one is changed without the other.
+
+Properties are always scoped to the module and feature they configure: a setting lives as a field on the properties class of the thing it controls, nested under that module's tree (`kinotic.managementApi.github.disableProvisioner`, `kinotic.systemApi.deployment.managementServer.host`). The only root-level `kinotic.*` entries are genuinely system-wide settings. Never park a feature-level flag at the root — a flag whose home class exists belongs on it, both as a field and in the `@ConditionalOnProperty` path.
 
 ## Dependency Versions
 
@@ -146,6 +166,15 @@ column; the grammar reference explains what each nested element costs.
 ## Keep docs in sync with code
 
 When a change alters something the docs describe — a wire contract, public API signature, REST route, auth mechanism, configuration option, or user-facing behavior — update the affected docs in the same change. `website/content/**` must always reflect the correct and current shape of the system; stale docs are a defect, not a follow-up. Before finishing, grep `website/content` for the symbols, routes, and field names you changed and reconcile every hit. If a change is genuinely too large to document in the same pass, say so explicitly rather than leaving the docs silently wrong.
+
+## Docs follow features, never the other way round
+
+`website/content/**` describes what the code does; it never decides what the code should do. A
+request from the user drives a feature, and the docs are updated afterwards to match what was
+built. Never treat a sentence in the docs as the specification of a behaviour the code lacks, and
+never build, keep or refuse something because the docs say so. When a request contradicts the
+docs, or the docs claim a behaviour the code does not have, say so and ask which way to go; do not
+pick the docs' side on your own. The only authority a doc has is over the docs.
 
 ## Avoid these code smells
 

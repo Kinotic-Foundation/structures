@@ -12,7 +12,12 @@ terraform {
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.0"
+      version = "~> 3.6"
+    }
+    # The platform zone and its records
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
     }
   }
 
@@ -36,6 +41,10 @@ provider "azurerm" {
   }
 }
 
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
+
 # ── Variables ─────────────────────────────────────────────────────────────────
 
 variable "project" {
@@ -51,9 +60,25 @@ variable "location" {
 }
 
 variable "domain_name" {
-  description = "Domain name for the DNS zone"
+  description = "The platform zone, where the servers' API hosts and the platform's own UIs live and the customers' sites never do"
   type        = string
   default     = "kinotic.ai"
+}
+
+variable "cloudflare_account_id" {
+  description = "The Cloudflare account the platform zone is created in; set it in local.auto.tfvars"
+  type        = string
+}
+
+variable "cloudflare_api_token" {
+  description = "The token this root creates the platform zone with: Zone edit on the account, DNS and zone settings edit on the zone. Set it in local.auto.tfvars or TF_VAR_cloudflare_api_token"
+  type        = string
+  sensitive   = true
+}
+
+variable "apps_api_domain" {
+  description = "The cluster root's apps_api_domain output, apps-api.<cloudflare zone>: the app server answers the system's social registrations' callbacks at it, so an Entra sign-in fails with a redirect URI mismatch when the two differ"
+  type        = string
 }
 
 variable "disable_grafana_entra" {
@@ -99,6 +124,20 @@ variable "github_app_private_key" {
   default     = ""
 }
 
+variable "cloudflare_dns_api_token" {
+  description = "A Cloudflare API token holding DNS edit on the platform zone and the customer zone (kinotic.io) and nothing else, which the management and system servers create each organization's sites record with; the cluster root gives cert-manager the same token for its DNS-01 challenges"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "turnstile_secret_key" {
+  description = "The secret key of the Cloudflare Turnstile site the portal's find-my-organizations form presents, which the management server verifies each request's token with; the cluster root passes the site key as turnstile_site_key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "github_webhook_secret" {
   description = "Webhook secret of the kinotic-ai GitHub App, which the management server verifies webhook deliveries with"
   type        = string
@@ -124,12 +163,43 @@ resource "azurerm_resource_group" "global" {
   tags     = local.common_tags
 }
 
-# ── DNS Zone ──────────────────────────────────────────────────────────────────
+# ── The platform zone ─────────────────────────────────────────────────────────
+# kinotic.ai on Cloudflare DNS, which the registrar's nameservers point at (dns_nameservers): the
+# servers' API hosts (the cluster and dev-server roots), the platform's own UIs, which the sites
+# Worker serves from the sites accounts at portal and console (the cluster root) and dev-portal
+# and dev-console (the dev-server root), and the email records below. The customers' sites are on
+# their own zone, kinotic.io, so no site is ever same-site with the platform.
 
-resource "azurerm_dns_zone" "main" {
-  name                = var.domain_name
-  resource_group_name = azurerm_resource_group.global.name
-  tags                = local.common_tags
+resource "cloudflare_zone" "main" {
+  account = {
+    id = var.cloudflare_account_id
+  }
+  name = var.domain_name
+  type = "full"
+}
+
+# The Azure DNS zone the domain was served from is forgotten, not destroyed: it keeps answering
+# while the registrar's change to Cloudflare's nameservers propagates, and is deleted by hand
+# afterwards (README.md)
+removed {
+  from = azurerm_dns_zone.main
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+# The proxied hosts of the zone, the platform's UIs, are served by the Worker over HTTPS alone
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = cloudflare_zone.main.id
+  setting_id = "always_use_https"
+  value      = "on"
+}
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = cloudflare_zone.main.id
+  setting_id = "min_tls_version"
+  value      = "1.2"
 }
 
 # ── Kinotic Platform OIDC App Registration ────────────────────────────────────
@@ -148,25 +218,16 @@ resource "azuread_application" "kinotic_platform" {
     requested_access_token_version = 2
   }
 
-  # Web-platform redirect URIs — used by the server-side OIDC flow. Login and signup
-  # are separate handlers (OrganizationLoginHandler / OrganizationSignupHandler) on distinct
-  # paths under /api/auth/org. Each flow's social callback is namespaced under /social/ so the
-  # gateway can disambiguate social vs per-org SSO callbacks at the same handler. Microsoft
-  # permits http://localhost:* for dev without HTTPS. The portal.* URI is for production; the
-  # others cover bare-local Java's static shape (9090), IDE dev against the api-gateway
-  # port (58503 — the vite server has no /api proxy, so callbacks go to the backend), and
-  # KinD with mkcert (https://localhost). The configId "entra-platform" in the path matches
-  # the row seeded by V2__kinotic_data_inserts.sql into kinotic_org_signup_oidc_configuration.
+  # Web-platform redirect URIs — used by the server-side OIDC flow. The registration is the
+  # system's APP_SOCIAL row "entra-platform" (V1__init.sql), offered at application logins
+  # only, so every flow through it returns to the app server's shared host, the one redirect
+  # URI the registration needs per environment (ApplicationSocialLoginHandler). Microsoft
+  # permits http://localhost:* for dev without HTTPS: the second URI is a developer's app
+  # server on its api-gateway port.
   web {
     redirect_uris = [
-      "https://portal.${var.domain_name}/api/auth/org/login/social/callback/entra-platform",
-      "https://portal.${var.domain_name}/api/auth/org/signup/social/callback/entra-platform",
-      "http://localhost:9090/api/auth/org/login/social/callback/entra-platform",
-      "http://localhost:9090/api/auth/org/signup/social/callback/entra-platform",
-      "http://localhost:58503/api/auth/org/login/social/callback/entra-platform",
-      "http://localhost:58503/api/auth/org/signup/social/callback/entra-platform",
-      "https://localhost/api/auth/org/login/social/callback/entra-platform",
-      "https://localhost/api/auth/org/signup/social/callback/entra-platform",
+      "https://${var.apps_api_domain}/api/auth/app/login/social/callback/entra-platform",
+      "http://localhost:58505/api/auth/app/login/social/callback/entra-platform",
     ]
     implicit_grant {
       access_token_issuance_enabled = false
@@ -300,15 +361,18 @@ output "resource_group_name" {
 }
 
 output "dns_zone_name" {
-  value = azurerm_dns_zone.main.name
+  description = "The platform zone"
+  value       = cloudflare_zone.main.name
 }
 
 output "dns_zone_id" {
-  value = azurerm_dns_zone.main.id
+  description = "The platform zone's id on Cloudflare, which the cluster and dev-server roots write their records and Worker routes into"
+  value       = cloudflare_zone.main.id
 }
 
 output "dns_nameservers" {
-  value = azurerm_dns_zone.main.name_servers
+  description = "Cloudflare's nameservers for the platform zone, which the registrar points the domain at"
+  value       = cloudflare_zone.main.name_servers
 }
 
 output "tenant_id" {
@@ -332,7 +396,7 @@ output "kinotic_oidc_authority" {
   value = "https://login.microsoftonline.com/common/v2.0"
 }
 
-# Sensitive — used to populate the platform OIDC client secret for local/KinD dev when
+# Sensitive — used to populate the platform OIDC client secret for local dev when
 # you don't want to round-trip through Key Vault. Pull with:
 #   terraform -chdir=deployment/terraform/azure/global output -raw kinotic_oidc_entra_platform_client_secret
 output "kinotic_oidc_entra_platform_client_secret" {

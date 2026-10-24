@@ -1,7 +1,7 @@
 # The development server's management server: kinotic-server-management as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox),
-# with Front Door, the sites storage account, email, and a Key Vault in Azure
-# (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
+# with the sites storage account, email, and a Key Vault in Azure and the sites Worker on
+# Cloudflare (deployment/terraform/azure/dev-server). Activated as `dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and
 # the credentials through the file imported below.
@@ -11,6 +11,12 @@ spring:
     # the host by sync-secrets.sh and mounted read-only
     import: optional:file:/etc/kinotic/secrets.yml
 kinotic:
+  managementServer:
+    turnstile:
+      # Cloudflare's always-passing test site, as in development: the development server has no Turnstile
+      # site of its own, so the find-my-organizations form renders the widget and every token verifies
+      siteKey: 1x00000000000000000000AA
+      secretKey: 1x0000000000000000000000000000000AA
   managementApi:
     entityDefinition:
       # Three master-eligible data nodes, one physical disk each: one replica survives a disk,
@@ -19,8 +25,7 @@ kinotic:
       numberOfShards: 1
       numberOfReplicas: 1
   apiGateway:
-    # The portal is served by Front Door from the sites account, so the server exposes the API
-    # port alone
+    # The portal is a Static Web App on the platform zone, so the server exposes the API port alone
     webServer:
       enabled: false
     ssl:
@@ -29,16 +34,15 @@ kinotic:
       enabled: true
       certPath: /etc/kinotic/certs/fullchain.pem
       keyPath: /etc/kinotic/certs/privkey.pem
-    cors:
-      # The portal alone
-      allowedOriginPattern: "https:\\/\\/${DEV_SERVER_PORTAL_HOSTNAME}"
-      allowCredentials: true
-  platformSecrets:
-    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),
-    # in the shape deployment/kind/terraform/platform-secrets.tf produces: an activeKeyId and a
-    # keys list, so a key can be added to the set at migration time
+  systemSecrets:
+    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox):
+    # an activeKeyId and a keys list, so a key can be added to the set at migration time
     jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
   domain:
+    cors:
+      # The portal and the trusted UIs (trusted_ui_hostnames in the dev-server terraform root)
+      allowedOriginPattern: "https:\\/\\/(${DEV_SERVER_MANAGEMENT_UI_HOSTNAMES})"
+      allowCredentials: true
     secretStorage:
       # The in-memory default loses every stored secret on restart; the Key Vault the
       # dev-server terraform root creates keeps them, and keeps them in Azure for migration.

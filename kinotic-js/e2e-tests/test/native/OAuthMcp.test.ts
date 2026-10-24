@@ -1,11 +1,11 @@
 import {Kinotic, Pageable} from '@kinotic-ai/core'
-import {DelegateKind, DelegateService} from '@kinotic-ai/management-api'
+import {DelegateType, DelegateService} from '@kinotic-ai/management-api'
 import type {DelegatingParticipantIdentity} from '@kinotic-ai/management-api'
 import * as allure from 'allure-js-commons'
 import {randomBytes, createHash} from 'node:crypto'
 import {WebSocket} from 'ws'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {E2E_FIXTURE_PASSWORD, E2E_ORG_USER_EMAIL, initKinoticClient, postForm, restBase, shutdownKinoticClient,
+import {E2E_FIXTURE_PASSWORD, E2E_ORG_USER_EMAIL, E2E_ORGANIZATION_ID, initKinoticClient, postForm, restBase, shutdownKinoticClient,
         stompUrl} from '../TestHelpers.js'
 
 const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
@@ -35,11 +35,10 @@ function stompHandshake(url: string, token: string): Promise<number | 'open'> {
  * reads to find the authorization server, the Client ID Metadata Document rules the authorize
  * endpoint enforces on a client_id, and the device grant the CLI logs in with.
  *
- * The authorization-code happy path is not covered here: a client_id must be an https URL whose
- * host does not resolve to a special-use address, which no host reachable from this suite
- * satisfies. Covering it needs a public HTTPS fixture serving a metadata document, or the Client ID
- * Metadata Document Service that draft-ietf-oauth-client-id-metadata-document Section 4.2
- * recommends authorization servers offer for exactly this reason.
+ * Set KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS=true to exercise the published metadata documents of the
+ * OpenAI and xAI clients against the management server, the one server whose OAuth allowlist
+ * admits them, including authorization-code consent and PKCE as Codex. This requires outbound
+ * HTTPS access to chatgpt.com, cursor.com, and kinotic.ai from that server.
  */
 describe('Kinotic JS', () => {
 
@@ -74,6 +73,7 @@ describe('Kinotic JS', () => {
         expect(asMetadata.code_challenge_methods_supported).toEqual(['S256'])
         // clients identify themselves by metadata document; there is nothing to register with
         expect(asMetadata.client_id_metadata_document_supported).toBe(true)
+        expect(asMetadata.authorization_response_iss_parameter_supported).toBe(true)
         expect(asMetadata.registration_endpoint).toBeUndefined()
     })
 
@@ -85,6 +85,79 @@ describe('Kinotic JS', () => {
         })
         expect(response.status).toBe(404)
     })
+
+    it.runIf(process.env.KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS === 'true')(
+        'binds Codex approval and denial callbacks to the advertised issuer', async () => {
+        const clientId = 'https://chatgpt.com/oauth/codex/client.json'
+        const redirectUri = 'http://127.0.0.1:33418/callback'
+        const metadata = await (await fetch(`${restBase()}/.well-known/oauth-authorization-server`)).json()
+        const login = await fetch(`${restBase()}/api/auth/org/login/${E2E_ORGANIZATION_ID}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: E2E_ORG_USER_EMAIL, password: E2E_FIXTURE_PASSWORD})
+        })
+        expect(login.status).toBe(204)
+        const cookie = login.headers.getSetCookie().find(c => c.startsWith('__Host-kinotic-'))!.split(';')[0]
+
+        for (const decision of ['deny', 'approve']) {
+            const verifier = randomBytes(48).toString('base64url')
+            const state = randomBytes(32).toString('base64url')
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, response_type: 'code',
+                code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+                code_challenge_method: 'S256', state
+            })
+            const authorization = await fetch(`${restBase()}/api/auth/oauth/authorize?${params}`, {redirect: 'manual'})
+            expect(authorization.status).toBe(302)
+            const requestId = new URL(authorization.headers.get('Location')!).searchParams.get('request_id')
+            expect(requestId).toBeTruthy()
+            const consent = await fetch(`${restBase()}/api/auth/oauth/${decision}`, {
+                method: 'POST', headers: {'Content-Type': 'application/json', Cookie: cookie},
+                body: JSON.stringify({requestId})
+            })
+            expect(consent.status).toBe(200)
+            const callback = new URL((await consent.json()).redirectUrl)
+            expect(callback.origin + callback.pathname).toBe(redirectUri)
+            expect(callback.searchParams.get('iss')).toBe(metadata.issuer)
+            expect(callback.searchParams.get('state')).toBe(state)
+            if (decision === 'deny') {
+                expect(callback.searchParams.get('error')).toBe('access_denied')
+                expect(callback.searchParams.has('code')).toBe(false)
+            } else {
+                const code = callback.searchParams.get('code')
+                expect(code).toBeTruthy()
+                const exchange = await postForm(metadata.token_endpoint, {
+                    grant_type: 'authorization_code', client_id: clientId,
+                    redirect_uri: redirectUri, code: code!, code_verifier: verifier
+                })
+                expect(exchange.status).toBe(200)
+                expect((await exchange.json()).access_token).toBeTruthy()
+            }
+        }
+    }, 60000)
+
+    it.runIf(process.env.KINOTIC_E2E_PUBLIC_OAUTH_CLIENTS === 'true')(
+        'starts consent for the ChatGPT, Grok, and Grok Build metadata documents', async () => {
+        const challenge = createHash('sha256').update(randomBytes(48).toString('base64url')).digest('base64url')
+        const clients = [
+            // prefers private_key_jwt and lists none among the methods it supports
+            {clientId: 'https://chatgpt.com/oauth/client.json',
+             redirectUri: 'https://chatgpt.com/connector_platform_oauth_redirect'},
+            {clientId: 'https://cursor.com/oauth/mcp-client.json',
+             redirectUri: 'https://grok.com/connectors-oauth-exchange-code/'},
+            {clientId: 'https://kinotic.ai/oauth/grok-build-client.json',
+             redirectUri: 'http://127.0.0.1:41873/callback'}
+        ]
+        for (const {clientId, redirectUri} of clients) {
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, response_type: 'code',
+                code_challenge: challenge, code_challenge_method: 'S256'
+            })
+            const authorization = await fetch(`${restBase()}/api/auth/oauth/authorize?${params}`, {redirect: 'manual'})
+            expect(authorization.status, clientId).toBe(302)
+            expect(new URL(authorization.headers.get('Location')!).searchParams.get('request_id'), clientId).toBeTruthy()
+        }
+    }, 60000)
 
     it('rejects a client_id that is not a usable metadata document URL', async () => {
         const challenge = createHash('sha256').update(randomBytes(48).toString('base64url')).digest('base64url')
@@ -121,7 +194,7 @@ describe('Kinotic JS', () => {
         expect(start.user_code).toBeTruthy()
 
         // the /device page approval, as DeviceVerification.vue sends it with the org user's session
-        const login = await fetch(`${restBase()}/api/auth/org/login`, {
+        const login = await fetch(`${restBase()}/api/auth/org/login/${E2E_ORGANIZATION_ID}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({email: E2E_ORG_USER_EMAIL, password: E2E_FIXTURE_PASSWORD})
@@ -163,7 +236,7 @@ describe('Kinotic JS', () => {
         const delegateService = new DelegateService(Kinotic)
         const delegates = await delegateService.findMyDelegates(Pageable.create(0, 25))
         const cliDelegate: DelegatingParticipantIdentity | undefined =
-            delegates.content?.find(d => d.delegateKind === DelegateKind.CLI)
+            delegates.content?.find(d => d.delegateType === DelegateType.CLI)
         expect(cliDelegate).toBeDefined()
         expect(cliDelegate!.enabled).toBe(true)
         const sessions = await delegateService.findSessions(cliDelegate!.id!)

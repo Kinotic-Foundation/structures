@@ -48,13 +48,6 @@
         <Tag :value="item.status" :severity="statusSeverity(item.status)" />
       </template>
 
-      <template #item.authType="{ item }">
-        <TableChip v-if="item.authType" :icon="item.authType === 'OIDC' ? ShieldCheck : KeyRound">
-          {{ authTypeLabel(item.authType) }}
-        </TableChip>
-        <span v-else class="text-muted-color">—</span>
-      </template>
-
       <template #item.created="{ item }">
         <TimePill :date="item.created" />
       </template>
@@ -72,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { KeyRound, ShieldCheck, Users } from '@lucide/vue'
+import { Users } from '@lucide/vue'
 import Tag from 'primevue/tag'
 
 import {
@@ -82,18 +75,16 @@ import {
   type IterablePage,
   type Page
 } from '@kinotic-ai/core'
-import type { PendingInviteSummary, UserParticipantIdentity } from '@kinotic-ai/management-api'
+import type { ApplicationParticipantIdentity, OrganizationMember, PendingInviteSummary, SystemParticipantIdentity } from '@kinotic-ai/management-api'
 import {
   CrudTable,
   InitialsTile,
   PageHeader,
-  TableChip,
   TimePill,
   pageNumberOf,
   statusSeverity,
   MemberDetail,
   SteppingDrawer,
-  authTypeLabel,
   useCrudTablePage,
   useSteppingDrawer,
   type MemberSummary,
@@ -104,9 +95,9 @@ import {
 import { scopeTint, type Scope } from '@/util/scope'
 
 /**
- * The platform's operators when no scope is given, otherwise the people with access to an
+ * The system users when no scope is given, otherwise the people with access to an
  * organization or the users of one of its applications, with pending invitations inline.
- * Read-only: an organization's people are the organization's to manage, and the platform's are
+ * Read-only: an organization's people are the organization's to manage, and the system's are
  * the identity provider's.
  */
 const props = defineProps<{
@@ -121,17 +112,16 @@ const INVITE_PAGE_SIZE = 100
 const headers: CrudHeader[] = [
   { field: 'email', header: 'Person', sortable: false, width: '40%' },
   { field: 'status', header: 'Status', sortable: false, width: '16%' },
-  { field: 'authType', header: 'Signs in with', sortable: false, optional: true, width: '22%' },
-  { field: 'created', header: 'Created', sortable: false, optional: true, width: '22%' }
+  { field: 'created', header: 'Joined', sortable: false, optional: true, width: '22%' }
 ]
 
-// An organization's people are its members; an application's and the platform's are its users
+// An organization's people are its members; an application's and the system's are its users
 const title = computed(() => props.organizationId && !props.applicationId ? 'Members' : 'Users')
 
 const description = computed(() => {
   let ret: string
   if (!props.organizationId) {
-    ret = 'Platform operators who sign in to this console.'
+    ret = 'System users who sign in to this console.'
   } else if (props.applicationId) {
     ret = 'Everyone who signs in to this application, including pending invitations. Inviting, disabling and removing are the organization\'s to do.'
   } else {
@@ -156,13 +146,13 @@ async function load(pageable: Pageable, searchText: string | null): Promise<Iter
   const organizationId = props.organizationId
   const page = organizationId
       ? await organizationMembers(organizationId, pageable, searchText)
-      : await platformOperators(pageable, searchText)
+      : await systemUsers(pageable, searchText)
 
   return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
 }
 
-/** The platform's operators; SYSTEM scope is not invited into, so there is nothing to fold in. */
-async function platformOperators(pageable: Pageable, searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
+/** The system users; SYSTEM scope is not invited into, so there is nothing to fold in. */
+async function systemUsers(pageable: Pageable, searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
   const users = searchText
       ? await Kinotic.systemMembers.searchUsers(searchText, pageable)
       : await Kinotic.systemMembers.findUsers(pageable)
@@ -172,7 +162,7 @@ async function platformOperators(pageable: Pageable, searchText: string | null):
     inviteTotal.value = 0
   }
   return {
-    content: (users.content ?? []).map(user => toMemberSummary(user)),
+    content: (users.content ?? []).map(user => toUserSummary(user)),
     totalElements: users.totalElements ?? 0,
     cursor: undefined
   }
@@ -184,9 +174,7 @@ async function organizationMembers(organizationId: string,
                                    pageable: Pageable,
                                    searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
   const applicationId = props.applicationId ?? null
-  const membersPage = searchText
-      ? await Kinotic.systemOrganizations.searchMembers(searchText, organizationId, applicationId, pageable)
-      : await Kinotic.systemOrganizations.findMembers(organizationId, applicationId, pageable)
+  const membersPage = await scopeMembers(organizationId, applicationId, pageable, searchText)
 
   const invites = await Kinotic.systemOrganizations.findPendingInvites(organizationId, applicationId, Pageable.create(0, INVITE_PAGE_SIZE, null))
   let inviteRows = (invites.content ?? []).map(invite => toInviteRow(invite))
@@ -208,10 +196,30 @@ async function organizationMembers(organizationId: string,
   }
 
   return {
-    content: [...inviteRows, ...(membersPage.content ?? []).map(user => toMemberSummary(user))],
+    content: [...inviteRows, ...(membersPage.content ?? [])],
     totalElements: (membersPage.totalElements ?? 0) + inviteCount,
     cursor: undefined
   }
+}
+
+/** The organization's members, or the users of one of its applications. */
+async function scopeMembers(organizationId: string,
+                            applicationId: string | null,
+                            pageable: Pageable,
+                            searchText: string | null): Promise<Page<MemberSummary>> {
+  let ret: Page<MemberSummary>
+  if (applicationId === null) {
+    const page = searchText
+        ? await Kinotic.systemOrganizations.searchMembers(searchText, organizationId, pageable)
+        : await Kinotic.systemOrganizations.findMembers(organizationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(member => toMemberSummary(member)) }
+  } else {
+    const page = searchText
+        ? await Kinotic.systemOrganizations.searchApplicationUsers(searchText, organizationId, applicationId, pageable)
+        : await Kinotic.systemOrganizations.findApplicationUsers(organizationId, applicationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(user => toUserSummary(user)) }
+  }
+  return ret
 }
 
 function toInviteRow(invite: PendingInviteSummary): MemberSummary {
@@ -220,19 +228,27 @@ function toInviteRow(invite: PendingInviteSummary): MemberSummary {
     email: invite.email,
     displayName: invite.displayName,
     status: 'Invited',
-    authType: null,
     created: invite.created,
     invite: true
   }
 }
 
-function toMemberSummary(user: UserParticipantIdentity): MemberSummary {
+function toMemberSummary(member: OrganizationMember): MemberSummary {
+  return {
+    id: member.id ?? '',
+    email: member.email,
+    displayName: member.displayName,
+    status: member.enabled ? 'Active' : 'Disabled',
+    created: member.joined
+  }
+}
+
+function toUserSummary(user: SystemParticipantIdentity | ApplicationParticipantIdentity): MemberSummary {
   return {
     id: user.id ?? '',
     email: user.email,
     displayName: user.displayName,
     status: user.enabled ? 'Active' : 'Disabled',
-    authType: user.authType ?? null,
     created: user.created
   }
 }

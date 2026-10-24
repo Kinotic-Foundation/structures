@@ -13,7 +13,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.exceptions.AuthenticationException;
 import org.kinotic.core.api.exceptions.AuthorizationException;
-import org.kinotic.gateway.api.config.CorsProperties;
+import org.kinotic.domain.api.config.CorsProperties;
 import org.kinotic.gateway.api.config.SslProperties;
 
 import java.util.Set;
@@ -42,12 +42,8 @@ public final class ApiGatewayUtil {
     private ApiGatewayUtil() {}
 
     public static CorsHandler createCorsHandler(CorsProperties properties) {
-        String pattern = properties.getAllowedOriginPattern();
-        if ("*".equals(pattern)) {
-            pattern = ".*";
-        }
         CorsHandler corsHandler = CorsHandler.create()
-                                             .addOriginWithRegex(pattern)
+                                             .addOriginWithRegex(properties.originRegex())
                                              .allowedMethods(ALLOWED_METHODS)
                                              .allowedHeaders(properties.getAllowedHeaders())
                                              .exposedHeaders(properties.getExposedHeaders());

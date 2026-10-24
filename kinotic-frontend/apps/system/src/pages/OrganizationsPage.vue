@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col">
-    <PageHeader title="Organizations" description="Every organization registered on the platform." />
+    <PageHeader title="Organizations" description="Every organization registered in the system." />
 
     <!-- the tenants at a glance: how many there are and how much they run -->
     <section v-if="organizationCount !== null"
@@ -147,7 +147,7 @@ async function toRow(org: Organization): Promise<OrganizationRow> {
   const firstPage = Pageable.create(0, 1)
   const [applications, members] = await Promise.all([
     Kinotic.systemOrganizations.findApplications(id, firstPage).then(page => page.totalElements ?? 0).catch(() => null),
-    Kinotic.systemOrganizations.findMembers(id, null, firstPage).then(page => page.totalElements ?? 0).catch(() => null)
+    Kinotic.systemOrganizations.findMembers(id, firstPage).then(page => page.totalElements ?? 0).catch(() => null)
   ])
   return {
     id,

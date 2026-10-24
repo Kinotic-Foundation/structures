@@ -27,17 +27,30 @@ public final class OidcErrorCodes {
     /** Auth code → token exchange at the IdP failed. Generic catch-all for callback failures not otherwise classified. */
     public static final String EXCHANGE_FAILED = "exchange_failed";
 
-    /** Verified IdP identity has no ParticipantIdentity in the target scope — login refuses to auto-create. */
-    public static final String NO_ACCOUNT = "no_account";
+    /** Verified IdP identity has no user in the target scope — login refuses to auto-create. */
+    public static final String NO_USER = "no_user";
 
-    /** Found ParticipantIdentity but {@code enabled=false}. */
-    public static final String ACCOUNT_DISABLED = "account_disabled";
+    /**
+     * A sign-in through a system social registration that named no organization found the identity a
+     * member of several, so the person chooses one and signs in at its own login; the session that completed
+     * the sign-in holds their ids, which the login page reads from {@code GET /api/auth/org/login/choices}.
+     */
+    public static final String MULTIPLE_ORGANIZATIONS = "multiple_organizations";
+
+    /** Found the user, but it or its membership of the organization has {@code enabled=false}. */
+    public static final String USER_DISABLED = "user_disabled";
 
     /** ParticipantIdentity lookup failed at the persistence layer — distinct from "not found". */
     public static final String LOOKUP_FAILED = "lookup_failed";
 
-    /** Signup callback found an existing ParticipantIdentity for the IdP identity — caller should log in instead. */
-    public static final String ACCOUNT_EXISTS = "account_exists";
+    /** Signup or invitation callback found an existing user for the IdP identity or its email — caller should log in instead. */
+    public static final String USER_EXISTS = "user_exists";
+
+    /**
+     * Signup found an organization user for the IdP identity or its email that an administrator added as a member and
+     * nobody signs in as yet — the person accepts their invitation or signs in on that organization's sign-in page.
+     */
+    public static final String USER_PENDING = "user_pending";
 
     /** Signup failed during pending sign-up creation. */
     public static final String SIGNUP_FAILED = "signup_failed";
@@ -47,4 +60,7 @@ public final class OidcErrorCodes {
 
     /** Invitation token is unknown, expired, or already consumed. */
     public static final String INVITE_INVALID = "invite_invalid";
+
+    /** The code handing a completed social sign-in to the application's API host is unknown, expired, already consumed, or for another application. */
+    public static final String HANDOFF_INVALID = "handoff_invalid";
 }

@@ -11,6 +11,12 @@ logging:
       console: logstash
 
 kinotic:
+  domain:
+    cors:
+      # the portal, which signs in with the session cookie, and Summit 42's UI, whose sign-in and sign-up run
+      # through this server
+      allowedOriginPattern: "https:\\/\\/(portal|summit42)\\.kinotic\\.ai"
+      allowCredentials: true
   ignite:
     discoveryType: KUBERNETES
     localAddress: "0.0.0.0"
@@ -18,8 +24,3 @@ kinotic:
     kubernetesServiceName: kinotic
     kubernetesIncludeNotReadyAddresses: true
 
-  apiGateway:
-    cors:
-      # the portal alone, which signs in with the session cookie
-      allowedOriginPattern: "https:\\/\\/portal\\.kinotic\\.ai"
-      allowCredentials: true

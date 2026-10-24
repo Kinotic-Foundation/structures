@@ -34,7 +34,7 @@ locals {
   grafana_ip = split("/", var.grafana_ip)[0]
 
   # The private network: the host is its gateway, the edge takes .10, the ES nodes .11 to .13,
-  # the servers .20, .22 and .23, the migration .21
+  # the servers .20, .22 and .23, the migration .21, Summit 42 .24
   private_prefix       = split("/", var.private_cidr)[1]
   private_gateway      = cidrhost(var.private_cidr, 1)
   edge_private_ip      = cidrhost(var.private_cidr, 10)
@@ -168,49 +168,45 @@ locals {
     timeout          = 300
   } }
 
-  # The three servers. Each serves its gateway on its own port on the private network, behind
-  # the edge, under the hostnames its certificate carries, and adds what is its alone to the
-  # environment every server shares.
-  servers = {
+  management_env = {
+    # the management server's API as a browser reaches it
+    KINOTIC_MANAGEMENTAPI_APIBASEURL = "https://${local.azure.api_hostname}"
+    KINOTIC_MANAGEMENTAPI_LOKIURL    = local.service_urls["http://loki:3100"]
+    KINOTIC_MANAGEMENTAPI_TEMPOURL   = local.service_urls["http://tempo:3200"]
+    KINOTIC_MANAGEMENTAPI_MIMIRURL   = local.service_urls["http://mimir:9009"]
+  }
+
+  # The three servers, and Summit 42 when the dev-server root enables it. Each serves on its own
+  # port on the private network, behind the edge, under the hostnames its certificate carries,
+  # and adds what is its alone to the environment every server shares.
+  servers = merge({
     kinotic-server-management = {
       vm_id       = 121
       private_ip  = cidrhost(var.private_cidr, 20)
       port        = 58503
       hostnames   = [local.azure.api_hostname]
       description = "the organizations' API: the portal, the CLI, MCP hosts, the GitHub webhook"
-      env = {
-        KINOTIC_MANAGEMENTSERVER_APIBASEURL     = "https://${local.azure.api_hostname}"
-        KINOTIC_MANAGEMENTSERVER_PORTALBASEURL  = "https://${local.azure.portal_hostname}"
-        # the emailed verification and invite links open in the portal
-        KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
-        KINOTIC_MANAGEMENTAPI_LOKIURL    = local.service_urls["http://loki:3100"]
-        KINOTIC_MANAGEMENTAPI_TEMPOURL   = local.service_urls["http://tempo:3200"]
-        KINOTIC_MANAGEMENTAPI_MIMIRURL   = local.service_urls["http://mimir:9009"]
-      }
+      env         = local.management_env
     }
     kinotic-server-system = {
       vm_id       = 122
       private_ip  = cidrhost(var.private_cidr, 22)
       port        = 58504
       hostnames   = [local.azure.system_api_hostname]
-      description = "the platform's own API: the system console, the nodes' vm-manager"
+      description = "the system's own API: the system console, the nodes' vm-manager"
       env = {
         KINOTIC_SYSTEMSERVER_APIBASEURL     = "https://${local.azure.system_api_hostname}"
         KINOTIC_SYSTEMSERVER_CONSOLEBASEURL = "https://${local.azure.console_hostname}"
-        # What a UI build is handed: the app server as a browser reaches it
-        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPAPIBASEURL = "https://${local.azure.apps_api_domain}"
-        # Invites the member service this server hosts sends are accepted in the portal
-        KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
         # What a workload dials, by the name its certificate carries, and the one destination its
         # egress policy permits; the node pins every server's name to the edge's LAN address
         # (hosts_entry)
         KINOTIC_SYSTEMAPI_DEPLOYMENT_MANAGEMENTSERVER_HOST = local.azure.api_hostname
         KINOTIC_SYSTEMAPI_DEPLOYMENT_MANAGEMENTSERVER_PORT = tostring(local.public_port)
-        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPSERVER_HOST = local.azure.apps_api_domain
-        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPSERVER_PORT = tostring(local.public_port)
-        KINOTIC_MANAGEMENTAPI_LOKIURL               = local.service_urls["http://loki:3100"]
-        KINOTIC_MANAGEMENTAPI_TEMPOURL              = local.service_urls["http://tempo:3200"]
-        KINOTIC_MANAGEMENTAPI_MIMIRURL              = local.service_urls["http://mimir:9009"]
+        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPSERVER_HOST        = local.azure.apps_api_domain
+        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPSERVER_PORT        = tostring(local.public_port)
+        KINOTIC_MANAGEMENTAPI_LOKIURL                      = local.service_urls["http://loki:3100"]
+        KINOTIC_MANAGEMENTAPI_TEMPOURL                     = local.service_urls["http://tempo:3200"]
+        KINOTIC_MANAGEMENTAPI_MIMIRURL                     = local.service_urls["http://mimir:9009"]
       }
     }
     kinotic-server-app = {
@@ -220,10 +216,41 @@ locals {
       hostnames   = [local.azure.apps_api_domain, "*.${local.azure.apps_api_domain}"]
       description = "every application's API, at <organizationId>--<applicationId>.${local.azure.apps_api_domain}"
       env = {
-        KINOTIC_APPSERVER_APIBASEURL = "https://${local.azure.apps_api_domain}"
+        # the app server provisions no organization's record, and holds no DNS token to do it with
+        KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED = "false"
       }
     }
-  }
+    },
+    # A member of the cluster that runs the management server's modules in process, so it reads the
+    # management server's secrets and takes its environment, with its own certificate. Its UI is on
+    # the sites Worker, which redeploy.sh uploads it to.
+    { for hostname in compact([local.azure.summit42_api_hostname]) : "summit-42" => {
+      vm_id       = 125
+      private_ip  = cidrhost(var.private_cidr, 24)
+      port        = 8080
+      hostnames   = [hostname]
+      description = "the app builder's services and its email sign-up"
+      image       = "kinoticai/summit-42:${var.summit42_version}"
+      mounts = [
+        { volume = "${var.secrets_dir}/kinotic-server-management", path = "/etc/kinotic", read_only = true },
+        { volume = "${var.secrets_dir}/summit-42/certs", path = "/etc/summit-42/certs", read_only = true },
+      ]
+      env = merge(local.management_env, {
+        SUMMIT42_UIBASEURL = "https://${local.azure.summit42_hostname}"
+        # The management server's dev-server profile, which Summit 42's image does not carry
+        SPRING_CONFIG_IMPORT                                    = "optional:file:/etc/kinotic/secrets.yml"
+        KINOTIC_SYSTEMSECRETS_JWTSIGNINGKEYSPATH                = "/etc/kinotic/platform-secrets/jwt-signing-keys"
+        KINOTIC_DOMAIN_SECRETSTORAGE_BACKEND                    = "AZURE"
+        KINOTIC_MANAGEMENTAPI_ENTITYDEFINITION_NUMBEROFSHARDS   = "1"
+        KINOTIC_MANAGEMENTAPI_ENTITYDEFINITION_NUMBEROFREPLICAS = "1"
+        SUMMIT42_SSL_ENABLED                                    = "true"
+        SUMMIT42_SSL_CERTPATH                                   = "/etc/summit-42/certs/fullchain.pem"
+        SUMMIT42_SSL_KEYPATH                                    = "/etc/summit-42/certs/privkey.pem"
+      })
+  } })
+
+  # Each server's image; Kinotic's three are tagged kinotic_version
+  server_images = { for name, server in local.servers : name => try(server.image, "kinoticai/${name}:${var.kinotic_version}") }
 
   # The non-secret half of what every server's environment shares: the compose services', the
   # Azure root's outputs, and the addresses only this root knows. The secret half is merged on
@@ -233,18 +260,23 @@ locals {
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_HOST"   = ip
     "KINOTIC_DOMAIN_ELASTICCONNECTIONS_${i}_PORT"   = "9200"
     }]...), {
-    SPRING_PROFILES_ACTIVE       = "production,dev-server"
+    SPRING_PROFILES_ACTIVE       = "dev-server"
     BPL_JVM_HEAD_ROOM            = "10"
     JAVA_TOOL_OPTIONS            = "-XX:MaxDirectMemorySize=512m -javaagent:/workspace/BOOT-INF/classes/opentelemetry-javaagent.jar --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
     KINOTIC_MAX_OFF_HEAP_MEMORY  = "419430400"
     KINOTIC_DOMAIN_EMAIL_ENABLED = "true"
+
+    # Every application's API host and the portal, as a browser reaches them; the emailed
+    # verification and invite links open in the portal
+    KINOTIC_DOMAIN_APPAPIBASEURL = "https://${local.azure.apps_api_domain}"
+    KINOTIC_DOMAIN_PORTALBASEURL = "https://${local.azure.portal_hostname}"
 
     # The servers find each other over their private addresses and form one Ignite cluster
     KINOTIC_IGNITE_DISCOVERYTYPE  = "LOCAL"
     KINOTIC_IGNITE_LOCALADDRESSES = join(",", [for server in local.servers : "${server.private_ip}:47500"])
 
     # No collector: the agent exports each signal to its store's OTLP endpoint, under the
-    # platform tenant, which is what the compose collector stamps on the servers' telemetry
+    # system tenant, which is what the compose collector stamps on the servers' telemetry
     OTEL_TRACES_EXPORTER                = "otlp"
     OTEL_METRICS_EXPORTER               = "otlp"
     OTEL_LOGS_EXPORTER                  = "otlp"
@@ -255,13 +287,18 @@ locals {
     OTEL_EXPORTER_OTLP_HEADERS          = "X-Scope-OrgID=kinotic-system"
     # jvm.buffer.* and jvm.system.cpu.*, which the agent gates behind this flag
     OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_EMIT_EXPERIMENTAL_TELEMETRY = "true"
-    # Names the bare transport spans under each Elasticsearch call
-    OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING = join(",", [for ip in local.es_ips : "${ip}:9200=elasticsearch"])
+    # Bridges Micrometer's global registry, where Vert.x registers its HTTP, WebSocket, event bus and pool meters
+    OTEL_INSTRUMENTATION_MICROMETER_ENABLED = "true"
+    # Names the bare transport spans under each Elasticsearch call and each Loki, Tempo and Mimir query
+    OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING = join(",", concat(
+      [for ip in local.es_ips : "${ip}:9200=elasticsearch"],
+      ["${local.loki_ip}:3100=loki", "${local.tempo_ip}:3200=tempo", "${local.mimir_ip}:9009=mimir"]
+    ))
   })
 
   server_containers = { for name, server in local.servers : name => {
     vm_id         = server.vm_id
-    description   = "${name}: ${server.description}; the gateway on :${server.port} with TLS, behind the edge"
+    description   = "${name}: ${server.description}; on :${server.port} with TLS, behind the edge"
     image         = proxmox_oci_image.server[name].id
     cores         = var.server_cores
     memory        = var.server_memory_mb
@@ -272,7 +309,7 @@ locals {
     # routes and source-NATs the rest, Azure and the stores on the LAN among it
     interfaces = [{ bridge = var.private_network, address = "${server.private_ip}/${local.private_prefix}", gateway = local.private_gateway }]
     # secrets.yml, the JWT key set and the certificate, placed by sync-secrets.sh and certbot
-    mounts     = [{ volume = "${var.secrets_dir}/${name}", path = "/etc/kinotic", read_only = true }]
+    mounts     = try(server.mounts, [{ volume = "${var.secrets_dir}/${name}", path = "/etc/kinotic", read_only = true }])
     entrypoint = local.images.cnb.entrypoint
     image_env  = local.images.cnb.env
     env = merge(local.server_env, server.env, {
@@ -421,9 +458,9 @@ locals {
       mounts        = []
       entrypoint    = local.images.cnb.entrypoint
       image_env     = local.images.cnb.env
-      # The production profile applies no fixture migration: no test users, no console samples
+      # No fixture migration applies: no test users, no console samples
       env = {
-        SPRING_PROFILES_ACTIVE           = "production"
+        SPRING_PROFILES_ACTIVE           = "dev-server"
         KINOTIC_MIGRATION_ELASTIC_SCHEME = "http"
         KINOTIC_MIGRATION_ELASTIC_HOST   = local.es_ips[0]
         KINOTIC_MIGRATION_ELASTIC_PORT   = "9200"
@@ -548,11 +585,11 @@ resource "proxmox_sdn_applier" "private" {
 # (README.md).
 
 resource "proxmox_oci_image" "server" {
-  for_each = local.servers
+  for_each = local.server_images
 
   node_name    = var.proxmox_node
   datastore_id = var.files_datastore_id
-  reference    = "docker.io/kinoticai/${each.key}:${var.kinotic_version}"
+  reference    = "docker.io/${each.value}"
 }
 
 resource "proxmox_oci_image" "kinotic_migration" {

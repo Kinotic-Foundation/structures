@@ -45,8 +45,8 @@ import { apiUrl, AuthPageShell, readAuthError } from '@kinotic-ai/frontend-commo
 
 /**
  * The RFC 8628 device-verification page. The CLI sends the user here
- * (`/device?user_code=<code>`); the signed-in user confirms the code, which binds their
- * account to the pending CLI authorization grant.
+ * (`/device?user_code=<code>`); the signed-in user confirms the code, which binds them
+ * to the pending CLI authorization grant.
  */
 const loading = ref(false)
 const approved = ref(false)

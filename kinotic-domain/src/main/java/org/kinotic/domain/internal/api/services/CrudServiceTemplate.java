@@ -15,6 +15,9 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
+import co.elastic.clients.elasticsearch.core.bulk.UpdateAction;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
@@ -117,8 +120,8 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link IndexResponse}
      */
     public <T> Future<IndexResponse> appendToDataStream(String dataStreamName,
-                                                                   T document,
-                                                                   Consumer<IndexRequest.Builder<T>> builderConsumer) {
+                                                        T document,
+                                                        Consumer<IndexRequest.Builder<T>> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.index((IndexRequest.Builder<T> builder) -> {
             builder.index(dataStreamName).opType(OpType.Create).document(document);
             if (builderConsumer != null) {
@@ -149,15 +152,15 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the number of documents in the index
      */
     public Future<Long> count(String indexName,
-                                         Consumer<CountRequest.Builder> builderConsumer) {
+                              Consumer<CountRequest.Builder> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.count(builder -> {
-                                                builder.index(indexName);
-                                                if (builderConsumer != null) {
-                                                    builderConsumer.accept(builder);
-                                                }
-                                                return builder;
-                                            })
-                                            .thenApply(CountResponse::count));
+                                                     builder.index(indexName);
+                                                     if (builderConsumer != null) {
+                                                         builderConsumer.accept(builder);
+                                                     }
+                                                     return builder;
+                                                 })
+                                                 .thenApply(CountResponse::count));
     }
 
     /**
@@ -174,8 +177,8 @@ public class CrudServiceTemplate {
      *         with {@link AlreadyExistsException} if the id is already taken
      */
     public <T> Future<IndexResponse> create(String indexName,
-                                                       String id,
-                                                       T document) {
+                                            String id,
+                                            T document) {
         return create(indexName, id, document, null);
     }
 
@@ -192,20 +195,20 @@ public class CrudServiceTemplate {
      *         with {@link AlreadyExistsException} if the id is already taken
      */
     public <T> Future<IndexResponse> create(String indexName,
-                                                       String id,
-                                                       T document,
-                                                       Consumer<IndexRequest.Builder<T>> builderConsumer) {
+                                            String id,
+                                            T document,
+                                            Consumer<IndexRequest.Builder<T>> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.index((IndexRequest.Builder<T> builder) -> {
-                    builder.index(indexName).id(id).document(document).opType(OpType.Create);
-                    if (builderConsumer != null) {
-                        builderConsumer.accept(builder);
-                    }
-                    return builder;
-                }))
-                .recover(throwable -> isVersionConflict(throwable)
-                        ? Future.failedFuture(new AlreadyExistsException(
-                                "A document with id '" + id + "' already exists in index '" + indexName + "'"))
-                        : Future.failedFuture(throwable));
+                              builder.index(indexName).id(id).document(document).opType(OpType.Create);
+                              if (builderConsumer != null) {
+                                  builderConsumer.accept(builder);
+                              }
+                              return builder;
+                          }))
+                          .recover(throwable -> isVersionConflict(throwable)
+                                  ? Future.failedFuture(new AlreadyExistsException(
+                                  "A document with id '" + id + "' already exists in index '" + indexName + "'"))
+                                  : Future.failedFuture(throwable));
     }
 
     /**
@@ -213,7 +216,7 @@ public class CrudServiceTemplate {
      */
     public Future<Void> createDataStream(String dataStreamName) {
         return KinoticUtil.toFuture(esAsyncClient.indices().createDataStream(builder -> builder.name(dataStreamName))
-                                          .thenApply(response -> null));
+                                                 .thenApply(response -> null));
     }
 
     /**
@@ -225,38 +228,38 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete when the index has been created
      */
     public Future<Void> createIndex(String indexName,
-                                               boolean failIfExists,
-                                               int numberOfShards,
-                                               int numberOfReplicas,
-                                               Map<String, Property> mappings) {
+                                    boolean failIfExists,
+                                    int numberOfShards,
+                                    int numberOfReplicas,
+                                    Map<String, Property> mappings) {
         return KinoticUtil.toFuture(esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (!exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .create(builder -> {
-                                                            builder.index(indexName)
-                                                                   .settings(s -> s
-                                                                           .numberOfShards(String.valueOf(numberOfShards))
-                                                                           .numberOfReplicas(String.valueOf(numberOfReplicas))
-                                                                           .store(st -> st.type(StorageType.Fs))
-                                                                   );
-                                                            if (mappings != null && !mappings.isEmpty()) {
-                                                                builder.mappings(m -> m
-                                                                        .dynamic(DynamicMapping.Strict)
-                                                                        .properties(mappings));
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    if (failIfExists) {
-                                        return CompletableFuture.failedFuture(
-                                                new IllegalArgumentException("Index already exists: " + indexName));
-                                    } else {
-                                        return CompletableFuture.completedFuture(null);
-                                    }
-                                }
-                            }));
+                                                 .thenCompose(exists -> {
+                                                     if (!exists.value()) {
+                                                         return esAsyncClient.indices()
+                                                                             .create(builder -> {
+                                                                                 builder.index(indexName)
+                                                                                        .settings(s -> s
+                                                                                                .numberOfShards(String.valueOf(numberOfShards))
+                                                                                                .numberOfReplicas(String.valueOf(numberOfReplicas))
+                                                                                                .store(st -> st.type(StorageType.Fs))
+                                                                                        );
+                                                                                 if (mappings != null && !mappings.isEmpty()) {
+                                                                                     builder.mappings(m -> m
+                                                                                             .dynamic(DynamicMapping.Strict)
+                                                                                             .properties(mappings));
+                                                                                 }
+                                                                                 return builder;
+                                                                             })
+                                                                             .thenApply(response -> null);
+                                                     } else {
+                                                         if (failIfExists) {
+                                                             return CompletableFuture.failedFuture(
+                                                                     new IllegalArgumentException("Index already exists: " + indexName));
+                                                         } else {
+                                                             return CompletableFuture.completedFuture(null);
+                                                         }
+                                                     }
+                                                 }));
     }
 
     /**
@@ -268,11 +271,11 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete when the index template has been created
      */
     public Future<Void> createIndexTemplate(String templateName,
-                                                       String indexPattern,
-                                                       DataStreamVisibility dataStreamVisibility,
-                                                       int numberOfShards,
-                                                       int numberOfReplicas,
-                                                       Map<String, Property> mappings) {
+                                            String indexPattern,
+                                            DataStreamVisibility dataStreamVisibility,
+                                            int numberOfShards,
+                                            int numberOfReplicas,
+                                            Map<String, Property> mappings) {
         return createIndexTemplate(templateName, indexPattern, dataStreamVisibility, null,
                                    numberOfShards, numberOfReplicas, mappings);
     }
@@ -289,12 +292,12 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete when the index template has been created
      */
     public Future<Void> createIndexTemplate(String templateName,
-                                                       String indexPattern,
-                                                       DataStreamVisibility dataStreamVisibility,
-                                                       Duration dataRetention,
-                                                       int numberOfShards,
-                                                       int numberOfReplicas,
-                                                       Map<String, Property> mappings) {
+                                            String indexPattern,
+                                            DataStreamVisibility dataStreamVisibility,
+                                            Duration dataRetention,
+                                            int numberOfShards,
+                                            int numberOfReplicas,
+                                            Map<String, Property> mappings) {
         Validate.notNull(templateName, "templateName cannot be null");
         Validate.notNull(indexPattern, "indexPattern cannot be null");
         // data_retention is a data stream lifecycle concept; it has no meaning on a plain index template
@@ -344,9 +347,9 @@ public class CrudServiceTemplate {
      *         is already taken
      */
     public <T> Future<IndexResponse> createSync(String indexName,
-                                                           String id,
-                                                           T document,
-                                                           Consumer<IndexRequest.Builder<T>> builderConsumer) {
+                                                String id,
+                                                T document,
+                                                Consumer<IndexRequest.Builder<T>> builderConsumer) {
         return create(indexName, id, document, builder -> {
             if (builderConsumer != null) {
                 builderConsumer.accept(builder);
@@ -364,8 +367,8 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link DeleteResponse}
      */
     public Future<DeleteResponse> deleteById(String indexName,
-                                                        String id,
-                                                        Consumer<DeleteRequest.Builder> builderConsumer) {
+                                             String id,
+                                             Consumer<DeleteRequest.Builder> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.delete(builder -> {
             builder.index(indexName).id(id);
             if (builderConsumer != null) {
@@ -385,8 +388,8 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link DeleteResponse}
      */
     public Future<DeleteResponse> deleteByIdSync(String indexName,
-                                                            String id,
-                                                            Consumer<DeleteRequest.Builder> builderConsumer) {
+                                                 String id,
+                                                 Consumer<DeleteRequest.Builder> builderConsumer) {
         return deleteById(indexName, id, builder -> {
             if (builderConsumer != null) {
                 builderConsumer.accept(builder);
@@ -403,7 +406,7 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link DeleteResponse}
      */
     public Future<DeleteByQueryResponse> deleteByQuery(String indexName,
-                                                                  Consumer<DeleteByQueryRequest.Builder> builderConsumer) {
+                                                       Consumer<DeleteByQueryRequest.Builder> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.deleteByQuery(builder -> {
             builder.index(indexName);
             if (builderConsumer != null) {
@@ -418,8 +421,8 @@ public class CrudServiceTemplate {
      */
     public Future<Void> deleteDataStream(String dataStreamName) {
         return KinoticUtil.toFuture(esAsyncClient.indices()
-                                          .deleteDataStream(builder -> builder.name(dataStreamName))
-                                          .thenApply(response -> null));
+                                                 .deleteDataStream(builder -> builder.name(dataStreamName))
+                                                 .thenApply(response -> null));
     }
 
     /**
@@ -430,8 +433,8 @@ public class CrudServiceTemplate {
      */
     public Future<Void> deleteIndex(String indexName) {
         return KinoticUtil.toFuture(esAsyncClient.indices()
-                                          .delete(builder -> builder.index(indexName))
-                                          .thenApply(response -> null));
+                                                 .delete(builder -> builder.index(indexName))
+                                                 .thenApply(response -> null));
     }
 
     /**
@@ -439,8 +442,8 @@ public class CrudServiceTemplate {
      */
     public Future<Void> deleteIndexTemplate(String templateName) {
         return KinoticUtil.toFuture(esAsyncClient.indices()
-                                          .deleteIndexTemplate(builder -> builder.name(templateName))
-                                          .thenApply(response -> null));
+                                                 .deleteIndexTemplate(builder -> builder.name(templateName))
+                                                 .thenApply(response -> null));
     }
 
     /** Matches documents where {@code field} is present (the inverse of {@link #missingFilter}). */
@@ -458,9 +461,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the document
      */
     public <T> Future<T> findById(String indexName,
-                                             String id,
-                                             Class<T> type,
-                                             Consumer<GetRequest.Builder> builderConsumer){
+                                  String id,
+                                  Class<T> type,
+                                  Consumer<GetRequest.Builder> builderConsumer){
         return findById(indexName, id, type, builderConsumer, null);
     }
 
@@ -475,14 +478,14 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the document
      */
     public <T, R> Future<R> findById(String indexName,
-                                                String id,
-                                                Class<T> type,
-                                                Consumer<GetRequest.Builder> builderConsumer,
-                                                Function<GetResult<T>, R> resultMapper) {
+                                     String id,
+                                     Class<T> type,
+                                     Consumer<GetRequest.Builder> builderConsumer,
+                                     Function<GetResult<T>, R> resultMapper) {
 
         @SuppressWarnings("unchecked")
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
-            (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
+                (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
                                                         "co.elastic.clients:Deserializer:_global.get.Response.TDocument",
@@ -496,18 +499,18 @@ public class CrudServiceTemplate {
         }
 
         return KinoticUtil.toFuture(esAsyncClient._transport()
-                                          .performRequestAsync(builder.build(),
-                                                               endpoint,
-                                                               esAsyncClient._transportOptions())
-                                          .thenApply(tGetResponse -> {
-                                              if(resultMapper != null) {
-                                                  return resultMapper.apply(tGetResponse);
-                                              }else{
-                                                  @SuppressWarnings("unchecked")
-                                                  R result = (R)tGetResponse.source();
-                                                  return result;
-                                              }
-                                          }));
+                                                 .performRequestAsync(builder.build(),
+                                                                      endpoint,
+                                                                      esAsyncClient._transportOptions())
+                                                 .thenApply(tGetResponse -> {
+                                                     if(resultMapper != null) {
+                                                         return resultMapper.apply(tGetResponse);
+                                                     }else{
+                                                         @SuppressWarnings("unchecked")
+                                                         R result = (R)tGetResponse.source();
+                                                         return result;
+                                                     }
+                                                 }));
     }
 
     /**
@@ -515,8 +518,8 @@ public class CrudServiceTemplate {
      * Convenience for "find by unique key" lookups.
      */
     public <T> Future<T> findFirst(String indexName,
-                                              Class<T> type,
-                                              Consumer<SearchRequest.Builder> builderConsumer) {
+                                   Class<T> type,
+                                   Consumer<SearchRequest.Builder> builderConsumer) {
         return search(indexName, Pageable.create(0, 1, Sort.unsorted()), type, builderConsumer)
                 .map(page -> page.getContent().isEmpty() ? null : page.getContent().getFirst());
     }
@@ -535,9 +538,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the documents requested
      */
     public <T, R> Future<List<R>> multiGet(List<MultiGetOperation> getOperations,
-                                                      Class<T> type,
-                                                      Consumer<MgetRequest.Builder> builderConsumer,
-                                                      Function<GetResult<T>, R> resultMapper){
+                                           Class<T> type,
+                                           Consumer<MgetRequest.Builder> builderConsumer,
+                                           Function<GetResult<T>, R> resultMapper){
         @SuppressWarnings("unchecked")
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
@@ -554,31 +557,31 @@ public class CrudServiceTemplate {
         }
 
         return KinoticUtil.toFuture(esAsyncClient._transport()
-                                          .performRequestAsync(builder.build(),
-                                                               endpoint,
-                                                               esAsyncClient._transportOptions())
-                                          .thenApply(response -> {
+                                                 .performRequestAsync(builder.build(),
+                                                                      endpoint,
+                                                                      esAsyncClient._transportOptions())
+                                                 .thenApply(response -> {
 
-                                              List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                                              ArrayList<R> content = new ArrayList<>();
+                                                     List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                                                     ArrayList<R> content = new ArrayList<>();
 
-                                              if(resultMapper != null) {
-                                                  for (MultiGetResponseItem<T> hit : recordsResponse) {
-                                                      if (hit.isResult() && hit.result().found()) {
-                                                          content.add(resultMapper.apply(hit.result()));
-                                                      }
-                                                  }
-                                              }else{
-                                                  for (MultiGetResponseItem<T> hit : recordsResponse) {
-                                                      if(hit.isResult() && hit.result().found()){
-                                                          @SuppressWarnings("unchecked")
-                                                          R result = (R)hit.result().source();
-                                                          content.add(result);
-                                                      }
-                                                  }
-                                              }
-                                              return content;
-                                          }));
+                                                     if(resultMapper != null) {
+                                                         for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                                             if (hit.isResult() && hit.result().found()) {
+                                                                 content.add(resultMapper.apply(hit.result()));
+                                                             }
+                                                         }
+                                                     }else{
+                                                         for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                                             if(hit.isResult() && hit.result().found()){
+                                                                 @SuppressWarnings("unchecked")
+                                                                 R result = (R)hit.result().source();
+                                                                 content.add(result);
+                                                             }
+                                                         }
+                                                     }
+                                                     return content;
+                                                 }));
     }
 
     /**
@@ -594,18 +597,18 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete when the update is applied
      */
     public Future<Void> partialUpdate(String indexName,
-                                                 String id,
-                                                 Map<String, Object> partial,
-                                                 boolean upsert) {
+                                      String id,
+                                      Map<String, Object> partial,
+                                      boolean upsert) {
         // a doc merge carries no compare-and-set semantics, so retrying re-applies the same fields
         // against the newest version and never loses a concurrent writer's fields
         return KinoticUtil.toFuture(esAsyncClient.update(u -> u.index(indexName)
-                                                        .id(id)
-                                                        .doc(partial)
-                                                        .docAsUpsert(upsert)
-                                                        .retryOnConflict(UPDATE_CONFLICT_RETRIES),
-                                                  Map.class)
-                                          .thenApply(response -> null));
+                                                               .id(id)
+                                                               .doc(partial)
+                                                               .docAsUpsert(upsert)
+                                                               .retryOnConflict(UPDATE_CONFLICT_RETRIES),
+                                                         Map.class)
+                                                 .thenApply(response -> null));
     }
 
     /**
@@ -620,9 +623,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete when the update is applied
      */
     public Future<Void> partialUpdateSync(String indexName,
-                                                     String id,
-                                                     Map<String, Object> partial,
-                                                     boolean upsert) {
+                                          String id,
+                                          Map<String, Object> partial,
+                                          boolean upsert) {
         return partialUpdateSync(indexName, id, partial, upsert, null);
     }
 
@@ -676,6 +679,58 @@ public class CrudServiceTemplate {
                                               Map<String, Object> params) {
         return scriptedUpdate(indexName, id, source, params, false, Refresh.WaitFor, null)
                 .map(response -> response.result() != Result.NoOp);
+    }
+
+    /**
+     * As {@link #scriptedUpdateSync(String, String, String, Map)} for many documents in one bulk request: the
+     * same script runs against each document with that document's params, and the changes are visible to
+     * search when the future completes. An id naming no document is skipped.
+     *
+     * @param indexName      name of the index
+     * @param source         the Painless source, reading its inputs from {@code params}
+     * @param paramsById     the values the script reads as {@code params.<name>}, by the id of the document
+     * @param actionConsumer to customize each {@link UpdateAction}, such as a scripted upsert, or null if no
+     *                       customization is needed
+     * @return a {@link Future} that will complete when every document is updated, or fail with the reasons the
+     * updates that failed give
+     */
+    @SuppressWarnings("rawtypes")
+    public Future<Void> bulkScriptedUpdateSync(String indexName,
+                                               String source,
+                                               Map<String, Map<String, Object>> paramsById,
+                                               Consumer<UpdateAction.Builder<Map, Map<String, Object>>> actionConsumer) {
+        if (paramsById.isEmpty()) {
+            // Elasticsearch rejects a bulk request with no operations
+            return Future.succeededFuture();
+        }
+        List<BulkOperation> operations = new ArrayList<>(paramsById.size());
+        paramsById.forEach((id, params) -> operations.add(BulkOperation.of(b -> b.<Map, Map<String, Object>>update(u -> u
+                .index(indexName)
+                .id(id)
+                .retryOnConflict(UPDATE_CONFLICT_RETRIES)
+                .action(a -> {
+                    a.script(sc -> sc.source(src -> src.scriptString(source))
+                                     .params(scriptParams(params)));
+                    if (actionConsumer != null) {
+                        actionConsumer.accept(a);
+                    }
+                    return a;
+                })))));
+        // one request with refresh=wait_for holds one refresh listener per shard, where a request per document
+        // holds one each and, past index.max_refresh_listeners, forces a refresh
+        return KinoticUtil.toFuture(esAsyncClient.bulk(br -> br.operations(operations).refresh(Refresh.WaitFor)))
+                          .compose(response -> {
+                              List<String> failures = new ArrayList<>();
+                              for (BulkResponseItem item : response.items()) {
+                                  if (item.error() != null && item.status() != 404) {
+                                      failures.add(item.id() + ": " + item.error().reason());
+                                  }
+                              }
+                              return failures.isEmpty()
+                                      ? Future.<Void>succeededFuture()
+                                      : Future.<Void>failedFuture(new IllegalStateException("Bulk update of " + indexName
+                                                                                                    + " failed for " + failures));
+                          });
     }
 
     /**
@@ -753,15 +808,11 @@ public class CrudServiceTemplate {
                                                        boolean returnSource,
                                                        Refresh refresh,
                                                        Consumer<UpdateRequest.Builder<Map, Map<String, Object>>> builderConsumer) {
-        Map<String, JsonData> scriptParams = new HashMap<>();
-        // JsonData.of(null) has no serializer to look up and throws; a jakarta JsonValue is written as it
-        // is, so a null parameter reaches the script as JSON null
-        params.forEach((name, value) -> scriptParams.put(name, JsonData.of(value == null ? JsonValue.NULL : value)));
         return KinoticUtil.toFuture(esAsyncClient.update((UpdateRequest.Builder<Map, Map<String, Object>> u) -> {
             u.index(indexName)
              .id(id)
              .script(s -> s.source(src -> src.scriptString(source))
-                           .params(scriptParams))
+                           .params(scriptParams(params)))
              .retryOnConflict(UPDATE_CONFLICT_RETRIES)
              .refresh(refresh);
             if (returnSource) {
@@ -774,6 +825,14 @@ public class CrudServiceTemplate {
         }, Map.class));
     }
 
+    private static Map<String, JsonData> scriptParams(Map<String, Object> params) {
+        Map<String, JsonData> ret = new HashMap<>();
+        // JsonData.of(null) has no serializer to look up and throws; a jakarta JsonValue is written as it
+        // is, so a null parameter reaches the script as JSON null
+        params.forEach((name, value) -> ret.put(name, JsonData.of(value == null ? JsonValue.NULL : value)));
+        return ret;
+    }
+
     /**
      * Indexes a document. Also allows for customization of the {@link IndexRequest}.
      *
@@ -784,9 +843,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link IndexResponse}
      */
     public <T> Future<IndexResponse> save(String indexName,
-                                                     String id,
-                                                     T document,
-                                                     Consumer<IndexRequest.Builder<T>> builderConsumer) {
+                                          String id,
+                                          T document,
+                                          Consumer<IndexRequest.Builder<T>> builderConsumer) {
         return KinoticUtil.toFuture(esAsyncClient.index((IndexRequest.Builder<T> builder) -> {
             builder.index(indexName).id(id).document(document);
             if (builderConsumer != null) {
@@ -807,9 +866,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with the {@link IndexResponse}
      */
     public <T> Future<IndexResponse> saveSync(String indexName,
-                                                         String id,
-                                                         T document,
-                                                         Consumer<IndexRequest.Builder<T>> builderConsumer) {
+                                              String id,
+                                              T document,
+                                              Consumer<IndexRequest.Builder<T>> builderConsumer) {
         return save(indexName, id, document, builder -> {
             if (builderConsumer != null) {
                 builderConsumer.accept(builder);
@@ -831,9 +890,9 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with a {@link Page} of documents
      */
     public <T> Future<Page<T>> search(String indexName,
-                                                 Pageable pageable,
-                                                 Class<T> type,
-                                                 Consumer<SearchRequest.Builder> builderConsumer){
+                                      Pageable pageable,
+                                      Class<T> type,
+                                      Consumer<SearchRequest.Builder> builderConsumer){
         return search(indexName, pageable, type, builderConsumer, null);
     }
 
@@ -851,57 +910,57 @@ public class CrudServiceTemplate {
      * @return a {@link Future} that will complete with a {@link Page} of documents
      */
     public <T,R> Future<Page<R>> search(String indexName,
-                                                   Pageable pageable,
-                                                   Class<T> type,
-                                                   Consumer<SearchRequest.Builder> builderConsumer,
-                                                   Function<Hit<T>, R> hitMapper) {
+                                        Pageable pageable,
+                                        Class<T> type,
+                                        Consumer<SearchRequest.Builder> builderConsumer,
+                                        Function<Hit<T>, R> hitMapper) {
 
         return KinoticUtil.toFuture(searchFullResponse(indexName, pageable, type, builderConsumer)
-                .thenApply(response -> {
+                                            .thenApply(response -> {
 
-                    HitsMetadata<T> hitsMetadata = response.hits();
-                    List<R> content = new ArrayList<>(hitsMetadata.hits().size());
-                    List<FieldValue> lastSort = null;
+                                                HitsMetadata<T> hitsMetadata = response.hits();
+                                                List<R> content = new ArrayList<>(hitsMetadata.hits().size());
+                                                List<FieldValue> lastSort = null;
 
-                    if(hitMapper != null) {
-                        for (Hit<T> hit : hitsMetadata.hits()) {
-                            content.add(hitMapper.apply(hit));
-                            lastSort = hit.sort();
-                        }
-                    }else {
-                        for (Hit<T> hit : hitsMetadata.hits()) {
-                            @SuppressWarnings("unchecked")
-                            R result = (R)hit.source();
-                            content.add(result);
-                            lastSort = hit.sort();
-                        }
-                    }
+                                                if(hitMapper != null) {
+                                                    for (Hit<T> hit : hitsMetadata.hits()) {
+                                                        content.add(hitMapper.apply(hit));
+                                                        lastSort = hit.sort();
+                                                    }
+                                                }else {
+                                                    for (Hit<T> hit : hitsMetadata.hits()) {
+                                                        @SuppressWarnings("unchecked")
+                                                        R result = (R)hit.source();
+                                                        content.add(result);
+                                                        lastSort = hit.sort();
+                                                    }
+                                                }
 
-                    if(pageable instanceof CursorPageable) {
-                        String cursor = null;
-                        if (lastSort != null) {
-                            try {
-                                cursor = objectMapper.writeValueAsString(lastSort);
-                            } catch(JacksonException e){
-                                throw new IllegalStateException("Sort Array could not be serialized to JSON", e);
-                            }
-                        }
-                        return new CursorPage<>(content,
-                                                cursor,
-                                                null);
-                    }else{
-                        return new Page<>(content,
-                                          Objects.requireNonNull(hitsMetadata.total(),
-                                                                 "System Error total hits not available")
-                                                 .value());
-                    }
-                }));
+                                                if(pageable instanceof CursorPageable) {
+                                                    String cursor = null;
+                                                    if (lastSort != null) {
+                                                        try {
+                                                            cursor = objectMapper.writeValueAsString(lastSort);
+                                                        } catch(JacksonException e){
+                                                            throw new IllegalStateException("Sort Array could not be serialized to JSON", e);
+                                                        }
+                                                    }
+                                                    return new CursorPage<>(content,
+                                                                            cursor,
+                                                                            null);
+                                                }else{
+                                                    return new Page<>(content,
+                                                                      Objects.requireNonNull(hitsMetadata.total(),
+                                                                                             "System Error total hits not available")
+                                                                             .value());
+                                                }
+                                            }));
     }
 
     public Future<Void> syncIndex(String indexName) {
         return KinoticUtil.toFuture(esAsyncClient.indices()
-                                     .refresh(b -> b.index(indexName)))
-                .mapEmpty();
+                                                 .refresh(b -> b.index(indexName)))
+                          .mapEmpty();
     }
 
     /** Builds a {@code term} query for {@code field} equal to {@code value}. */
@@ -925,85 +984,85 @@ public class CrudServiceTemplate {
     }
 
     public Future<Void> updateIndexMapping(String indexName,
-                                                      Map<String, Property> mappings) {
+                                           Map<String, Property> mappings) {
         return KinoticUtil.toFuture(esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putMapping(builder -> {
-                                                            builder.index(indexName);
-                                                            if (mappings != null && !mappings.isEmpty()) {
-                                                                builder.dynamic(DynamicMapping.Strict)
-                                                                       .properties(mappings);
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    return CompletableFuture.failedFuture(
-                                            new IllegalArgumentException("Index " + indexName + " does not exist"));
-                                }
-                            }));
+                                                 .thenCompose(exists -> {
+                                                     if (exists.value()) {
+                                                         return esAsyncClient.indices()
+                                                                             .putMapping(builder -> {
+                                                                                 builder.index(indexName);
+                                                                                 if (mappings != null && !mappings.isEmpty()) {
+                                                                                     builder.dynamic(DynamicMapping.Strict)
+                                                                                            .properties(mappings);
+                                                                                 }
+                                                                                 return builder;
+                                                                             })
+                                                                             .thenApply(response -> null);
+                                                     } else {
+                                                         return CompletableFuture.failedFuture(
+                                                                 new IllegalArgumentException("Index " + indexName + " does not exist"));
+                                                     }
+                                                 }));
     }
 
     /**
      * Updates an existing index template
      */
     public Future<Void> updateIndexTemplate(String templateName,
-                                                       Map<String, Property> mappings) {
+                                            Map<String, Property> mappings) {
         Validate.notNull(templateName, "templateName cannot be null");
         Validate.notNull(mappings, "mappings cannot be null");
         Validate.notEmpty(mappings, "mappings cannot be empty");
 
         return KinoticUtil.toFuture(esAsyncClient.indices()
-                            .existsIndexTemplate(builder -> builder.name(templateName))
-                            .thenCompose(exists -> {
-                                if (!exists.value()) {
-                                    return CompletableFuture.failedFuture(
-                                            new IllegalArgumentException("Index template " + templateName + " does not exist"));
-                                }
+                                                 .existsIndexTemplate(builder -> builder.name(templateName))
+                                                 .thenCompose(exists -> {
+                                                     if (!exists.value()) {
+                                                         return CompletableFuture.failedFuture(
+                                                                 new IllegalArgumentException("Index template " + templateName + " does not exist"));
+                                                     }
 
-                                // Fetch the existing template
-                                return esAsyncClient.indices()
-                                                    .getIndexTemplate(builder -> builder.name(templateName))
-                                                    .thenCompose(response -> {
-                                                        IndexTemplateWithRollover existingTemplate = response.indexTemplates().getFirst()
-                                                                                                             .indexTemplate();
+                                                     // Fetch the existing template
+                                                     return esAsyncClient.indices()
+                                                                         .getIndexTemplate(builder -> builder.name(templateName))
+                                                                         .thenCompose(response -> {
+                                                                             IndexTemplateWithRollover existingTemplate = response.indexTemplates().getFirst()
+                                                                                                                                  .indexTemplate();
 
-                                                        if (existingTemplate == null) {
-                                                            return CompletableFuture.failedFuture(
-                                                                    new IllegalStateException("Failed to retrieve template " + templateName));
-                                                        }
+                                                                             if (existingTemplate == null) {
+                                                                                 return CompletableFuture.failedFuture(
+                                                                                         new IllegalStateException("Failed to retrieve template " + templateName));
+                                                                             }
 
-                                                        // Update the template with existing settings and patterns
-                                                        return esAsyncClient.indices()
-                                                                            .putIndexTemplate(builder -> {
-                                                                                builder.name(templateName)
-                                                                                       .indexPatterns(existingTemplate.indexPatterns())
-                                                                                       .priority(Objects.requireNonNullElse(existingTemplate.priority(), DEFAULT_PRIORITY));
+                                                                             // Update the template with existing settings and patterns
+                                                                             return esAsyncClient.indices()
+                                                                                                 .putIndexTemplate(builder -> {
+                                                                                                     builder.name(templateName)
+                                                                                                            .indexPatterns(existingTemplate.indexPatterns())
+                                                                                                            .priority(Objects.requireNonNullElse(existingTemplate.priority(), DEFAULT_PRIORITY));
 
-                                                                                // Preserve data stream configuration if present
-                                                                                if (existingTemplate.dataStream() != null) {
-                                                                                    builder.dataStream(d -> d);
-                                                                                }
+                                                                                                     // Preserve data stream configuration if present
+                                                                                                     if (existingTemplate.dataStream() != null) {
+                                                                                                         builder.dataStream(d -> d);
+                                                                                                     }
 
-                                                                                // Apply existing settings and new mappings
-                                                                                builder.template(t -> {
-                                                                                    IndexTemplateSummaryWithRollover template = existingTemplate.template();
-                                                                                    if (template != null && template.settings() != null) {
-                                                                                        t.settings(template.settings());
-                                                                                    }
-                                                                                    t.mappings(m -> m
-                                                                                            .dynamic(DynamicMapping.Strict)
-                                                                                            .properties(mappings));
-                                                                                    return t;
-                                                                                });
+                                                                                                     // Apply existing settings and new mappings
+                                                                                                     builder.template(t -> {
+                                                                                                         IndexTemplateSummaryWithRollover template = existingTemplate.template();
+                                                                                                         if (template != null && template.settings() != null) {
+                                                                                                             t.settings(template.settings());
+                                                                                                         }
+                                                                                                         t.mappings(m -> m
+                                                                                                                 .dynamic(DynamicMapping.Strict)
+                                                                                                                 .properties(mappings));
+                                                                                                         return t;
+                                                                                                     });
 
-                                                                                return builder;
-                                                                            })
-                                                                            .thenApply(pr -> null);
-                                                    });
-                            }));
+                                                                                                     return builder;
+                                                                                                 })
+                                                                                                 .thenApply(pr -> null);
+                                                                         });
+                                                 }));
     }
 
     /**
@@ -1024,7 +1083,7 @@ public class CrudServiceTemplate {
             if (!exists) {
                 throw new IllegalStateException(
                         "Elasticsearch index '" + indexName + "' does not exist. "
-                        + "Did you forget to add a migration in kinotic-migration/src/main/resources/migrations/?");
+                                + "Did you forget to add a migration in kinotic-migration/src/main/resources/migrations/?");
             }
         } catch (IllegalStateException e) {
             throw e;
@@ -1135,7 +1194,7 @@ public class CrudServiceTemplate {
 
         if(log.isTraceEnabled()) {
             // wrapped, so toString() will not be called if trace is not enabled
-          //  log.trace("Query: \n {}", request.toString());
+            //  log.trace("Query: \n {}", request.toString());
         }
 
         return esAsyncClient._transport()

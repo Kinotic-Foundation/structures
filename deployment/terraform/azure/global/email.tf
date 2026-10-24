@@ -15,7 +15,7 @@ resource "azurerm_email_communication_service" "main" {
 }
 
 resource "azurerm_email_communication_service_domain" "kinotic" {
-  name              = azurerm_dns_zone.main.name
+  name              = var.domain_name
   email_service_id  = azurerm_email_communication_service.main.id
   domain_management = "CustomerManaged"
   tags              = local.common_tags
@@ -54,60 +54,88 @@ resource "terraform_data" "link_email_domain" {
   ]
 }
 
-# ── DNS Records (all automated from verification_records output) ──────────────
+# ── DNS records (from the verification_records output) ────────────────────────
+# ACS names the apex record by the zone itself and the DKIM records by their label within the
+# zone; Cloudflare takes every name in full. The three apex TXT values are records of their own.
 
-# Domain-ownership verification + SPF share the apex TXT record set. Azure DNS
-# stores multiple TXT values under one record set; each ACS verification query
-# pulls the value it needs. Splitting these into two `azurerm_dns_txt_record`
-# resources causes them to overwrite each other (same Azure resource ID).
-#
-# ACS' verification_records returns `name = "kinotic.ai"` for the apex, but
-# `azurerm_dns_txt_record` needs `"@"` for the apex — passing the literal zone
-# name creates a subdomain record at `kinotic.ai.kinotic.ai`, where ACS won't
-# find it. Translate when the returned name matches the zone.
 locals {
+  email_records = azurerm_email_communication_service_domain.kinotic.verification_records[0]
   email_domain_record_name = (
-    azurerm_email_communication_service_domain.kinotic.verification_records[0].domain[0].name == azurerm_dns_zone.main.name
-    ? "@"
-    : azurerm_email_communication_service_domain.kinotic.verification_records[0].domain[0].name
+    local.email_records.domain[0].name == var.domain_name
+    ? var.domain_name
+    : "${local.email_records.domain[0].name}.${var.domain_name}"
   )
 }
 
-resource "azurerm_dns_txt_record" "email_apex" {
-  name                = local.email_domain_record_name
-  zone_name           = azurerm_dns_zone.main.name
-  resource_group_name = azurerm_resource_group.global.name
-  ttl                 = azurerm_email_communication_service_domain.kinotic.verification_records[0].domain[0].ttl
+# The Azure zone's records stay with it until it is deleted by hand
+removed {
+  from = azurerm_dns_txt_record.apex
 
-  record {
-    value = azurerm_email_communication_service_domain.kinotic.verification_records[0].domain[0].value
-  }
-  record {
-    value = azurerm_email_communication_service_domain.kinotic.verification_records[0].spf[0].value
+  lifecycle {
+    destroy = false
   }
 }
 
-moved {
-  from = azurerm_dns_txt_record.email_domain
-  to   = azurerm_dns_txt_record.email_apex
+removed {
+  from = azurerm_dns_cname_record.email_dkim
+
+  lifecycle {
+    destroy = false
+  }
 }
 
-# DKIM record (CNAME)
-resource "azurerm_dns_cname_record" "email_dkim" {
-  name                = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim[0].name
-  zone_name           = azurerm_dns_zone.main.name
-  resource_group_name = azurerm_resource_group.global.name
-  ttl                 = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim[0].ttl
-  record              = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim[0].value
+removed {
+  from = azurerm_dns_cname_record.email_dkim2
+
+  lifecycle {
+    destroy = false
+  }
 }
 
-# DKIM2 record (CNAME)
-resource "azurerm_dns_cname_record" "email_dkim2" {
-  name                = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim2[0].name
-  zone_name           = azurerm_dns_zone.main.name
-  resource_group_name = azurerm_resource_group.global.name
-  ttl                 = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim2[0].ttl
-  record              = azurerm_email_communication_service_domain.kinotic.verification_records[0].dkim2[0].value
+resource "cloudflare_dns_record" "email_domain" {
+  zone_id = cloudflare_zone.main.id
+  name    = local.email_domain_record_name
+  type    = "TXT"
+  content = local.email_records.domain[0].value
+  ttl     = local.email_records.domain[0].ttl
+  comment = "Azure Communication Services domain verification"
+}
+
+resource "cloudflare_dns_record" "email_spf" {
+  zone_id = cloudflare_zone.main.id
+  name    = var.domain_name
+  type    = "TXT"
+  content = local.email_records.spf[0].value
+  ttl     = local.email_records.spf[0].ttl
+  comment = "SPF for the email service"
+}
+
+resource "cloudflare_dns_record" "google_site_verification" {
+  zone_id = cloudflare_zone.main.id
+  name    = var.domain_name
+  type    = "TXT"
+  content = "google-site-verification=BC6-VIXGtc4Bvqkplz3FEulgnS25f31hfwVcD4aQG5U"
+  ttl     = 3600
+}
+
+resource "cloudflare_dns_record" "email_dkim" {
+  zone_id = cloudflare_zone.main.id
+  name    = "${local.email_records.dkim[0].name}.${var.domain_name}"
+  type    = "CNAME"
+  content = local.email_records.dkim[0].value
+  ttl     = local.email_records.dkim[0].ttl
+  proxied = false
+  comment = "DKIM for the email service"
+}
+
+resource "cloudflare_dns_record" "email_dkim2" {
+  zone_id = cloudflare_zone.main.id
+  name    = "${local.email_records.dkim2[0].name}.${var.domain_name}"
+  type    = "CNAME"
+  content = local.email_records.dkim2[0].value
+  ttl     = local.email_records.dkim2[0].ttl
+  proxied = false
+  comment = "DKIM for the email service"
 }
 
 # ── Trigger domain verification ───────────────────────────────────────────────
@@ -130,7 +158,7 @@ resource "terraform_data" "verify_email_domain" {
       echo "Waiting for verification..."
       for i in $(seq 1 30); do
         STATUS=$(az communication email domain show \
-          --name "${azurerm_dns_zone.main.name}" \
+          --name "${var.domain_name}" \
           --email-service-name "ecs-${var.project}" \
           --resource-group "${azurerm_resource_group.global.name}" \
           --query "verificationStates.domain.status" -o tsv 2>/dev/null || true)
@@ -146,9 +174,10 @@ resource "terraform_data" "verify_email_domain" {
   }
 
   depends_on = [
-    azurerm_dns_txt_record.email_apex,
-    azurerm_dns_cname_record.email_dkim,
-    azurerm_dns_cname_record.email_dkim2,
+    cloudflare_dns_record.email_domain,
+    cloudflare_dns_record.email_spf,
+    cloudflare_dns_record.email_dkim,
+    cloudflare_dns_record.email_dkim2,
   ]
 }
 
@@ -163,9 +192,9 @@ output "email_service_endpoint" {
 }
 
 output "email_sender_domain" {
-  value = azurerm_dns_zone.main.name
+  value = var.domain_name
 }
 
 output "email_verification_status" {
-  value = "az communication email domain show --name ${azurerm_dns_zone.main.name} --email-service-name ecs-${var.project} --resource-group ${azurerm_resource_group.global.name} --query verificationStates"
+  value = "az communication email domain show --name ${var.domain_name} --email-service-name ecs-${var.project} --resource-group ${azurerm_resource_group.global.name} --query verificationStates"
 }

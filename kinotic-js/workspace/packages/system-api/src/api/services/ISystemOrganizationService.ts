@@ -2,12 +2,13 @@ import { Application,
          Organization,
          Project,
          SYSTEM_API_ZONE,
-         type PendingInviteSummary,
-         type UserParticipantIdentity } from '@kinotic-ai/management-api'
+         type ApplicationParticipantIdentity,
+         type OrganizationMember,
+         type PendingInviteSummary } from '@kinotic-ai/management-api'
 import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 
 /**
- * Cross-organization reads for platform operators. Published in the system zone, which only
+ * Cross-organization reads for system users. Published in the system zone, which only
  * SYSTEM participants may address, so every method takes the target organization explicitly
  * instead of resolving it from the caller's scope.
  */
@@ -26,10 +27,13 @@ export interface ISystemOrganizationService {
 
     findProjects(organizationId: string, pageable: Pageable): Promise<Page<Project>>
 
-    /** applicationId null = the organization's members */
-    findMembers(organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<UserParticipantIdentity>>
+    findMembers(organizationId: string, pageable: Pageable): Promise<Page<OrganizationMember>>
 
-    searchMembers(searchText: string, organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<UserParticipantIdentity>>
+    searchMembers(searchText: string, organizationId: string, pageable: Pageable): Promise<Page<OrganizationMember>>
+
+    findApplicationUsers(organizationId: string, applicationId: string, pageable: Pageable): Promise<Page<ApplicationParticipantIdentity>>
+
+    searchApplicationUsers(searchText: string, organizationId: string, applicationId: string, pageable: Pageable): Promise<Page<ApplicationParticipantIdentity>>
 
     findPendingInvites(organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<PendingInviteSummary>>
 
@@ -67,12 +71,20 @@ export class SystemOrganizationService implements ISystemOrganizationService {
         return this.serviceProxy.invoke('findProjects', [organizationId, pageable])
     }
 
-    public findMembers(organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<UserParticipantIdentity>> {
-        return this.serviceProxy.invoke('findMembers', [organizationId, applicationId, pageable])
+    public findMembers(organizationId: string, pageable: Pageable): Promise<Page<OrganizationMember>> {
+        return this.serviceProxy.invoke('findMembers', [organizationId, pageable])
     }
 
-    public searchMembers(searchText: string, organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<UserParticipantIdentity>> {
-        return this.serviceProxy.invoke('searchMembers', [searchText, organizationId, applicationId, pageable])
+    public searchMembers(searchText: string, organizationId: string, pageable: Pageable): Promise<Page<OrganizationMember>> {
+        return this.serviceProxy.invoke('searchMembers', [searchText, organizationId, pageable])
+    }
+
+    public findApplicationUsers(organizationId: string, applicationId: string, pageable: Pageable): Promise<Page<ApplicationParticipantIdentity>> {
+        return this.serviceProxy.invoke('findApplicationUsers', [organizationId, applicationId, pageable])
+    }
+
+    public searchApplicationUsers(searchText: string, organizationId: string, applicationId: string, pageable: Pageable): Promise<Page<ApplicationParticipantIdentity>> {
+        return this.serviceProxy.invoke('searchApplicationUsers', [searchText, organizationId, applicationId, pageable])
     }
 
     public findPendingInvites(organizationId: string, applicationId: string | null, pageable: Pageable): Promise<Page<PendingInviteSummary>> {

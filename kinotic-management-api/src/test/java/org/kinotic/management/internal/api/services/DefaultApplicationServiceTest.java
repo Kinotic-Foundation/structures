@@ -3,6 +3,7 @@ package org.kinotic.management.internal.api.services;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 
 import java.util.List;
@@ -25,11 +26,11 @@ class DefaultApplicationServiceTest {
 
     private static final String CALLER_ORG = "acme";
 
-    private final DefaultApplicationService service = new DefaultApplicationService(null, null, null, null, callerContext());
+    private final DefaultApplicationService service = new DefaultApplicationService(null, null, null, null, callerContext(CALLER_ORG));
 
-    private static SecurityContext callerContext() {
+    private static SecurityContext callerContext(String organizationId) {
         OrganizationParticipant participant = mock(OrganizationParticipant.class);
-        when(participant.getOrganizationId()).thenReturn(CALLER_ORG);
+        when(participant.getOrganizationId()).thenReturn(organizationId);
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.requireParticipant(OrganizationParticipant.class)).thenReturn(participant);
         return securityContext;
@@ -77,7 +78,7 @@ class DefaultApplicationServiceTest {
     }
 
     @Test
-    void allowsNamesMatchingTheOtherPlatformZones() {
+    void allowsNamesMatchingTheOtherZones() {
         // an id only ever lands after the app zone prefix, so these cannot collide with a zone
         for (String name : List.of("App API", "OS API", "App")) {
             assertDoesNotThrow(() -> service.beforeSave(new Application(name, "desc")),
@@ -95,14 +96,30 @@ class DefaultApplicationServiceTest {
 
     @Test
     void rejectsIdsWhoseSiteLabelsLeaveNoRoomForAUiName() {
-        // a site label "acme--<app>--<ui>" with a one-character UI name leaves 54 of the 63 characters a label may hold
+        // a site label "<app>--<ui>" with a one-character UI name leaves the application the budget less the separator and one
+        int longest = HostLabelUtil.MAX_SITE_LABEL_LENGTH - HostLabelUtil.HOST_LABEL_SEPARATOR.length() - 1;
         Application fits = new Application("Orders App", "desc");
-        fits.setId("a".repeat(54));
+        fits.setId("a".repeat(longest));
         assertDoesNotThrow(() -> service.beforeSave(fits));
 
         Application tooLong = new Application("Orders App", "desc");
-        tooLong.setId("a".repeat(55));
+        tooLong.setId("a".repeat(longest + 1));
         assertThrows(IllegalArgumentException.class, () -> service.beforeSave(tooLong));
+    }
+
+    @Test
+    void rejectsIdsWhoseApiHostLabelExceedsTheDnsLimit() {
+        // the API host label "<org>--<app>" leaves the application the DNS limit less the organization and the separator
+        String organizationId = "northwind-traders-international-holdings";
+        DefaultApplicationService longOrgService = new DefaultApplicationService(null, null, null, null, callerContext(organizationId));
+        int longest = HostLabelUtil.MAX_HOST_LABEL_LENGTH - organizationId.length() - HostLabelUtil.HOST_LABEL_SEPARATOR.length();
+        Application fits = new Application("Orders App", "desc");
+        fits.setId("a".repeat(longest));
+        assertDoesNotThrow(() -> longOrgService.beforeSave(fits));
+
+        Application tooLong = new Application("Orders App", "desc");
+        tooLong.setId("a".repeat(longest + 1));
+        assertThrows(IllegalArgumentException.class, () -> longOrgService.beforeSave(tooLong));
     }
 
     @Test

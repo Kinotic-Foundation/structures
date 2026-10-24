@@ -750,10 +750,6 @@ public class WorkloadOrchestrationTests extends KinoticTestBase {
         return await(runAsOrganization(operation));
     }
 
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
-    }
-
     private VmNode node() throws Exception {
         return await(nodes.findById(NODE_ID));
     }

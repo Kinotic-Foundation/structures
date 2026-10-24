@@ -71,7 +71,7 @@ import Tag from 'primevue/tag'
 import { Boxes, Building2, CalendarClock, ChevronRight, Hash, LaptopMinimalCheck, LayoutGrid, Tag as TagIcon, Users, Waypoints } from '@lucide/vue'
 
 import { Kinotic, Pageable } from '@kinotic-ai/core'
-import { ExecutionStatus, RepositoryConnectionStatus, WorkloadStatus,
+import { ExecutionStatus, RepositoryConnectionStatus, TenantManagement, WorkloadStatus,
          type Application, type JobRun, type Project, type Workload } from '@kinotic-ai/management-api'
 import { DashboardSection, DatetimeUtil, FactList, InitialsTile, PageHeader, ProjectsIcon, StatCard, TINTS,
          errorMessage, executionStatusSeverity, scanJobRuns, EmptyChartCharacter } from '@kinotic-ai/frontend-common'
@@ -81,7 +81,7 @@ import { applicationPath, organizationPath, projectPath } from '@/util/scope'
 import { scanWorkloads } from '@/util/workloads'
 
 /**
- * The landing page of one application, built from what a platform operator may read: the
+ * The landing page of one application, built from what a system user may read: the
  * application record and its projects, its users, its workloads and its runs. Each tile leads
  * to the page with the detail.
  */
@@ -136,10 +136,10 @@ const facts = computed(() => {
   let tenancy: string
   if (!app) {
     tenancy = '—'
-  } else if (app.tenantPerUser) {
-    tenancy = 'Tenant per user'
+  } else if (app.tenantManagement === TenantManagement.SYSTEM) {
+    tenancy = 'System, one per user'
   } else {
-    tenancy = 'Shared tenant'
+    tenancy = 'Tenant administrators'
   }
   return [
     { label: 'Name', icon: markRaw(TagIcon), value: app?.name ?? '—' },
@@ -213,7 +213,7 @@ async function load() {
     const [apps, orgProjects, users, invites, workloadList, runList] = await Promise.all([
       Kinotic.systemOrganizations.findApplications(orgId, Pageable.create(0, PAGE_SIZE)),
       Kinotic.systemOrganizations.findProjects(orgId, Pageable.create(0, PAGE_SIZE)),
-      Kinotic.systemOrganizations.findMembers(orgId, appId, firstPage),
+      Kinotic.systemOrganizations.findApplicationUsers(orgId, appId, firstPage),
       Kinotic.systemOrganizations.findPendingInvites(orgId, appId, firstPage),
       scanWorkloads({ organizationId: orgId, applicationId: appId }),
       scanJobRuns({ organizationId: orgId, applicationId: appId })

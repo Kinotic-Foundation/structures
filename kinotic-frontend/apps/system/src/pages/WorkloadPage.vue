@@ -42,7 +42,7 @@
             </div>
 
             <Message v-if="unreachable" severity="warn" :closable="false">
-              {{ unreachable.message }}, {{ DatetimeUtil.formatRelativeDate(unreachable.since).toLowerCase() }}. The status is the last the node
+              {{ unreachable.message }}, {{ DatetimeUtil.formatRelativeDate(unreachable.since) }}. The status is the last the node
               reported; the VM may still be running, so its room stays held. The node's next report of the workload settles it.
             </Message>
             <Message v-if="workload.status === WorkloadStatus.FAILED" severity="error" :closable="false">
@@ -254,8 +254,8 @@ const stats = computed<Stat[]>(() => {
     ownerTo = organizationPath(w.organizationId)
     ownerIcon = Building2
   } else {
-    ownerName = 'platform'
-    ownerDetail = 'runs for the platform itself'
+    ownerName = 'system'
+    ownerDetail = 'runs for the system itself'
     ownerTo = '/cluster'
     ownerIcon = Shield
   }
@@ -263,7 +263,7 @@ const stats = computed<Stat[]>(() => {
     {
       label: 'Status',
       value: w.status,
-      detail: w.exitCode !== null ? `exit code ${w.exitCode}` : `since ${formatDateTime(w.updated ?? w.created)}`,
+      detail: w.exitCode !== null ? `exit code ${w.exitCode}` : DatetimeUtil.formatRelativeDate(w.updated ?? w.created),
       tag: workloadSeverity(w.status),
       heartbeat: workloadHeartbeat(w.status),
       tint: HEARTBEAT_TINTS[workloadHeartbeat(w.status)]

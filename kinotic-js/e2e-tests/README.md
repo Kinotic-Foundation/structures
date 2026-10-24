@@ -22,8 +22,8 @@ pnpm ui-test       # vitest --ui
 system and app servers on the `test,e2e-tests,compose` profiles) and hands each server's mapped
 port to the suites; otherwise it points them at the ports that file publishes on `127.0.0.1`. A
 suite reaches a server through `managementServer()`, `systemServer()` or `appServer()` in
-`test/TestHelpers.ts`: an organization's users and machines connect to the management server, platform
-operators to the system server, and an application's users and machines to the app server.
+`test/TestHelpers.ts`: an organization's users and machines connect to the management server,
+system users to the system server, and an application's users and machines to the app server.
 
 ## Node-failure suite
 

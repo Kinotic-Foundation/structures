@@ -32,7 +32,7 @@ the commit under test rather than whatever the published tag currently holds.
 | `compose.kinotic-servers.yml` | The three Kinotic servers, one Ignite cluster | `kinotic-server-management:9090/58503` (portal, REST and STOMP), `kinotic-server-system:58504`, `kinotic-server-app:58505` |
 | `compose-otel.yml` | OpenTelemetry collector + Grafana + Tempo + Loki + Mimir | `grafana:3000`, `loki:3100`, `tempo:3200`, `mimir:9009` |
 | `compose.gen-schemas.yml` | Load-generator container that pre-populates schemas | One-shot when `compose.yml` brings up the full stack |
-| `compose.keycloak.yml` | Local Keycloak as a platform OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |
+| `compose.keycloak.yml` | Local Keycloak as a social sign-in OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |
 | `compose.kinotic-test.yml` | Minimal: ES + migration only, no server | Backing services for the `kinotic-test` suite, which runs the server in-process |
 | `compose.kinotic-e2e-test.yml` | Elasticsearch + migration + the servers, on the `test,e2e-tests,compose` profiles | Used by e2e tests in CI |
 
@@ -76,7 +76,7 @@ docker compose down -v && docker compose up -d
 
 ## Sample data
 
-The full stack seeds the `kinotic-test` organization for evaluators: `compose.yml` runs the
+The full stack seeds the `test-org` organization for evaluators: `compose.yml` runs the
 migration with the `fixtures` profile (set in `evaluation.env`), and `kinotic-gen-schemas`
 adds the `ecommerce` and `healthcare` applications with entity data. Sign in at
 <http://localhost:9090> as `kinotic@kinotic.local` / `kinotic` to see it. The other stacks
@@ -108,7 +108,7 @@ Steps in the SPA:
 
 ### Adding "Continue with Keycloak" (local OIDC, no internet)
 
-To exercise the platform-OIDC plumbing without needing a real IdP, layer in
+To exercise the social sign-in OIDC plumbing without needing a real IdP, layer in
 `compose.keycloak.yml`:
 
 ```bash
@@ -127,7 +127,7 @@ What this gives you:
   The management server's container picks the secret up from the `KINOTIC_AKV_KEYCLOAK` env
   var via the dev-fallback `EnvVarSecretReferenceResolver`.
 - The **Continue with Keycloak** button isn't wired automatically — the social-button
-  list is sourced from `kinotic_org_signup_oidc_configuration` rows, and no migration
+  list is sourced from the `type=ORG_SIGNUP` rows of `kinotic_oidc_configuration`, and no migration
   ships a Keycloak entry. Seed one manually via the kinotic-migration tool if you want
   the button to appear.
 
@@ -189,20 +189,36 @@ nothing. The rules that matter:
   `http.server.request.duration` → `http_server_request_duration_seconds_bucket`) because
   `mimir.yml` sets `otel_metric_suffixes_enabled: true`. Mimir defaults that off, which stores
   bare `jvm_memory_used` and leaves every stock dashboard empty.
-- **Vert.x metrics** (`vertx_http_server_active_connections`, `vertx_http_server_active_ws_connections`,
-  `vertx_eventbus_*`, `vertx_pool_*`) arrive through Micrometer's global registry, which the agent
-  bridges onto the OTLP exporter — so they are only exported when the agent is attached.
+- **Vert.x metrics** arrive through Micrometer's global registry, which the agent bridges onto the
+  OTLP exporter when `OTEL_INSTRUMENTATION_MICROMETER_ENABLED` is `true` — so they are only exported
+  with the agent attached and that flag set. What reaches Mimir is the gauges and the failure counters:
+  `vertx_{http,net}_{server,client}_active_connections`, `vertx_http_{server,client}_active_requests`,
+  `vertx_http_{server,client}_active_ws_connections`, `vertx_eventbus_pending`,
+  `vertx_eventbus_handlers`, `vertx_pool_in_use`, `vertx_pool_queue_pending`, `vertx_pool_ratio`,
+  `vertx_eventbus_reply_failures_total`, `vertx_{http,net}_{server,client}_errors_total` and
+  `vertx_http_server_request_resets_total`. `vertx_http_server_active_ws_connections` counts
+  the STOMP connections on `/api/v1`, the servers' only WebSocket endpoint. `KinoticVertxConfig`
+  denies Vert.x's request counters and response timers, whose requests the agent records as
+  `http_server_request_duration_seconds_*` and `http_client_request_duration_seconds_*`, and the
+  meters that record on every socket read and write, event bus message, request or worker task: the
+  byte counters and size histograms, the per-message event bus counters, and the pool timers and
+  completed-task counter.
 - **Tempo's metrics-generator** writes its own series to Mimir — `traces_spanmetrics_calls_total`
   and `traces_spanmetrics_latency_bucket`, labelled `service`, `span_name`, `span_kind`,
-  `status_code`. These only exist because `tempo.yml` enables the processors under `overrides`;
-  the `metrics_generator.processor` block alone does nothing.
+  `status_code`, and `peer_service` on HTTP client spans to a named backend. These only exist
+  because `tempo.yml` enables the processors under `overrides`; the `metrics_generator.processor`
+  block alone does nothing.
 - **Loki** promotes `service.name` to the `service_name` index label and keeps `trace_id` /
   `span_id` as structured metadata, which is what the Tempo link on each log line matches.
 - **Span names come from semconv, not from the code**: `get` / `index` / `search` are
   Elasticsearch endpoint ids, and a bare `GET` / `PUT` / `POST` is an HTTP span with no route
   template. Each Elasticsearch call therefore appears twice — the client span and its transport
-  child. `peer.service` and `db.system` are what identify the far end, and Tempo resolves them
-  into virtual nodes on the service graph.
+  child, and each Loki, Tempo or Mimir query the servers make is a bare `GET` / `POST` too.
+  `peer.service` and `db.system` are what identify the far end, and Tempo resolves them
+  into virtual nodes on the service graph. `OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING`
+  sets `peer.service` on each HTTP client span from the host and port it called (`elasticsearch`,
+  `loki`, `tempo`, `mimir`), so `{peer_service!="elasticsearch"}` leaves the Elasticsearch
+  transport spans out of a query; the endpoint spans keep their `get` / `index` / `search` names.
 
 `mimir.yml` and `tempo.yml` are bind-mounted, so editing them does not change the container
 spec and `docker compose up -d` leaves the old config running. Restart those services
@@ -254,9 +270,3 @@ environment" in the contributing guide (`website/content/02.platform/09.contribu
   a developer's tunnel origin and GitHub App, and the App alone, when
   `dev-tools/github-app/dev-github-app.ts create` has written them. The servers keep no state
   of their own there.
-
-## When you outgrow docker-compose
-
-For multi-node clustering (Ignite cluster discovery, replica counts, real workload
-identity, etc.) use the KinD setup in `deployment/kind/`. See
-`deployment/kind/terraform/` for the Terraform-driven local Kubernetes story.

@@ -1,5 +1,5 @@
 # ── Platform Key Vault ────────────────────────────────────────────────────────
-# Holds platform-wide secrets (each server's JWT signing keys, the secret-storage master key, the
+# Holds system-wide secrets (each server's JWT signing keys, the secret-storage master key, the
 # GitHub App's private key and webhook secret) that every kinotic cluster consumes via the
 # Secrets Store CSI driver. Rotation is performed out-of-band (`az keyvault secret set ...`);
 # terraform intentionally does not manage the secret values after initial seeding — hence
@@ -47,49 +47,22 @@ resource "terraform_data" "wait_for_kv_rbac" {
 }
 
 # ── Initial key material ──────────────────────────────────────────────────────
-# 32 random bytes each, base64-standard encoded. Consumed by the Java side as raw bytes
-# (Base64.getDecoder().decode(...)). `b64_std` attribute produces padded base64 which our
-# VersionedKeySet parser accepts.
+# 32 random bytes each, as padded standard base64, which the Java side decodes with
+# Base64.getDecoder(). random_bytes marks the value sensitive, so plan, apply and state show
+# never print it.
 
 locals {
   # Each server signs its tokens with a key set of its own
   servers = ["kinotic-server-management", "kinotic-server-system", "kinotic-server-app"]
 }
 
-resource "random_id" "jwt_signing_key_v1" {
-  for_each    = toset(local.servers)
-  byte_length = 32
+resource "random_bytes" "jwt_signing_key_v1" {
+  for_each = toset(local.servers)
+  length   = 32
 }
 
-# The management server keeps the key set the single server signed with
-moved {
-  from = random_id.jwt_signing_key_v1
-  to   = random_id.jwt_signing_key_v1["kinotic-org-server"]
-}
-
-# The servers' modules were renamed; each key set follows its server's new name
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-org-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-management"]
-}
-
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-system-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-system"]
-}
-
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-app-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-app"]
-}
-
-resource "random_id" "secret_storage_master_key" {
-  byte_length = 32
-}
-
-moved {
-  from = random_id.secret_storage_master_key_v1
-  to   = random_id.secret_storage_master_key
+resource "random_bytes" "secret_storage_master_key" {
+  length = 32
 }
 
 # ── Secrets ───────────────────────────────────────────────────────────────────
@@ -106,7 +79,7 @@ resource "azurerm_key_vault_secret" "jwt_signing_keys" {
   value = jsonencode({
     activeKeyId = "v1"
     keys = [
-      { id = "v1", key = random_id.jwt_signing_key_v1[each.key].b64_std },
+      { id = "v1", key = random_bytes.jwt_signing_key_v1[each.key].base64 },
     ]
   })
 
@@ -120,7 +93,7 @@ resource "azurerm_key_vault_secret" "jwt_signing_keys" {
 }
 
 # The secrets follow their servers' new names too. A Key Vault secret's name forces replacement,
-# so each is recreated under the new name with the same key material, which the random_id above keeps
+# so each is recreated under the new name
 moved {
   from = azurerm_key_vault_secret.jwt_signing_keys["kinotic-org-server"]
   to   = azurerm_key_vault_secret.jwt_signing_keys["kinotic-server-management"]
@@ -142,7 +115,7 @@ moved {
 resource "azurerm_key_vault_secret" "secret_storage_master_key" {
   name         = "kinotic-secret-storage-master-key"
   key_vault_id = azurerm_key_vault.platform.id
-  value        = random_id.secret_storage_master_key.b64_std
+  value        = random_bytes.secret_storage_master_key.base64
 
   tags = local.common_tags
 
@@ -179,6 +152,44 @@ resource "azurerm_key_vault_secret" "github_webhook_secret" {
   key_vault_id = azurerm_key_vault.platform.id
   content_type = "Webhook secret of the kinotic-ai GitHub App"
   value        = var.github_webhook_secret
+
+  tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  depends_on = [terraform_data.wait_for_kv_rbac]
+}
+
+# The Cloudflare DNS token the management and system servers import as
+# kinotic.domain.publishedSites.cloudflare.apiToken, with which each organization's sites record
+# is created. Supplied via TF_VAR_cloudflare_dns_api_token on first apply; rotations happen
+# out-of-band via `az keyvault secret set ...` and lifecycle.ignore_changes keeps them.
+resource "azurerm_key_vault_secret" "cloudflare_dns_api_token" {
+  name         = "kinotic-cloudflare-dns-api-token"
+  key_vault_id = azurerm_key_vault.platform.id
+  content_type = "Cloudflare API token with DNS edit on the platform zone and the customer zone"
+  value        = var.cloudflare_dns_api_token
+
+  tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  depends_on = [terraform_data.wait_for_kv_rbac]
+}
+
+# The Turnstile site's secret key the management server imports as
+# kinotic.managementServer.turnstile.secretKey, with which it verifies the token the portal's
+# find-my-organizations form earns. Supplied via TF_VAR_turnstile_secret_key on first apply;
+# rotations happen out-of-band via `az keyvault secret set ...` and lifecycle.ignore_changes keeps them.
+resource "azurerm_key_vault_secret" "turnstile_secret_key" {
+  name         = "kinotic-turnstile-secret-key"
+  key_vault_id = azurerm_key_vault.platform.id
+  content_type = "Cloudflare Turnstile site secret key"
+  value        = var.turnstile_secret_key
 
   tags = local.common_tags
 

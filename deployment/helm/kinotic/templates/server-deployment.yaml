@@ -88,7 +88,7 @@ spec:
             - configMapRef:
                 name: {{ $name }}
           env:
-            # Pod name for unique eviction file paths, and the node's service instance id
+            # The node's service instance id
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -103,11 +103,11 @@ spec:
                 secretKeyRef:
                   name: {{ $.Values.kinotic.elastic.secretName }}
                   key: {{ $.Values.kinotic.elastic.secretKey }}
-            - name: KINOTIC_PLATFORMSECRETS_JWTSIGNINGKEYSPATH
-              value: "{{ $.Values.platformSecrets.mountPath }}/jwt-signing-keys"
-            # Each file of the platform-secrets volume sets the property it is named after
+            - name: KINOTIC_SYSTEMSECRETS_JWTSIGNINGKEYSPATH
+              value: "{{ $.Values.systemSecrets.mountPath }}/jwt-signing-keys"
+            # Each file of the system-secrets volume sets the property it is named after
             - name: SPRING_CONFIG_IMPORT
-              value: "configtree:{{ $.Values.platformSecrets.mountPath }}/"
+              value: "configtree:{{ $.Values.systemSecrets.mountPath }}/"
           volumeMounts:
             - name: tmp-work
               mountPath: /workspace/ignite/work
@@ -116,12 +116,8 @@ spec:
               mountPath: /certs
               readOnly: true
             {{- end }}
-            {{- if $.Values.evictionTracking.enabled }}
-            - name: eviction-data
-              mountPath: {{ $.Values.evictionTracking.mountPath | default "/eviction-data" }}
-            {{- end }}
-            - name: platform-secrets
-              mountPath: {{ $.Values.platformSecrets.mountPath }}
+            - name: system-secrets
+              mountPath: {{ $.Values.systemSecrets.mountPath }}
               readOnly: true
       restartPolicy: Always
       nodeSelector: {{ toYaml $.Values.nodeSelector | nindent 8 }}
@@ -134,33 +130,15 @@ spec:
           secret:
             secretName: {{ $server.tlsSecretName }}
         {{- end }}
-        {{- if $.Values.evictionTracking.enabled }}
-        - name: eviction-data
-          hostPath:
-            path: {{ $.Values.evictionTracking.hostPath | default "/tmp/kinotic-eviction-data" }}
-            type: DirectoryOrCreate
-        {{- end }}
-        # The files kinotic.platformSecretFiles lists for this server: its own JWT key set, never
+        # The files kinotic.systemSecretFiles lists for this server: its own JWT key set, never
         # another server's, and the secret properties it imports
-        - name: platform-secrets
-          {{- if $.Values.platformSecrets.keyVault.name }}
-          # Azure: the CSI driver projects this server's SecretProviderClass objects from Key Vault
-          # and refreshes them in place when Key Vault values change.
+        - name: system-secrets
+          # The CSI driver projects this server's SecretProviderClass objects from Key Vault and
+          # refreshes them in place when Key Vault values change.
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ $name }}-platform-secrets
-          {{- else }}
-          # KinD / other: a K8s Secret (created by external terraform or tooling) holds every
-          # server's objects. Mounted directly — files refresh when the Secret is updated.
-          secret:
-            secretName: {{ required "platformSecrets.secretName or platformSecrets.keyVault.name is required" $.Values.platformSecrets.secretName }}
-            items:
-              {{- range $file := include "kinotic.platformSecretFiles" (dict "name" $name "server" $server "root" $) | fromYamlArray }}
-              - key: {{ $file.object }}
-                path: {{ $file.path }}
-              {{- end }}
-          {{- end }}
+              secretProviderClass: {{ $name }}-system-secrets
 {{- end }}
 {{- end }}

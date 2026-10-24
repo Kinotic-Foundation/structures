@@ -41,15 +41,12 @@ public class DefaultInviteEmailTemplateService extends AbstractApplicationScoped
     @Override
     public Future<InviteEmailTemplate> save(InviteEmailTemplate entity) {
         Validate.notBlank(entity.getApplicationId(), "applicationId is required");
-        Validate.notBlank(entity.getSubject(), "subject is required");
-        Validate.notBlank(entity.getHtmlBody(), "htmlBody is required");
-        Validate.notBlank(entity.getTextBody(), "textBody is required");
 
         String organizationId = requireOrganizationId();
         entity.setOrganizationId(organizationId);
 
         // Fails at save rather than at the next send.
-        emailService.validateInviteTemplate(entity.getSubject(), entity.getHtmlBody(), entity.getTextBody());
+        emailService.validateTemplateSources(entity.getSubject(), entity.getHtmlBody(), entity.getTextBody());
 
         return applicationRepository.requireById(entity.getApplicationId(), organizationId)
                 .compose(_ -> inviteEmailTemplateRepository.findByApplication(entity.getApplicationId(), organizationId))

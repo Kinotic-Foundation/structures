@@ -1,35 +1,34 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
+import org.kinotic.domain.api.model.security.identity.ApplicationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 
 /**
- * In-process service for verifying email + password and resolving the matching
- * {@link UserParticipantIdentity}. Not {@code @Publish}-annotated: raw passwords never travel over RPC,
- * only direct in-JVM calls (e.g. the {@code POST /api/auth/org/login} HTTP handler) or
- * STOMP CONNECT credentials handled separately by the {@code SecurityService}.
+ * In-process service for verifying an email and password against the user of one scope. Not
+ * {@code @Publish}-annotated: raw passwords never travel over RPC, only direct in-JVM calls (e.g. the
+ * {@code POST /api/auth/org/login/:orgId} HTTP handler) or STOMP CONNECT credentials handled separately by the
+ * {@code SecurityService}. Each method returns the user on success, or {@code null} for any failure (unknown
+ * email, wrong password, a user with no password, disabled user); callers surface a generic message so the
+ * client learns nothing about which case applies. A user of another scope with the same email never matches.
  */
 public interface LocalAuthenticationService {
 
-    /**
-     * Verifies {@code password} against the ORGANIZATION-scope {@link UserParticipantIdentity} matching
-     * {@code email}, in whichever organization it belongs to. Returns the user on success, or {@code null}
-     * for any failure (unknown email, wrong password, OIDC user, disabled user). Callers should surface
-     * a generic message to the client to avoid leaking which case applies.
-     */
-    Future<UserParticipantIdentity> authenticateOrgUser(String email, String password);
+    /** Verifies {@code password} against the system user with {@code email}. */
+    Future<SystemParticipantIdentity> authenticateSystemUser(String email, String password);
 
     /**
-     * Verifies {@code password} against the {@link UserParticipantIdentity} matching {@code email} in the
-     * given {@code (organizationId, applicationId)} pair, so a match in another scope can't authenticate.
-     * Returns the user on success, or {@code null} for any failure. Scope is identified structurally:
-     * <ul>
-     *   <li>both null → SYSTEM</li>
-     *   <li>{@code organizationId} only → ORGANIZATION</li>
-     *   <li>both set → APPLICATION</li>
-     * </ul>
+     * Verifies {@code password} against the organization user with {@code email}, which then signs in to an
+     * organization through its membership there, which the caller resolves.
      */
-    Future<UserParticipantIdentity> authenticateLocal(String email, String password,
-                                                      String organizationId, String applicationId);
+    Future<OrganizationParticipantIdentity> authenticateOrganizationUser(String email, String password);
+
+    /** Whether {@code password} is the password of {@code user}, an enabled user of any scope. */
+    Future<Boolean> verifyPassword(UserParticipantIdentity user, String password);
+
+    /** Verifies {@code password} against the user of application {@code applicationId} of organization {@code organizationId} with {@code email}. */
+    Future<ApplicationParticipantIdentity> authenticateApplicationUser(String email, String password,
+                                                                         String organizationId, String applicationId);
 }
-

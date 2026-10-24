@@ -1,7 +1,10 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
+import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.model.EmailTemplate;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 
 /**
@@ -14,29 +17,41 @@ public interface SignUpService {
 
     /**
      * Starts an email/password sign-up: validates and stores a pending record and emails a
-     * verification link. The organization name and password are collected later, at completion.
+     * verification link. The organization name and password are collected later, at completion. Fails with
+     * {@link ExistingUserException} when the email has an organization user someone signs in as, and with
+     * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet.
+     *
+     * @param email           the email to verify
+     * @param displayName     the founder's display name
+     * @param emailTemplate   the verification email to send in place of Kinotic's, whose UI's {@code /signup/verify}
+     *                        page the link opens, or {@code null} for Kinotic's, which opens the portal's
+     * @throws IllegalArgumentException when {@code emailTemplate} is not valid, as {@link EmailTemplate} describes
      */
-    Future<Void> initiateLocalSignUp(String email, String displayName);
+    Future<Void> initiateLocalSignUp(String email, String displayName, EmailTemplate emailTemplate);
 
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it
      * with its {@code id} and {@code verificationToken} populated. The caller supplies the verified
-     * identity (and, for an existing-org registration, the {@code organizationId}).
+     * identity (and, for an existing-org registration, the {@code organizationId}). Fails as
+     * {@link #initiateLocalSignUp} does when the identity, or its verified email, has an organization user.
      */
     Future<PendingSignUp> createOidcPending(PendingSignUp pending);
 
     /**
      * Completes an email/password sign-up: validates the token, creates the organization with the
-     * given name (failing if it is taken), its admin user, and the password credential, then
-     * deletes the pending record.
+     * given name (failing if it is taken), the founder's organization user with its password and its
+     * membership of the organization, then deletes the pending record.
      *
-     * @return the new organization's admin user
+     * @return the founder as the new organization's participant, for the session to sign in
      */
-    Future<UserParticipantIdentity> completeLocalSignUp(String token, String orgName, String orgDescription, String password);
+    Future<Participant> completeLocalSignUp(String token, String orgName, String orgDescription, String password);
 
     /**
-     * Completes an OIDC sign-up by creating a new organization with the given name (failing if it
-     * is taken), making the verified identity its admin, then deleting the pending record.
+     * Completes an OIDC sign-up by creating a new organization with the given name (failing if it is
+     * taken), the founder's organization user bound to the verified identity and its membership of the
+     * organization, then deleting the pending record.
+     *
+     * @return the founder as the new organization's participant, for the session to sign in
      */
-    Future<UserParticipantIdentity> completeOidcWithNewOrg(String token, String orgName, String orgDescription);
+    Future<Participant> completeOidcWithNewOrg(String token, String orgName, String orgDescription);
 }

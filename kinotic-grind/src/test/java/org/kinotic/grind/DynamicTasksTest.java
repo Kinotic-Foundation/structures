@@ -5,13 +5,16 @@ import org.kinotic.grind.api.model.ExecutionStatus;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobOwner;
 import org.kinotic.grind.api.model.JobRunHandle;
+import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.events.TasksDiscoveredEvent;
 import org.kinotic.grind.api.model.Tasks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,6 +39,51 @@ public class DynamicTasksTest extends AbstractGrindTest {
         assertEquals(List.of("decided"), seen);
         assertEquals(ExecutionStatus.COMPLETED, repository.taskAt(handle.getJobRunId(), "0/1/1").getStatus());
         assertTrue(repository.taskAt(handle.getJobRunId(), "0/1").isDynamicTasks());
+    }
+
+    @Test
+    public void aTaskAFutureCompletesWithIsStoredAsAValue() throws Exception {
+        JobDefinition job = JobDefinition.create("future task")
+                .name("future-task").version("1")
+                .task(Tasks.fromCallable("plan", () -> CompletableFuture.completedFuture(Tasks.noop("planned")))
+                           .store(Store.result("plan")));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        assertEquals("plan", repository.taskAt(handle.getJobRunId(), "0/1").getStoredName());
+        assertFalse(repository.taskAt(handle.getJobRunId(), "0/1").isDynamicTasks());
+        assertNull(repository.taskAt(handle.getJobRunId(), "0/1/1"));
+    }
+
+    @Test
+    public void dynamicTaskWithoutAStoreKeepsItsValueAsTheProducerDeclares() throws Exception {
+        JobDefinition job = JobDefinition.create("inherited store")
+                .name("inherited-store").version("1")
+                .task(Tasks.fromCallable("decide", () -> Tasks.fromValue("decided widget", new Widget("inherited")))
+                           .store(Store.result("producerWidget")));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        assertEquals("producerWidget", repository.taskAt(handle.getJobRunId(), "0/1/1").getStoredName());
+    }
+
+    @Test
+    public void dynamicTaskWithItsOwnStoreKeepsItsValueThatWay() throws Exception {
+        JobDefinition job = JobDefinition.create("own store")
+                .name("own-store").version("1")
+                .task(Tasks.fromCallable("decide", () -> Tasks.fromValue("decided widget", new Widget("own"))
+                                                              .store(Store.result("dynamicWidget")))
+                           .store(Store.result("producerWidget")));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        assertEquals("dynamicWidget", repository.taskAt(handle.getJobRunId(), "0/1/1").getStoredName());
     }
 
     @Test

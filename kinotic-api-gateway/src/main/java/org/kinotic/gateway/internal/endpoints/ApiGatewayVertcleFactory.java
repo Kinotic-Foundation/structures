@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.gateway.api.utils.ApiGatewayUtil;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.gateway.api.config.KinoticApiGatewayProperties;
 import org.springframework.stereotype.Component;
@@ -32,9 +33,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApiGatewayVertcleFactory {
 
-    private static final String STOMP_WEBSOCKET_PATH = "/v1";
+    private static final String STOMP_WEBSOCKET_PATH = "/api/v1";
 
     private final KinoticApiGatewayProperties properties;
+    private final KinoticDomainProperties domainProperties;
     private final StompServerHandlerFactory stompServerHandlerFactory;
     private final List<SuppliesGatewayRoutes> gatewayRoutes;
     private final HealthChecks healthChecks;
@@ -48,11 +50,11 @@ public class ApiGatewayVertcleFactory {
         // Vert.x's default bare reason-phrase 500. CORS: the SPA is a different origin from this
         // gateway (portal.kinotic.ai vs api.kinotic.ai in prod, vite's :5173 in dev). They're
         // same-site, so the SameSite=Lax session cookie flows; credentialed CORS
-        // (kinotic.apiGateway.cors.*) lets the cross-origin login fetch store it.
-        Router router = ApiGatewayUtil.createRouterWithCors(vertx, properties.getApiGateway().getCors());
+        // (kinotic.domain.cors.*) lets the cross-origin login fetch store it.
+        Router router = ApiGatewayUtil.createRouterWithCors(vertx, domainProperties.getDomain().getCors());
 
         // Health check on the api-gateway port so probes work even when the static
-        // web-server (9090) is disabled in KinD/Azure.
+        // web-server (9090) is disabled in Azure.
         router.get("/health")
               .handler(HealthCheckHandler.createWithHealthChecks(healthChecks));
 
@@ -84,10 +86,6 @@ public class ApiGatewayVertcleFactory {
         // here, so a module absent from the server's classpath contributes nothing and the gateway
         // still boots.
         gatewayRoutes.forEach(routes -> routes.mountRoutes(router));
-
-        // The STOMP WebSocket handshake authenticates from the browser session, so the
-        // SessionHandler must also cover the WebSocket path — it is not under /api/*.
-        router.route(STOMP_WEBSOCKET_PATH).handler(sessionHandler).handler(sessionBinding);
 
         // The library's default heartbeat, 30 s offered and expected both ways, is what the TS client offers
         // too, so the negotiated interval is 30 s and a silent connection closes after two of them

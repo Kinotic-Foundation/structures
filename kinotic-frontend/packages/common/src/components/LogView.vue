@@ -48,12 +48,14 @@
         @scroll="onScroll"
       >
         <template #item="{ item }">
-          <!-- A continuation row keeps its entry's timestamp and level invisible so its text aligns under the first row's -->
+          <!-- A continuation row keeps its entry's timestamp, level and logger invisible so its text aligns under the first row's -->
           <div class="flex h-[22px] items-center gap-3 whitespace-pre pr-4 hover:bg-white/[0.04]">
             <span class="shrink-0 select-none border-r border-white/[0.06] px-4 tabular-nums text-surface-500"
                   :class="{ invisible: item.continuation }">{{ formatTimestamp(item.ts) }}</span>
             <span v-if="item.level" class="shrink-0 min-w-[5ch] uppercase" :class="{ invisible: item.continuation }"
                   :style="{ color: LEVEL_COLORS[item.level as LogLevel] }">{{ item.level }}</span>
+            <span v-if="item.logger" class="shrink-0" :class="{ invisible: item.continuation }"><span
+                  :style="{ color: LOGGER_COLOR }">{{ item.logger }}</span> <span class="text-surface-500">:</span></span>
             <span><span v-for="(segment, i) in item.segments" :key="i" :style="segment.style">{{ segment.text }}</span></span>
           </div>
         </template>
@@ -163,11 +165,17 @@ const LEVEL_COLORS = {
   trace: ANSI_PALETTE[2]!
 }
 type LogLevel = keyof typeof LEVEL_COLORS
+// The logger column as Spring Boot's console pattern lays it out, %-40.40logger{39}, in its cyan
+const LOGGER_COLOR = ANSI_PALETTE[6]!
+const LOGGER_WIDTH = 40
+const LOGGER_ABBREVIATION_LENGTH = 39
 
 /** One Loki entry; its text may span several lines. */
 interface LogEntry {
   ts: number
   level: LogLevel | null
+  /** The logger name, abbreviated and padded to the logger column; null when the entry names no logger. */
+  logger: string | null
   text: string
 }
 
@@ -181,6 +189,7 @@ interface StyledSegment {
 interface LogRow {
   ts: number
   level: LogLevel | null
+  logger: string | null
   /** True for every line of an entry after its first. */
   continuation: boolean
   segments: StyledSegment[]
@@ -256,7 +265,8 @@ const showDate = computed(() => {
 
 // Both Loki payloads carry entries as streams of [nanosecond-timestamp, line] tuples. Loki merges an
 // entry's structured metadata into its stream labels, which is where an OTLP-shipped log keeps the
-// severity_text its logger set and the stack trace of the exception it was logged with. The level is that
+// severity_text its logger set, the stack trace of the exception it was logged with, and the scope_name the
+// OpenTelemetry logback appender sets to the logger's name. The level is that
 // severity_text because Loki's detected_level is a keyword guess on a plain-text line, labelling some lines
 // of a workload log and leaving the rest bare.
 function parseStreams(streams: Array<{ stream?: Record<string, string>; values?: [string, string][] }> | undefined): LogEntry[] {
@@ -264,13 +274,28 @@ function parseStreams(streams: Array<{ stream?: Record<string, string>; values?:
   for (const { stream, values } of streams ?? []) {
     const severity = stream?.severity_text?.toLowerCase()
     const level = severity !== undefined && Object.hasOwn(LEVEL_COLORS, severity) ? severity as LogLevel : null
+    const logger = stream?.scope_name ? loggerColumn(stream.scope_name) : null
     const stackTrace = stream?.exception_stacktrace
     for (const [ns, line] of values ?? []) {
       const message = line.replace(/\n+$/, '')
-      out.push({ ts: Number(ns) / 1_000_000, level, text: stackTrace ? `${message}\n${stackTrace}` : message })
+      out.push({ ts: Number(ns) / 1_000_000, level, logger, text: stackTrace ? `${message}\n${stackTrace}` : message })
     }
   }
   return out
+}
+
+// Collapses package segments to their first letter, leftmost first, until the name fits the abbreviation
+// length, then pads it to the column or cuts it from the left, as logback's %-40.40logger{39} does
+function loggerColumn(name: string): string {
+  const segments = name.split('.')
+  let length = name.length
+  for (let i = 0; i < segments.length - 1 && length > LOGGER_ABBREVIATION_LENGTH; i++) {
+    const segment = segments[i]!
+    segments[i] = segment.slice(0, 1)
+    length -= segment.length - segments[i]!.length
+  }
+  const abbreviated = segments.join('.')
+  return abbreviated.length > LOGGER_WIDTH ? abbreviated.slice(-LOGGER_WIDTH) : abbreviated.padEnd(LOGGER_WIDTH)
 }
 
 function toRows(entries: LogEntry[]): LogRow[] {
@@ -279,7 +304,7 @@ function toRows(entries: LogEntry[]): LogRow[] {
     // A style carries across the entry's lines, as a terminal carries it across a newline
     const style = plainStyle()
     entry.text.split(/\r?\n/).forEach((line, i) => {
-      out.push({ ts: entry.ts, level: entry.level, continuation: i > 0, segments: styleSegments(line, style) })
+      out.push({ ts: entry.ts, level: entry.level, logger: entry.logger, continuation: i > 0, segments: styleSegments(line, style) })
     })
   }
   return out

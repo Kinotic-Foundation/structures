@@ -5,7 +5,7 @@ on:
     branches:
       - develop
       - main
-    paths-ignore:
+    paths-ignore: &ignored-paths
       - 'helm/**'
       - 'deployment/**'
       - 'docker-compose/**'
@@ -15,14 +15,14 @@ on:
       - 'kinotic-js/kinotic-cli/**'
       - 'kinotic-js/load-generator/**'
       - 'website/**'
-  # Runs every suite and the image scan against the merge result before a change lands. No path
-  # filter: Build Result is the check a merge waits on, and a run skipped by a filter never reports it.
+  # Runs every suite and the image scan against the merge result before a change lands.
   # Staging to ghcr.io needs packages: write, which GitHub withholds from pull requests opened from
   # forks, so those runs fail at staging; push the branch to this repository to build it.
   pull_request:
     branches:
       - develop
       - main
+    paths-ignore: *ignored-paths
   # Nightly full run. This is what refreshes the 5.0.0-SNAPSHOT jars on Sonatype: the publish job
   # below is deliberately off the per-push path because its ~3.5 min of uploads gates nothing else.
   schedule:
@@ -241,7 +241,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
           image: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ github.sha }}
           registry-username: ${{ github.actor }}
@@ -346,6 +346,11 @@ jobs:
           # Cross-package imports resolve to each package's dist/, which bunup builds
           bun run build
           bun run --filter '*' test
+
+      - name: Run the sites Worker tests
+        run: |
+          cd deployment/cloudflare/sites-worker
+          bun test
 
       - name: Collect Allure results
         if: ${{ !cancelled() }}

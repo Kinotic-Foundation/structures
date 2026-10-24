@@ -78,7 +78,7 @@ import { applicationPath, organizationPath, projectPath } from '@/util/scope'
 import { scanWorkloads, shortImage, workloadSeverity } from '@/util/workloads'
 
 /**
- * The landing page of one project, from what a platform operator may read: the project record,
+ * The landing page of one project, from what a system user may read: the project record,
  * the state of its deploy runs, and its microservice workloads with how many are running.
  */
 const props = defineProps<{

@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="dev-server-diagram-wrap">
-    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 900" role="img" aria-label="Development server topology: GitHub, peers and application users reach one forwarded port, 443, on the edge, an HAProxy container that passes each TLS connection unopened to the server its SNI names; the org, system and app servers live on a private NAT-only network with three Elasticsearch nodes and the one-shot migration, and form one Ignite cluster; Loki, Tempo, Mimir and Grafana are containers on the LAN; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; each Elasticsearch node has a ZFS pool on its own drive and Proxmox a drive of its own; two Intel NUCs beside the host run the vm-manager with Cloud Hypervisor micro VMs, which reach their servers through the edge by name.">
+    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 900" role="img" aria-label="Development server topology: GitHub, peers and application users reach one forwarded port, 443, on the edge, an HAProxy container that passes each TLS connection unopened to the server its SNI names; the org, system and app servers live on a private NAT-only network with three Elasticsearch nodes and the one-shot migration, and form one Ignite cluster; Loki, Tempo, Mimir and Grafana are containers on the LAN; Azure keeps the sites storage account, email, a Key Vault and a snapshot container, and Cloudflare both zones, where the sites Worker serves the published UIs, the portal and the console from the account; each Elasticsearch node has a ZFS pool on its own drive and Proxmox a drive of its own; two Intel NUCs beside the host run the vm-manager with Cloud Hypervisor micro VMs, which reach their servers through the edge by name.">
 
       <defs>
         <marker id="ds-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -39,19 +39,19 @@
       <line class="flow" x1="310" y1="90" x2="310" y2="344" marker-end="url(#ds-ink)"></line>
       <text class="t-tiny" x="318" y="256">dev-api · dev-system-api</text>
       <line class="flow" x1="510" y1="90" x2="510" y2="344" marker-end="url(#ds-ink)"></line>
-      <text class="t-tiny" x="518" y="256">*.dev-apps-api</text>
+      <text class="t-tiny" x="518" y="256">*.apps-api.dev.kinotic.io</text>
 
-      <!-- ═════════ Azure, kept ═════════ -->
+      <!-- ═════════ Azure and Cloudflare, kept ═════════ -->
       <rect class="encl-plat" x="660" y="24" width="488" height="202" rx="10"></rect>
-      <text class="t-plane-p" x="676" y="46">AZURE · KEPT</text>
+      <text class="t-plane-p" x="676" y="46">AZURE · CLOUDFLARE · KEPT</text>
 
       <rect class="chip" x="676" y="64" width="120" height="46" rx="8"></rect>
       <text class="t-chip" x="736" y="83" text-anchor="middle">ACS</text>
       <text class="t-sub"  x="736" y="99" text-anchor="middle">email</text>
 
       <rect class="chip" x="812" y="64" width="140" height="46" rx="8"></rect>
-      <text class="t-chip" x="882" y="83" text-anchor="middle">Front Door</text>
-      <text class="t-sub"  x="882" y="99" text-anchor="middle">*.apps-dev.kinotic.ai</text>
+      <text class="t-chip" x="882" y="83" text-anchor="middle">Sites Worker</text>
+      <text class="t-sub"  x="882" y="99" text-anchor="middle">*.dev.kinotic.io · dev-portal · dev-console</text>
 
       <rect class="chip" x="978" y="64" width="154" height="46" rx="8"></rect>
       <text class="t-chip" x="1055" y="83" text-anchor="middle">Sites storage account</text>
@@ -67,8 +67,8 @@
       <text class="t-sub"  x="898" y="183" text-anchor="middle">ES snapshots · daily</text>
 
       <rect class="chip" x="984" y="148" width="148" height="46" rx="8"></rect>
-      <text class="t-chip" x="1058" y="167" text-anchor="middle">DNS zone</text>
-      <text class="t-sub"  x="1058" y="183" text-anchor="middle">A records · DNS-01 certs</text>
+      <text class="t-chip" x="1058" y="167" text-anchor="middle">Cloudflare DNS</text>
+      <text class="t-sub"  x="1058" y="183" text-anchor="middle">kinotic.ai · kinotic.io</text>
 
       <!-- ═════════ the host ═════════ -->
       <rect class="wall" x="24" y="262" width="696" height="620" rx="12"></rect>
