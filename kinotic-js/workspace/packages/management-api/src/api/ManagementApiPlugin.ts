@@ -18,6 +18,7 @@ import { OwnedOidcConfigurationService, type IOwnedOidcConfigurationService } fr
 import { MachineService, type IMachineService } from '@/api/services/security/IMachineService'
 import { GitHubAppInstallationService, type IGitHubAppInstallationService } from '@/api/services/IGitHubAppInstallationService'
 import { JobMonitoringService, type IJobMonitoringService } from '@/api/services/IJobMonitoringService'
+import { VulnerabilityAlertService, type IVulnerabilityAlertService } from '@/api/services/IVulnerabilityAlertService'
 
 export interface IManagementApiExtension {
     applications: IApplicationService
@@ -39,6 +40,7 @@ export interface IManagementApiExtension {
     ownedOidcConfigurations: IOwnedOidcConfigurationService
     machines: IMachineService
     githubAppInstallations: IGitHubAppInstallationService
+    vulnerabilityAlerts: IVulnerabilityAlertService
 }
 
 export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
@@ -63,6 +65,7 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
             ownedOidcConfigurations: new OwnedOidcConfigurationService(kinotic),
             machines: new MachineService(kinotic),
             githubAppInstallations: new GitHubAppInstallationService(kinotic),
+            vulnerabilityAlerts: new VulnerabilityAlertService(kinotic),
         }
     }
 }

@@ -24,9 +24,11 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
+    // reads the OSV advisories
+    implementation 'tools.jackson.core:jackson-databind'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation 'com.azure:azure-storage-blob'
 }
 

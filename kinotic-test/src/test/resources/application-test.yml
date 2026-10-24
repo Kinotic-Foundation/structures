@@ -22,6 +22,8 @@ kinotic:
   systemApi:
     # no sites account in tests: the site provisioner is the mock
     disableAzureStorage: true
+    # tests store the advisories they check SBOMs against; OSV is never read
+    disableOsvImport: true
     deployment:
       # required at boot; no deployment ever runs in tests, workloads would reach the local gateway
       managementServer:
