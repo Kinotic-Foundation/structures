@@ -35,7 +35,7 @@ import type { ButtonDesignTokens } from '@primeuix/themes/types/button';
     colorScheme: {
         light: {
             root: {
-                // Primary actions are near-black
+                // Primary actions are near-black, not the brand colour
                 primary: {
                     background: "{surface.950}",
                     hoverBackground: "{surface.800}",
